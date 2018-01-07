@@ -8,17 +8,21 @@
 
 // CPU control /////////////////////////////////////////////////////////////////
 
-#ifdef HALT
 inline void halt_input(void)
 {
+#ifdef HALT
     CTRL2_PIN &= ~(1 << HALT);
+#endif
 }
 
 inline uint8_t get_halt(void)
 {
+#ifdef HALT
     return CTRL2_PIN & (1 << HALT);
-}
+#else
+    return 1;
 #endif
+}
 
 inline void ioack_output(void)
 {
@@ -146,17 +150,21 @@ inline void ctrl_output(void)
     CTRL_DDR |= ((1 << IORQ) | (1 << MREQ) | (1 << WR) | (1 << RD));
 }
 
-#ifdef M1
 inline void m1_input(void)
 {
+#ifdef M1
     CTRL2_DDR &= ~(1 << M1);
+#endif
 }
 
 inline uint8_t get_m1(void)
 {
+#ifdef M1
     return CTRL2_PIN & (1 << M1);
-}
+#else
+    return 1;
 #endif
+}
 
 inline uint8_t get_mreq(void)
 {
@@ -218,17 +226,21 @@ inline void wr_lo(void)
     CTRL_PORT &= ~(1 << WR);
 }
 
-#ifdef RFSH
 inline void rfsh_input(void)
 {
+#ifdef RFSH
     CTRL2_DDR &= ~(1 << RFSH);
+#endif
 }
 
 inline uint8_t get_rfsh(void)
 {
+#ifdef RFSH
     return CTRL2_PIN & (1 << RFSH);
-}
+#else
+    return 1;
 #endif
+}
 
 // Address bus /////////////////////////////////////////////////////////////////
 
@@ -399,15 +411,9 @@ void bus_init(void)
     busrq_hi();
     set_bank(0);
 
-#ifdef M1
     m1_input();
-#endif
-#ifdef RFSH
     rfsh_input();
-#endif
-#ifdef HALT
     halt_input();
-#endif
     ioack_output();
     ioack_lo();
     ioack_hi();
@@ -426,13 +432,19 @@ void bus_status(void)
     printf(
 #ifdef M1
         "m1=%x "
+#else
+        "m1=X "
 #endif        
         "mreq=%x iorq=%x rd=%x wr=%x "
 #ifdef RFSH
         "rfsh=%x "
+#else
+        "rfsh=X "
 #endif
 #ifdef HALT
         "halt=%x "
+#else
+        "halt=X "
 #endif
         "wait=%x "
         "int=%x nmi=%x reset=%x busrq=%x busack=%x "
