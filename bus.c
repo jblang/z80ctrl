@@ -3,8 +3,10 @@
 #include "bus.h"
 #include "iox.h"
 
-#include <stdio.h>
+#include <avr/interrupt.h>
 #include <util/delay.h>
+
+#include <stdio.h>
 
 // CPU control /////////////////////////////////////////////////////////////////
 
@@ -346,16 +348,9 @@ inline void clk_lo(void)
     CTRL_PORT &= ~(1 << CLK);
 }
 
-inline void clk_tick(void)
+inline void clk_toggle(void)
 {
-    clk_hi();
-#ifdef DEBUG
-    bus_status();
-#endif
-    clk_lo();
-#ifdef DEBUG
-    bus_status();
-#endif
+    CTRL_PORT ^= (1 << CLK);
 }
 
 inline void clk_run(void)
@@ -396,39 +391,43 @@ void bus_slave(void)
 
 void bus_init(void)
 {
+    // Initialize I/O expander
     iox_init();
 
+    // Configure bus signal direction
     int_output();
     nmi_output();
     reset_output();
     busrq_output();
-    busack_input();
     bank_output();
+    ioack_output();
+    clk_output();
+    busack_input();
+    m1_input();
+    rfsh_input();
+    halt_input();
 
+    // Set defaults for output bus signals
     int_hi();
     nmi_hi();
     reset_lo();
     busrq_hi();
+    clk_lo();
     set_bank(0);
 
-    m1_input();
-    rfsh_input();
-    halt_input();
-    ioack_output();
+    // Clear wait flip flop
     ioack_lo();
     ioack_hi();
 
-    clk_output();
-    clk_lo();
-    clk_tick();
-    clk_tick();
-    clk_tick();
-
+    // Make bidirectional signals inputs
     bus_slave();
 }
 
 void bus_status(void)
 {
+    uint8_t data = get_data();
+    uint8_t ascii = (data >= 0x20 && data <= 0x7e) ? data : ' ';
+
     printf(
 #ifdef M1
         "m1=%x "
@@ -448,7 +447,7 @@ void bus_status(void)
 #endif
         "wait=%x "
         "int=%x nmi=%x reset=%x busrq=%x busack=%x "
-        "clk=%x bank=%03x addr=%04x data=%02x\n",
+        "clk=%x bank=%x addr=%04x data=%02x %c\n",
 #ifdef M1
         !!get_m1(), 
 #endif
@@ -461,7 +460,22 @@ void bus_status(void)
 #endif
         !!get_ioack(),
         !!get_int(), !!get_nmi(), !!get_reset(), !!get_busrq(), !!get_busack(),
-        !!get_clk(), get_bank(), get_addr(), get_data());
+        !!get_clk(), get_bank(), get_addr(), data, ascii);
+}
+
+void bus_trace(uint16_t cycles)
+{
+    clk_stop();
+    clk_lo();
+    uint16_t i;
+    for (i = 0; i < cycles; i++) {
+        printf("%05d: ", i);
+        clk_hi();
+        bus_status();
+        printf("%05d: ", i);
+        clk_lo();
+        bus_status();
+    }
 }
 
 void read_mem(uint16_t addr, uint8_t * buf, uint16_t len)

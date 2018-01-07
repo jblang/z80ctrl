@@ -19,40 +19,48 @@
 
 #include <avr/io.h>
 #include <avr/pgmspace.h>
+#include <avr/interrupt.h>
 
 #include <util/delay.h>
 
 #include "uart.h"
-#include "spi.h"
-#include "iox.h"
 #include "bus.h"
 
-FILE uart_str =
-FDEV_SETUP_STREAM(uart_putchar, uart_getchar, _FDEV_SETUP_RW);
 
-uint8_t prog[] = {
-    0x3a, 0x0d, 0x00, 0x2a, 0x0e, 0x00, 0x86, 0x32, 0x0f, 0x00, 0xc3, 0x0a, 0x00, 0x0a, 0x05, 0x00
+FILE uart_str = FDEV_SETUP_STREAM(uart_putchar, uart_getchar, _FDEV_SETUP_RW);
+
+unsigned char hello_bin[] = {
+  0x21, 0x10, 0x00, 0xcd, 0x08, 0x00, 0x18, 0xfe, 0x7e, 0xa7, 0xc8, 0xd3,
+  0x00, 0x23, 0x18, 0xf8, 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x2c, 0x20, 0x77,
+  0x6f, 0x72, 0x6c, 0x64, 0x00
 };
+unsigned int hello_bin_len = 29;
 
 int main(void)
 {
-    char buf[80];
-    _delay_ms(10000);
     uart_init();
     stdout = stdin = &uart_str;
 
+    _delay_ms(5000);
+    printf("starting...\n");
+
     bus_init();
     clk_run();
+    _delay_ms(1);
     reset_hi();
+
+    printf("copy program...\n");
     bus_master();
-    write_mem(0x0000, prog, sizeof prog);
-    reset_lo();
+    write_mem(0x0000, hello_bin, hello_bin_len);
     bus_slave();
+
+    printf("reset...\n");
+    reset_lo();
+    _delay_ms(1);
     clk_stop();
+
+    printf("debugging...\n");
     reset_hi();
-    uint8_t i;
-    for (i = 0;; i++) {
-        clk_tick();
-    }
+    bus_trace(1500);
     return 0;
 }
