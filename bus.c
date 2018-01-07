@@ -8,11 +8,6 @@
 
 // CPU control /////////////////////////////////////////////////////////////////
 
-inline void ctrlx_pullup(void)
-{
-    iox_write(CTRLX_GPPU, 0xFF);
-}
-
 #ifdef HALT
 inline void halt_input(void)
 {
@@ -237,11 +232,6 @@ inline uint8_t get_rfsh(void)
 
 // Address bus /////////////////////////////////////////////////////////////////
 
-inline void addrhi_pullup(void)
-{
-    iox_write(ADDRHI_GPPU, 0xFF);
-}
-
 inline void addr_input(void)
 {
     ADDRLO_DDR = 0x00;
@@ -394,8 +384,7 @@ void bus_slave(void)
 
 void bus_init(void)
 {
-    ctrlx_pullup();
-    addrhi_pullup();
+    iox_init();
 
     int_output();
     nmi_output();

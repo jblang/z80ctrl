@@ -1,4 +1,3 @@
-inline void ctrlx_pullup(void);
 inline void halt_input(void);
 inline uint8_t get_halt(void);
 inline void ioack_output(void);
@@ -41,7 +40,6 @@ inline void wr_hi(void);
 inline void wr_lo(void);
 inline void rfsh_input(void);
 inline uint8_t get_rfsh(void);
-inline void addrhi_pullup(void);
 inline void addr_input(void);
 inline void addr_output(void);
 inline uint8_t get_addrlo(void);

@@ -61,6 +61,7 @@
 #define WRITE 0
 #define READ 1
 
+void iox_init(void);
 void iox_begin(uint8_t mode, uint8_t addr);
 void iox_end(void);
 uint8_t iox_read(uint8_t addr);

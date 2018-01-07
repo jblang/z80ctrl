@@ -41,7 +41,6 @@ int main(void)
     uart_init();
     stdout = stdin = &uart_str;
 
-    spi_init((1 << SD_CS) | (1 << IOX_CS));
     bus_init();
     clk_run();
     reset_hi();

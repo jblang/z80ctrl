@@ -3,6 +3,15 @@
 #include "iox.h"
 #include "spi.h"
 
+void iox_init(void)
+{
+    SPI_DDR |= (1 << IOX_CS);
+    SPI_PORT |= (1 << IOX_CS);
+    spi_init();
+    iox_write(GPPUA0, 0xFF);
+    iox_write(GPPUB0, 0xFF);
+}
+
 void iox_begin(uint8_t mode, uint8_t addr)
 {
     SPI_PORT &= ~(1 << IOX_CS);

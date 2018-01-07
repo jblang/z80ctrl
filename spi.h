@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-void spi_init(uint8_t cs_mask);
+void spi_init();
 inline uint8_t spi_exchange(uint8_t val);
 
 #endif
