@@ -1,6 +1,6 @@
 # z80ctrl
 
-This is an AVR-based bootloader and I/O firmware for a Z80 single-board computer.  The idea is to have the AVR load the SRAM with the ROM image from an SD card for the Z80 to run. The AVR will also provide debugging facilities, serial I/O, disk emulation, and potentially other peripherals for the Z80.  [Several](https://hackaday.io/project/7354-zaviour-board-avrz80-hybrid) [other](http://benryves.com/journal/3662496) people have had the idea to build a similar SBC before me. I took inspiration from these processes but I designed this specific circuit and software implementation myself without using any code from other projects.
+This is an AVR-based bootloader and I/O firmware for a Z80 single-board computer.  The idea is to have the AVR load the SRAM with the ROM image from an SD card for the Z80 to run. The AVR will also provide debugging facilities, serial I/O, disk emulation, and potentially other peripherals for the Z80.  [Several](https://hackaday.io/project/7354-zaviour-board-avrz80-hybrid) [other](http://benryves.com/journal/3662496) people have had the idea to build a similar SBC before me. I took inspiration from these projects but I designed this specific circuit and software implementation myself without using any code from other projects.
 
 Currently the computer consists of:
 
@@ -19,7 +19,7 @@ Currently the computer consists of:
 
 ## Connections
 
-I plan to eventually provide a schematic for the SBC, but for now, here is a description of how everything is connected, and teh rationale.
+I plan to eventually provide a schematic for the SBC, but for now, here is a description of how everything is connected, and the rationale.
 
 The ATmega1284p doesn't have enough I/O to interface with all of the Z80's bus, so the I/O expander provides additional I/O.  I have tried to design the bus layout so that the most freqently-changed I/O lines connect directly on the AVR, and those less-frequently changed are on the I/O expander.  The AVR has direct connections for the LSB of the address bus, the data bus, and IO and the memory control lines (MREQ, IORQ, RD, and WR).  The AVR provides a clock to the Z80 using either Fast PWM up to 10MHz, or using a slower bit banging method with debug info logged for each clock cycle.
 
