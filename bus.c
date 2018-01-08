@@ -142,14 +142,14 @@ inline uint8_t get_busack(void)
 
 inline void ctrl_input(void)
 {
-    CTRL_PORT |= ((1 << IORQ) | (1 << MREQ) | (1 << WR) | (1 << RD));
-    CTRL_DDR &= ~((1 << IORQ) | (1 << MREQ) | (1 << WR) | (1 << RD));
+    CTRL_PORT |= ((1 << MREQ) | (1 << WR) | (1 << RD));
+    CTRL_DDR &= ~((1 << MREQ) | (1 << WR) | (1 << RD));
 }
 
 inline void ctrl_output(void)
 {
-    CTRL_PORT |= ((1 << IORQ) | (1 << MREQ) | (1 << WR) | (1 << RD));
-    CTRL_DDR |= ((1 << IORQ) | (1 << MREQ) | (1 << WR) | (1 << RD));
+    CTRL_PORT |= ((1 << MREQ) | (1 << WR) | (1 << RD));
+    CTRL_DDR |= ((1 << MREQ) | (1 << WR) | (1 << RD));
 }
 
 inline void m1_input(void)
@@ -183,19 +183,14 @@ inline void mreq_lo(void)
     CTRL_PORT &= ~(1 << MREQ);
 }
 
+inline void iorq_input(void)
+{
+    CTRL_DDR ^= ~ (1 << IORQ);
+}
+
 inline uint8_t get_iorq(void)
 {
     return CTRL_PIN & (1 << IORQ);
-}
-
-inline void iorq_hi(void)
-{
-    CTRL_PORT |= (1 << IORQ);
-}
-
-inline void iorq_lo(void)
-{
-    CTRL_PORT &= ~(1 << IORQ);
 }
 
 inline uint8_t get_rd(void)
@@ -353,15 +348,17 @@ inline void clk_toggle(void)
     CTRL_PORT ^= (1 << CLK);
 }
 
+// Run the Z80's clock
 inline void clk_run(void)
 {
     // Fast PWM mode with adjustable top and no prescaler
-    TCCR2A |= (1 << COM2A0) | (1 << COM2B1) | (1 << WGM21) | (1 << WGM20);
+    TCCR2A |= (1 << COM2B1) | (1 << WGM21) | (1 << WGM20);
     TCCR2B |= (1 << WGM22) | (1 << CS20);
-    OCR2A = 200;
-    OCR2B = 100;
+    OCR2A = 90;
+    OCR2B = 45;
 }
 
+// Stop the Z80's clock
 inline void clk_stop()
 {
     TCCR2A = 0;
@@ -370,17 +367,41 @@ inline void clk_stop()
     OCR2B = 0;
 }
 
+// IORQ interrupt handler //////////////////////////////////////////////////////
+
+void enable_iorq_int(void)
+{
+    // trigger interrupt on falling edge of IORQ
+    EICRA = (1 << ISC01);
+    EIMSK = (1 << INT0);
+    sei();
+}
+
+volatile int int0cnt = 0;
+
+ISR(INT0_vect)
+{
+    //if(get_addrlo() == 0)
+        putchar(get_data());
+    ioack_lo();
+    _delay_us(10);
+    ioack_hi();
+}
+
 // Convenience functions //////////////////////////////////////////////////////
 
+// Request control of the bus from the Z80
 void bus_master(void)
 {
     busrq_lo();
-    while (!get_busack());
+    while (!get_busack())
+        ;
     ctrl_output();
     addr_output();
     data_input();
 }
 
+// Return control of the bus to the Z80
 void bus_slave(void)
 {
     ctrl_input();
@@ -389,6 +410,7 @@ void bus_slave(void)
     busrq_hi();
 }
 
+// Initialize bus
 void bus_init(void)
 {
     // Initialize I/O expander
@@ -400,6 +422,7 @@ void bus_init(void)
     reset_output();
     busrq_output();
     bank_output();
+    iorq_input();
     ioack_output();
     clk_output();
     busack_input();
@@ -415,7 +438,8 @@ void bus_init(void)
     clk_lo();
     set_bank(0);
 
-    // Clear wait flip flop
+    // Setup IORQ handling
+    enable_iorq_int();
     ioack_lo();
     ioack_hi();
 
@@ -423,6 +447,7 @@ void bus_init(void)
     bus_slave();
 }
 
+// Log current bus status
 void bus_status(void)
 {
     uint8_t data = get_data();
@@ -463,22 +488,24 @@ void bus_status(void)
         !!get_clk(), get_bank(), get_addr(), data, ascii);
 }
 
+// Trace the bus state for specified number of clock cycles
 void bus_trace(uint16_t cycles)
 {
     clk_stop();
     clk_lo();
     uint16_t i;
-    for (i = 0; i < cycles; i++) {
-        printf("%05d: ", i);
+    for (i = 0; i < cycles && get_halt() != 0; i++) {
         clk_hi();
-        bus_status();
         printf("%05d: ", i);
+        bus_status();
         clk_lo();
+        printf("%05d: ", i);
         bus_status();
     }
 }
 
-void read_mem(uint16_t addr, uint8_t * buf, uint16_t len)
+// Read specified number of bytes from external memory to a buffer
+void read_mem(uint16_t addr, uint8_t *buf, uint16_t len)
 {
     data_input();
     mreq_lo();
@@ -497,6 +524,7 @@ void read_mem(uint16_t addr, uint8_t * buf, uint16_t len)
     mreq_hi();
 }
 
+// Write specified number of bytes to external memory from a buffer
 void write_mem(uint16_t addr, uint8_t * buf, uint16_t len)
 {
     data_output();

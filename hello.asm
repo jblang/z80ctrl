@@ -3,7 +3,7 @@ tx:     equ 0
 
         ld hl, msg
         call strout
-end:    jr end
+        halt
 
 strout: ld a,(hl)
         and a
