@@ -1,66 +1,120 @@
-inline void halt_input(void);
-inline uint8_t get_halt(void);
-inline void ioack_output(void);
-inline uint8_t get_ioack(void);
-inline void ioack_hi(void);
-inline void ioack_lo(void);
-inline void int_output(void);
-inline uint8_t get_int(void);
-inline void int_lo(void);
-inline void int_hi(void);
-inline void nmi_output(void);
-inline uint8_t get_nmi(void);
-inline void nmi_lo(void);
-inline void nmi_hi(void);
-inline void reset_output(void);
-inline uint8_t get_reset();
-inline void reset_lo(void);
-inline void reset_hi(void);
-inline void busrq_output(void);
-inline uint8_t get_busrq(void);
-inline void busrq_lo(void);
-inline void busrq_hi(void);
-inline void busack_input(void);
-inline uint8_t get_busack(void);
-inline void ctrl_input(void);
-inline void ctrl_output(void);
-inline void m1_input(void);
-inline uint8_t get_m1(void);
-inline uint8_t get_mreq(void);
-inline void mreq_hi(void);
-inline void mreq_lo(void);
-inline void iorq_input(void);
-inline uint8_t get_iorq(void);
-inline uint8_t get_rd(void);
-inline void rd_hi(void);
-inline void rd_lo(void);
-inline uint8_t get_wr(void);
-inline void wr_hi(void);
-inline void wr_lo(void);
-inline void rfsh_input(void);
-inline uint8_t get_rfsh(void);
-inline void addr_input(void);
-inline void addr_output(void);
-inline uint8_t get_addrlo(void);
-inline void set_addrlo(uint8_t addr);
-inline uint8_t get_addrhi(void);
-inline void set_addrhi(uint8_t addr);
-inline uint16_t get_addr(void);
-inline void set_addr(uint16_t addr);
-inline void bank_output(void);
-inline uint8_t get_bank(void);
-inline void set_bank(uint8_t bank);
-inline void data_input(void);
-inline void data_output(void);
-inline uint8_t get_data(void);
-inline void set_data(uint8_t data);
-inline void clk_output(void);
-inline uint8_t get_clk(void);
-inline void clk_hi(void);
-inline void clk_lo(void);
-inline void clk_toggle(void);
-inline void clk_run(void);
-inline void clk_stop(void);
+#ifndef BUS_H
+#define BUS_H
+
+#include "defines.h"
+#include <avr/io.h>
+
+// CPU control /////////////////////////////////////////////////////////////////
+
+#ifdef HALT
+#define HALT_INPUT CTRL2_PIN &= ~(1 << HALT)
+#define GET_HALT (CTRL2_PIN & (1 << HALT))
+#else
+#define HALT_INPUT
+#define GET_HALT 1
+#endif
+
+#define IOACK_OUTPUT CTRL_DDR |= (1 << IOACK)
+#define GET_IOACK (CTRL_PIN & (1 << IOACK))
+#define IOACK_HI CTRL_PORT |= (1 << IOACK)
+#define IOACK_LO CTRL_PORT &= ~(1 << IOACK)
+
+#define INT_OUTPUT iox_write(CTRLX_IODIR, iox_read(CTRLX_IODIR) & ~(1 << INT))
+#define GET_INT (iox_read(CTRLX_GPIO) & (1 << INT))
+#define INT_LO iox_write(CTRLX_GPIO, iox_read(CTRLX_GPIO) & ~(1 << INT))
+#define INT_HI iox_write(CTRLX_GPIO, iox_read(CTRLX_GPIO) | (1 << INT))
+
+#define NMI_OUTPUT iox_write(CTRLX_IODIR, iox_read(CTRLX_IODIR) & ~(1 << NMI))
+#define GET_NMI (iox_read(CTRLX_GPIO) & (1 << NMI))
+#define NMI_LO iox_write(CTRLX_GPIO, iox_read(CTRLX_GPIO) & ~(1 << NMI))
+#define NMI_HI iox_write(CTRLX_GPIO, iox_read(CTRLX_GPIO) | (1 << NMI))
+
+#define RESET_OUTPUT iox_write(CTRLX_IODIR, iox_read(CTRLX_IODIR) & ~(1 << RESET))
+#define GET_RESET (iox_read(CTRLX_GPIO) & (1 << RESET))
+#define RESET_LO iox_write(CTRLX_GPIO, iox_read(CTRLX_GPIO) & ~(1 << RESET))
+#define RESET_HI iox_write(CTRLX_GPIO, iox_read(CTRLX_GPIO) | (1 << RESET))
+
+// CPU bus control /////////////////////////////////////////////////////////////
+
+#define BUSRQ_OUTPUT iox_write(CTRLX_IODIR, iox_read(CTRLX_IODIR) & ~(1 << BUSRQ))
+#define GET_BUSRQ (iox_read(CTRLX_GPIO) & (1 << BUSRQ))
+#define BUSRQ_LO iox_write(CTRLX_GPIO, iox_read(CTRLX_GPIO) & ~(1 << BUSRQ))
+#define BUSRQ_HI iox_write(CTRLX_GPIO, iox_read(CTRLX_GPIO) | (1 << BUSRQ))
+
+#define BUSACK_INPUT iox_write(CTRLX_IODIR, iox_read(CTRLX_IODIR) | (1 << BUSACK))
+#define GET_BUSACK (iox_read(CTRLX_GPIO) & (1 << BUSACK))
+
+// System control //////////////////////////////////////////////////////////////
+
+#define CTRL_INPUT CTRL_DDR &= ~((1 << MREQ) | (1 << WR) | (1 << RD))
+#define CTRL_OUTPUT CTRL_DDR |= ((1 << MREQ) | (1 << WR) | (1 << RD))
+#define CTRL_HI CTRL_PORT |= ((1 << MREQ) | (1 << WR) | (1 << RD))
+
+#ifdef M1
+#define M1_INPUT CTRL2_DDR &= ~(1 << M1)
+#define GET_M1 (CTRL2_PIN & (1 << M1))
+#else
+#define M1_INPUT
+#define GET_M1 1
+#endif
+
+#define GET_MREQ (CTRL_PIN & (1 << MREQ))
+#define MREQ_HI CTRL_PORT |= (1 << MREQ)
+#define MREQ_LO CTRL_PORT &= ~(1 << MREQ)
+
+#define IORQ_INPUT CTRL_DDR &= ~(1 << IORQ)
+#define GET_IORQ (CTRL_PIN & (1 << IORQ))
+
+#define GET_RD (CTRL_PIN & (1 << RD))
+#define RD_HI CTRL_PORT |= (1 << RD)
+#define RD_LO CTRL_PORT &= ~(1 << RD)
+
+#define GET_WR (CTRL_PIN & (1 << WR))
+#define WR_HI CTRL_PORT |= (1 << WR)
+#define WR_LO CTRL_PORT &= ~(1 << WR)
+
+#ifdef RFSH
+#define RFSH_INPUT CTRL2_DDR &= ~(1 << RFSH)
+#define GET_RFSH (CTRL2_PIN & (1 << RFSH))
+#else
+#define RFSH_INPUT
+#define GET_RFSH 1
+#endif
+
+// Address bus /////////////////////////////////////////////////////////////////
+
+#define ADDR_INPUT (ADDRLO_DDR = 0x00, iox_write(ADDRHI_IODIR, 0xFF))
+#define ADDR_OUTPUT (ADDRLO_DDR = 0xFF, iox_write(ADDRHI_IODIR, 0x00))
+#define GET_ADDRLO ADDRLO_PIN
+#define SET_ADDRLO(addr) ADDRLO_PORT = (addr)
+#define GET_ADDRHI iox_read(ADDRHI_GPIO)
+#define SET_ADDRHI(addr) iox_write(ADDRHI_GPIO, (addr))
+#define GET_ADDR (GET_ADDRLO | (GET_ADDRHI << 8))
+#define SET_ADDR(addr) (SET_ADDRLO((addr) & 0xFF), SET_ADDRHI((addr) >> 8))
+
+#define BANK_OUTPUT iox_write(CTRLX_IODIR, iox_read(CTRLX_IODIR) & ~BANKMASK)
+#define GET_BANK ((iox_read(CTRLX_GPIO) & BANKMASK) >> BANKADDR)
+#define SET_BANK(bank) iox_write(CTRLX_GPIO, (iox_read(CTRLX_GPIO) & ~BANKMASK) | (((bank) << BANKADDR) & BANKMASK))
+
+// Data bus ///////////////////////////////////////////////////////////////////
+
+#define DATA_INPUT DATA_DDR = 0x00
+#define DATA_OUTPUT DATA_DDR = 0xFF
+#define GET_DATA DATA_PIN
+#define SET_DATA(data) DATA_PORT = (data)
+
+// Clock ///////////////////////////////////////////////////////////////////////
+
+#define CLK_OUTPUT CTRL_DDR |= (1 << CLK)
+#define GET_CLK (CTRL_PIN & (1 << CLK))
+#define CLK_HI CTRL_PORT |= (1 << CLK)
+#define CLK_LO CTRL_PORT &= ~(1 << CLK)
+#define CLK_TOGGLE CTRL_PIN |= (1 << CLK)
+
+void clk_cycle(uint8_t cycles);
+void clk_run(void);
+void clk_stop(void);
+void z80_reset(void);
 void bus_master(void);
 void bus_slave(void);
 void bus_init(void);
@@ -68,3 +122,5 @@ void bus_status(void);
 void bus_trace(uint16_t cycles);
 void read_mem(uint16_t addr, uint8_t * buf, uint16_t len);
 void write_mem(uint16_t addr, uint8_t * buf, uint16_t len);
+
+#endif
