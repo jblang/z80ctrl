@@ -2,6 +2,7 @@
 
 This is an AVR-based bootloader and I/O firmware for a Z80 single-board computer.  The idea is to have the AVR load the SRAM with the ROM image from an SD card for the Z80 to run. The AVR will also provide debugging facilities, serial I/O, disk emulation, and potentially other peripherals for the Z80.  [Several](https://hackaday.io/project/7354-zaviour-board-avrz80-hybrid) [other](http://benryves.com/journal/3662496) people have had the idea to build a similar SBC before me. I took inspiration from these projects but I designed this specific circuit and software implementation myself without using any code from other projects.
 
+
 ## Hardware
 
 Currently the computer consists of:
@@ -18,6 +19,8 @@ Currently the computer consists of:
 - LM1117T 3.3V regulator
 - Various bypass and filter caps
 - The prototype has been built on two full-size breadboards using dupont wire.
+
+![breadboard](breadboard.jpg)
 
 I plan to eventually provide a schematic for the SBC, but for now, here is a general description of how everything is connected, and the rationale for doing it this way.
 
@@ -36,6 +39,8 @@ The specific ports and pins used for each function are defined in `defines.h`.  
 As an early test, I successfully ran a simple "hello, world" program (`hello.asm`) that I wrote in Z80 assembly language. I implemented I/O ports for the UART that are compatible with the Altair 8800 2SIO board.  With this in place, I have gotten a simple monitor program (`turnmon.asm`) for the Altair 8800 to run unmodified. Altair 4K BASIC starts to load (prompts for memory, terminal width, etc.) but then hangs before issuing the ready prompt and I haven't figured out what the problem is yet. Following that, I will implement bootloading and drive emulation from the SD Card with the goal of getting CP/M to run.
 
 I am cross-assembling the programs using `z80asm` for Zilog mnemonics, or `asm8080` for Intel mnemonics. After assembling the programs, I use `xxd -i` to generate a C header file with an array containing the machine code, include the header file into my main program, and use my memory transfer functions to copy them to the external SRAM.
+
+![monitor](monitor.png)
 
 ## License
 
