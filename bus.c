@@ -212,18 +212,42 @@ void read_mem(uint16_t addr, uint8_t *buf, uint16_t len)
     for (i = 0; i < len; i++) {
         buf[i] = GET_DATA;
         addr++;
-        if (addr & 0xFF == 0) {
+        if ((addr & 0xFF) == 0) {
             SET_ADDR(addr);
         } else {
-            SET_ADDRLO(addr);
+            SET_ADDRLO(addr & 0xFF);
         }
     }
     RD_HI;
     MREQ_HI;
 }
 
+
+
+// Hex dump memory block to console
+void dump_mem(uint16_t addr, uint16_t len)
+{
+    DATA_INPUT;
+    MREQ_LO;
+    RD_LO;
+    SET_ADDR(addr);
+    uint16_t i;
+    for (i = 0; i < len; i++) {
+        printf("%04x %02x\n", GET_ADDR, GET_DATA);
+        addr++;
+        if ((addr & 0xFF) == 0) {
+            SET_ADDR(addr);
+        } else {
+            SET_ADDRLO(addr & 0xFF);
+        }
+    }
+    RD_HI;
+    MREQ_HI;
+}
+
+
 // Write specified number of bytes to external memory from a buffer
-void write_mem(uint16_t addr, uint8_t * buf, uint16_t len)
+void write_mem(uint16_t addr, uint8_t *buf, uint16_t len)
 {
     DATA_OUTPUT;
     MREQ_LO;
@@ -234,7 +258,7 @@ void write_mem(uint16_t addr, uint8_t * buf, uint16_t len)
         WR_LO;
         WR_HI;
         addr++;
-        if (addr & 0xFF == 0) {
+        if ((addr & 0xFF) == 0) {
             SET_ADDR(addr);
         } else {
             SET_ADDRLO(addr & 0xFF);
