@@ -9,7 +9,7 @@ F_CPU=20000000L
 PROGRAMMER=arduino
 PORT=/dev/ttyS9
 BAUD=115200
-CFLAGS=-O -DF_CPU=$(F_CPU) -mmcu=$(MCU)
+CFLAGS=-O3 -DF_CPU=$(F_CPU) -mmcu=$(MCU)
 
 
 $(BIN).hex: $(BIN).elf
