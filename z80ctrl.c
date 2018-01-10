@@ -13,20 +13,22 @@
 #include "uart.h"
 #include "bus.h"
 
+#include "hello.h"
+#include "turnmon.h"
+//#include "basic4k40.h"
+#define PROG_BIN turnmon_bin
+#define PROG_ORG 0xFD00
+#define PROG_LEN turnmon_bin_len
+
+uint8_t reset_vect[] = {0xc3, (PROG_ORG & 0xFF), (PROG_ORG >> 8)};
+
 
 FILE uart_str = FDEV_SETUP_STREAM(uart_putchar, uart_getchar, _FDEV_SETUP_RW);
 
-unsigned char hello_bin[] = {
-  0x21, 0x13, 0x00, 0xcd, 0x0b, 0x00, 0xdb, 0x00, 0xd3, 0x00, 0x76, 0x7e,
-  0xa7, 0xc8, 0xd3, 0x00, 0x23, 0x18, 0xf8, 0x68, 0x65, 0x6c, 0x6c, 0x6f,
-  0x2c, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64, 0x0a, 0x00
-};
-unsigned int hello_bin_len = 33;
-
 int main(void)
 {
-    unsigned char hello_read[hello_bin_len];
-    uint8_t i;
+    unsigned char verify_buf[PROG_LEN];
+    int i;
     
     uart_init();
     stdout = stdin = &uart_str;
@@ -38,42 +40,43 @@ int main(void)
 
     printf("copying program...\n");
     bus_master();
-    write_mem(0x0000, hello_bin, hello_bin_len);
+#if (PROG_ORG != 0x0000)
+    write_mem(0x0000, reset_vect, 3);
+#endif
+    write_mem(PROG_ORG, PROG_BIN, PROG_LEN);
+    write_mem(0x100, hello_bin, hello_bin_len);
 
-    printf("verifying program...\n");
-    read_mem(0x0000, hello_read, hello_bin_len);
-    uint8_t error = 0;
-    for (i = 0; i < hello_bin_len; i++) {
-      if (hello_bin[i] != hello_read[i]) {
-        printf("error at %x: %x (read) != %x (orig)\n", i, hello_read[i], hello_bin[i]);
-        error = 1;
-      }
-    }
-    if (error)
-      printf("verification failed!\n");
-    else
-      printf("program verified.\n");
     bus_slave();
 
     printf("resetting processor...\n");
     z80_reset();
 
     //bus_trace(1000);
-
     for (;;) {
       clk_run();
       while(GET_IORQ)
         ;
       clk_stop();
       switch (GET_ADDRLO) {
-          case 0x00:
-            if (!GET_WR) {
-                putchar(GET_DATA);
-            } else if (!GET_RD) {
-                SET_DATA(getchar());
-                DATA_OUTPUT;
+          case 0x10:    // sio0 status
+            if (!GET_RD) {
+              SET_DATA(((UCSR0A >> (UDRE0-1)) & 0x2) | ((UCSR0A >> RXC0) & 0x1));
+              DATA_OUTPUT;
             }
             break;
+          case 0x11:    // sio0 data
+            if (!GET_RD) {
+              SET_DATA(UDR0);
+              DATA_OUTPUT;
+            } else if (!GET_WR) {
+              UDR0 = GET_DATA;
+            }
+            break;
+          default:
+            if (!GET_RD) {
+              SET_DATA(0377);
+              DATA_OUTPUT;
+            }
       }
       IOACK_LO;
       while(!GET_IORQ)
@@ -81,5 +84,4 @@ int main(void)
       DATA_INPUT;
       IOACK_HI;
     }
-
 }
