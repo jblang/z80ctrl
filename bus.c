@@ -16,7 +16,6 @@ void clk_cycle(uint8_t cycles)
         CLK_HI;
         CLK_LO;
     }
-
 }
 
 // Run the Z80's clock
@@ -36,33 +35,6 @@ void clk_stop()
     TCCR2B = 0;
     OCR2A = 0;
     OCR2B = 0;
-}
-
-void z80_reset(void)
-{
-    RESET_LO;
-    clk_cycle(3);
-    RESET_HI;
-    IOACK_LO;
-    IOACK_HI;
-}
-
-// Set up interrupt on falling edge of IORQ
-void enable_iorq_int(void)
-{
-    EICRA = (1 << ISC01);
-    EIMSK = (1 << INT0);
-    sei();
-}
-
-// Interrupt handler for IORQ
-ISR(INT0_vect)
-{
-    //if(get_addrlo() == 0)
-        putchar(GET_DATA);
-    IOACK_LO;
-    _delay_us(100);
-    IOACK_HI;
 }
 
 // Request control of the bus from the Z80
@@ -108,6 +80,9 @@ void bus_init(void)
     M1_INPUT;
     RFSH_INPUT;
     HALT_INPUT;
+    
+    // Pullup on halt so it can be used with a switch
+    HALT_PULLUP;
 
     // Set defaults for output bus signals
     INT_HI;
@@ -163,6 +138,61 @@ void bus_status(void)
         !!GET_CLK, GET_BANK, GET_ADDR, data, ascii);
 }
 
+void z80_reset(void)
+{
+    RESET_LO;
+    clk_cycle(3);
+    RESET_HI;
+    IOACK_LO;
+    IOACK_HI;
+}
+
+void z80_run(uint16_t addr) {
+    uint8_t reset_vect[] = { 0xc3, (addr & 0xFF), (addr >> 8) };
+    if (addr > 0x0002) {
+        write_mem(0x0000, reset_vect, 3);
+    }
+    z80_reset();
+    clk_run();
+    for (;;) {
+        if (!GET_IORQ) {
+            clk_stop();
+            switch (GET_ADDRLO) {
+                case 0x10:             // sio0 status
+                    if (!GET_RD) {
+                        SET_DATA(((UCSR0A >> (UDRE0 - 1)) & 0x2) | ((UCSR0A >> RXC0) & 0x1));
+                        DATA_OUTPUT;
+                    }
+                    break;
+                case 0x11:             // sio0 data
+                    if (!GET_RD) {
+                        SET_DATA(UDR0);
+                        DATA_OUTPUT;
+                    } else if (!GET_WR) {
+                        UDR0 = GET_DATA;
+                    }
+                    break;
+                default:
+                    if (!GET_RD) {
+                        SET_DATA(0x3F);
+                        DATA_OUTPUT;
+                    }
+            }
+            IOACK_LO;
+            while (!GET_IORQ)
+                CLK_TOGGLE;
+            DATA_INPUT;
+            IOACK_HI;
+            clk_run();
+        }
+        if (!GET_HALT) {
+            clk_stop();
+            CLK_LO;
+            break;
+        }
+    }
+}
+
 // Trace the bus state for specified number of clock cycles
 void bus_trace(uint16_t cycles)
 {
@@ -201,14 +231,17 @@ void bus_trace(uint16_t cycles)
     }
 }
 
+
 // Read specified number of bytes from external memory to a buffer
 void read_mem(uint16_t addr, uint8_t *buf, uint16_t len)
 {
+    uint16_t i;
+
+    bus_master();
     DATA_INPUT;
     MREQ_LO;
     RD_LO;
     SET_ADDR(addr);
-    uint16_t i;
     for (i = 0; i < len; i++) {
         buf[i] = GET_DATA;
         addr++;
@@ -220,20 +253,26 @@ void read_mem(uint16_t addr, uint8_t *buf, uint16_t len)
     }
     RD_HI;
     MREQ_HI;
+    bus_slave();
 }
 
-
-
-// Hex dump memory block to console
-void dump_mem(uint16_t addr, uint16_t len)
+// Verify specified number of bytes from external memory against a buffer
+uint8_t verify_mem(uint16_t addr, uint8_t *buf, uint16_t len, uint8_t log)
 {
+    uint8_t error = 0;
+    uint16_t i;
+
+    bus_master();
     DATA_INPUT;
     MREQ_LO;
     RD_LO;
     SET_ADDR(addr);
-    uint16_t i;
     for (i = 0; i < len; i++) {
-        printf("%04x %02x\n", GET_ADDR, GET_DATA);
+        if (buf[i] != GET_DATA) {
+            if (log)
+                printf("Mismatch at %04x: expected %02x but read %02x\n", GET_ADDR, buf[i], GET_DATA);
+            error = 1;
+        }
         addr++;
         if ((addr & 0xFF) == 0) {
             SET_ADDR(addr);
@@ -243,12 +282,40 @@ void dump_mem(uint16_t addr, uint16_t len)
     }
     RD_HI;
     MREQ_HI;
+    bus_slave();
+    return error;
 }
 
+
+// Hex dump memory block to console
+void dump_mem(uint16_t addr, uint16_t len)
+{
+    bus_master();
+    DATA_INPUT;
+    MREQ_LO;
+    RD_LO;
+    SET_ADDR(addr);
+    uint16_t i;
+    for (i = 0; i < len; i++) {
+        if ((i & 0xFF) == 0)
+            printf("\n%04x: ", GET_ADDR);
+        printf("%02x ", GET_DATA);
+        addr++;
+        if ((addr & 0xFF) == 0) {
+            SET_ADDR(addr);
+        } else {
+            SET_ADDRLO(addr & 0xFF);
+        }
+    }
+    RD_HI;
+    MREQ_HI;
+    bus_slave();
+}
 
 // Write specified number of bytes to external memory from a buffer
 void write_mem(uint16_t addr, uint8_t *buf, uint16_t len)
 {
+    bus_master();
     DATA_OUTPUT;
     MREQ_LO;
     SET_ADDR(addr);
@@ -266,4 +333,5 @@ void write_mem(uint16_t addr, uint8_t *buf, uint16_t len)
     }
     MREQ_HI;
     DATA_INPUT;
+    bus_slave();
 }

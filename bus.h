@@ -6,13 +6,9 @@
 
 // CPU control /////////////////////////////////////////////////////////////////
 
-#ifdef HALT
-#define HALT_INPUT CTRL2_PIN &= ~(1 << HALT)
+#define HALT_INPUT CTRL2_DDR &= ~(1 << HALT)
+#define HALT_PULLUP CTRL2_PORT |= (1 << HALT)
 #define GET_HALT (CTRL2_PIN & (1 << HALT))
-#else
-#define HALT_INPUT
-#define GET_HALT 1
-#endif
 
 #define IOACK_OUTPUT CTRL_DDR |= (1 << IOACK)
 #define GET_IOACK (CTRL_PIN & (1 << IOACK))
