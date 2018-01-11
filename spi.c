@@ -8,7 +8,7 @@ void spi_init()
 {
     SPI_DDR |= (1 << MOSI) | (1 << SCK);
     SPI_DDR &= ~(1 << MISO);
-    //SPSR = (1<<SPI2X);
+    SPSR = (1 << SPI2X);
     SPCR = (1 << SPE) | (1 << MSTR);
 }
 
