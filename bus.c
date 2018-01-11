@@ -297,7 +297,7 @@ void dump_mem(uint16_t addr, uint16_t len)
     SET_ADDR(addr);
     uint16_t i;
     for (i = 0; i < len; i++) {
-        if ((i & 0xFF) == 0)
+        if ((i & 0xF) == 0)
             printf("\n%04x: ", GET_ADDR);
         printf("%02x ", GET_DATA);
         addr++;
@@ -307,6 +307,7 @@ void dump_mem(uint16_t addr, uint16_t len)
             SET_ADDRLO(addr & 0xFF);
         }
     }
+    printf("\n");
     RD_HI;
     MREQ_HI;
     bus_slave();
