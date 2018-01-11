@@ -53,8 +53,8 @@
 #define CTRL2_PORT PORTB
 #define CTRL2_PIN PINB
 #define M1 1
-#define RFSH 2
-#define HALT 3
+//#define RFSH 2
+#define HALT 2
 
 // CPU control lines on i/o expander
 #define CTRLX_IODIR IODIRB0
