@@ -188,6 +188,7 @@ void z80_run(uint16_t addr) {
         if (!GET_HALT) {
             clk_stop();
             CLK_LO;
+            printf("\n\nz80 halted\n");
             break;
         }
     }

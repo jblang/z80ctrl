@@ -145,7 +145,7 @@ With the Z80 bus interface, UART RX/TX, SPI MISO/MOSI/SCK, and chip selects for 
 
 ### AVR
 
-The AVR is programmed with the [MightyCore](https://github.com/MCUdude/MightyCore) bootloader to allow it to be reprogrammed through the serial interface.  Although I am using the MightyCore bootloader, I do not use the Arduino libraries; only avr-libc. I plan to use the [fatfs](http://elm-chan.org/fsw/ff/00index_e.html) library to provide access to a FAT32-formatted SD-card containing ROM and disk images for the Z80.
+The AVR is programmed with the [MightyCore](https://github.com/MCUdude/MightyCore) bootloader to allow it to be reprogrammed through the serial interface.  Although I am using the MightyCore bootloader, I do not use the Arduino libraries; only avr-libc. I use the [fatfs](http://elm-chan.org/fsw/ff/00index_e.html) library to provide access to a FAT32-formatted SD-card containing ROM and disk images for the Z80.
 
 The layout of the source code is as follows:
 - The specific ports and pins used for the Z80 bus interface and SPI chip selects are defined in `defines.h`.
@@ -153,6 +153,7 @@ The layout of the source code is as follows:
 - Convenience functions are provided in `bus.c` to intialize the bus, enter and exit bus-master mode, do DMA transfers, reset and start the Z80, and trace the bus status during program execution.  Altair 8800 2SIO-compatible I/O ports for the Z80 are redirected to the UART on the AVR. 
 - The `uart.c` and `uart.h` files borrowed from the avr-libc [stdio demo](http://www.nongnu.org/avr-libc/user-manual/group__stdiodemo.html) allow the use of the C stdio library over serial.
 - `z80ctrl.c` contains the main function that presents a command-line monitor interface to allow programs to be loaded and run, memory to be inspected, and so forth. 
+- `cli.c` contains the command-line interface for controlling the Z80 and memory via the AVR.
 
 ### Z80
 

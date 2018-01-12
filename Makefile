@@ -1,5 +1,5 @@
 BIN=z80ctrl
-OBJS=z80ctrl.o uart.o spi.o iox.o bus.o diskio.o ff.o ffsystem.o mmc_avr_spi.o ffunicode.o
+OBJS=z80ctrl.o uart.o spi.o iox.o bus.o diskio.o ff.o ffsystem.o mmc_avr_spi.o ffunicode.o cli.o
 
 CC=avr-gcc
 OBJCOPY=avr-objcopy
