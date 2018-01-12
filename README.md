@@ -157,8 +157,9 @@ The layout of the source code is as follows:
 ### Z80
 
 Thus far, I have tested the following code on the Z80:
-- I wrote a simple "hello, world" program in Z80 assembly language (`hello.asm`) to test that the Z80 was able to successfully run code and use the serial I/O ports.  
-- The first "real" software I got to run unmodified was Turnkey Monitor (`turnmon.asm`), a simple monitor program for the Altair 8800b. 
+- I wrote a simple "hello, world" program in Z80 assembly language to test that the Z80 was able to successfully run code and use the serial I/O ports (`hello.asm`).  
+- The first "real" software I got to run unmodified was [Turnkey Monitor](http://www.autometer.de/unix4fun/z80pack/ftp/altair/turnmon.asm) , a simple monitor program for the Altair 8800b (`turnmon.asm`). 
+- I later discovered the more fully featured [Altair Monitor](http://altairclone.com/downloads/roms/Altair%20Monitor/) from the [Altair Clone](http://altairclone.com) project and switched to using it (`altmon.asm`).
 - I have tried unsuccessfully to run Altair 4K BASIC. It starts to load (prompts for memory, terminal width, etc.) but then hangs before issuing the ready prompt. According to [one source](http://www.autometer.de/unix4fun/z80pack/ftp/altair/), 4K BASIC is not compatible with the Z80 so the problem may not be on my end. 
 
 Once I implement bootloading and drive emulation using the SD Card, the ultimate goal is to get CP/M running.

@@ -13,8 +13,9 @@
 #include "bus.h"
 
 #include "hello.h"
-#include "turnmon.h"
+//#include "turnmon.h"
 //#include "basic4k40.h"
+#include "altmon.h"
 
 FILE uart_str = FDEV_SETUP_STREAM(uart_putchar, uart_getchar, _FDEV_SETUP_RW);
 
@@ -75,10 +76,10 @@ int main(void)
 
     printf("copying program...\n");
     write_mem(0x0100, hello_bin, hello_bin_len);
-    write_mem(0xfd00, turnmon_bin, turnmon_bin_len);
+    write_mem(0xf800, altmon_bin, altmon_bin_len);
 
     printf("running program...\n");
-    z80_run(0xfd00);
+    z80_run(0xf800);
 
     printf("halted.\n");
 
