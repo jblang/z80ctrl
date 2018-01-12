@@ -20,7 +20,7 @@
 #define MISO 6
 #define MOSI 5
 #define IOX_CS 4
-#define SD_CS 3
+#define SD_CS 0
 
 // Data bus on local port
 #define DATA_DDR DDRC
@@ -60,7 +60,7 @@
 #define CTRLX_IODIR IODIRB0
 #define CTRLX_GPPU GPPUB0
 #define CTRLX_GPIO GPIOB0
-#define INT 0
+#define INTERRUPT 0
 #define NMI 1
 #define RESET 2
 #define BUSRQ 3
@@ -68,6 +68,6 @@
 #define BANKADDR 5
 #define BANKMASK ((1<<BANKADDR) | (1<<(BANKADDR+1)) | (1<<(BANKADDR+2)))
 
-#define DEBUG
+#define DRV_MMC 0
 
 #endif

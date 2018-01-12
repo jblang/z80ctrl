@@ -15,10 +15,10 @@
 #define IOACK_HI CTRL_PORT |= (1 << IOACK)
 #define IOACK_LO CTRL_PORT &= ~(1 << IOACK)
 
-#define INT_OUTPUT iox_write(CTRLX_IODIR, iox_read(CTRLX_IODIR) & ~(1 << INT))
-#define GET_INT (iox_read(CTRLX_GPIO) & (1 << INT))
-#define INT_LO iox_write(CTRLX_GPIO, iox_read(CTRLX_GPIO) & ~(1 << INT))
-#define INT_HI iox_write(CTRLX_GPIO, iox_read(CTRLX_GPIO) | (1 << INT))
+#define INT_OUTPUT iox_write(CTRLX_IODIR, iox_read(CTRLX_IODIR) & ~(1 << INTERRUPT))
+#define GET_INT (iox_read(CTRLX_GPIO) & (1 << INTERRUPT))
+#define INT_LO iox_write(CTRLX_GPIO, iox_read(CTRLX_GPIO) & ~(1 << INTERRUPT))
+#define INT_HI iox_write(CTRLX_GPIO, iox_read(CTRLX_GPIO) | (1 << INTERRUPT))
 
 #define NMI_OUTPUT iox_write(CTRLX_IODIR, iox_read(CTRLX_IODIR) & ~(1 << NMI))
 #define GET_NMI (iox_read(CTRLX_GPIO) & (1 << NMI))
