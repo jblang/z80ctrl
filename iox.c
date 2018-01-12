@@ -5,8 +5,6 @@
 
 void iox_init(void)
 {
-    SPI_DDR |= (1 << IOX_CS);
-    SPI_PORT |= (1 << IOX_CS);
     spi_init();
     iox_write(GPPUA0, 0xFF);
     iox_write(GPPUB0, 0xFF);
