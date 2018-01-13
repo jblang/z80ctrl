@@ -97,43 +97,41 @@ void bus_init(void)
     bus_slave();
 }
 
-// Log current bus status
-void bus_status(void)
-{
-    uint8_t data = GET_DATA;
-    uint8_t ascii = (data >= 0x20 && data <= 0x7e) ? data : ' ';
+#define HL(signal) ((signal) ? 'H' : 'L')
 
-    printf(
-#ifdef M1
-        "m1=%x "
-#else
-        "m1=X "
-#endif        
-        "mreq=%x iorq=%x rd=%x wr=%x "
+// Log current bus status
+char *bus_status()
+{
+    static char buf[256];
+    uint8_t ctrlx = iox_read(CTRLX_GPIO);
+    uint8_t data = GET_DATA;
+
+    sprintf(buf,
+        "CLK=%c M1=%c MREQ=%c IORQ=%c IOACK=%c RD=%c WR=%c RFSH=%c HALT=%c "
+        "INT=%c NMI=%c RESET=%c BUSRQ=%c BUSACK=%c BANK=%X ADDR=%04X "
+        "DATA=%02X %c\n",
+        HL(GET_CLK), 
+        HL(GET_M1), 
+        HL(GET_MREQ), 
+        HL(GET_IORQ), 
+        HL(GET_IOACK),
+        HL(GET_RD), 
+        HL(GET_WR), 
 #ifdef RFSH
-        "rfsh=%x "
+        HL(GET_RFSH), 
 #else
-        "rfsh=X "
+        'X',
 #endif
-#ifdef HALT
-        "halt=%x "
-#else
-        "halt=X "
-#endif
-        "wait=%x "
-        "int=%x nmi=%x reset=%x busrq=%x busack=%x "
-        "clk=%x bank=%x addr=%04x data=%02x %c\n",
-#ifdef M1
-        !!GET_M1, 
-#endif
-        !!GET_MREQ, !!GET_IORQ, !!GET_RD, !!GET_WR,
-#ifdef RFSH
-        !!GET_RFSH, 
-#endif
-#ifdef HALT
-        !!GET_HALT, 
-#endif
-        !!GET_IOACK,
-        !!GET_INT, !!GET_NMI, !!GET_RESET, !!GET_BUSRQ, !!GET_BUSACK,
-        !!GET_CLK, GET_BANK, GET_ADDR, data, ascii);
+        HL(GET_HALT), 
+        HL(ctrlx & (1 << INTERRUPT)), 
+        HL(ctrlx & (1 << NMI)), 
+        HL(ctrlx & (1 << RESET)), 
+        HL(ctrlx & (1 << BUSRQ)), 
+        HL(ctrlx & (1 << BUSACK)),
+        ((ctrlx & BANKMASK) >> BANKADDR), 
+        GET_ADDR, 
+        data,
+        ((0x20 <= data && data <= 0x7e) ? data : ' '));
+
+    return buf;
 }

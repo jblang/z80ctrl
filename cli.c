@@ -38,7 +38,7 @@ void cli_run(char *argv[], int argc)
 
 void cli_bus(char *argv[], int argc)
 {
-    bus_status();
+    puts(bus_status());
 }
 
 void cli_altmon(char *argv[], int argc)
