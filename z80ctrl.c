@@ -21,10 +21,6 @@ int main(void)
 
     printf("z80ctrl 0.9 by J.B. Langston\n\n");
 
-    disk_initialize(0);
-    if ((rc = f_mount(&fs, "", 1)) != FR_OK) {
-        printf("error %d mounting fs.", rc);
-    }
     bus_init();
 
     cli_loop();
