@@ -11,6 +11,7 @@ void spi_init(void)
     SPI_PORT |= (1 << IOX_CS) | (1 << SD_CS);
     SPSR = (1 << SPI2X);
     SPCR = (1 << SPE) | (1 << MSTR);
+    spi_fast();
 }
 
 void spi_slow(void)
