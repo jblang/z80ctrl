@@ -97,3 +97,98 @@ void dump_mem(uint16_t addr, uint16_t len)
         printf("\n");
     }
 }
+
+uint8_t fromhex(char hex)
+{
+    if ('0' <= hex && hex <= '9')
+        return hex - '0';
+    else if ('A' <= hex && hex <= 'F')
+        return hex - 'A' + 10;
+    else if ('a' <= hex && hex <= 'f')
+        return hex - 'a' + 10;
+    else
+        return 255;
+}
+
+int write_ihex_rec(char *record) 
+{
+    int i;
+
+    if (strlen(record) < 11)
+        return IHEX_FORMAT;
+    if (record[0] != ':')
+        return IHEX_FORMAT;
+    for (i = 1; i < strlen(record); i++) {
+        if (fromhex(record[i]) > 0xf)
+            return IHEX_FORMAT;
+    }
+    uint8_t count = fromhex(record[1]) << 4 | fromhex(record[2]);
+    if (strlen(record) < 11 + count)
+        return IHEX_COUNT;
+    uint16_t addr = fromhex(record[3]) << 12 | fromhex(record[4]) << 8 | fromhex(record[5]) << 4 | fromhex(record[6]);
+    uint8_t type = fromhex(record[7]) << 4 | fromhex(record[8]);
+    uint8_t check1 = count + (addr >> 8) + (addr & 0xff) + type;
+    uint8_t data[256];
+    for (i = 0; i < count; i++) {
+        data[i] = fromhex(record[i*2+9]) << 4 | fromhex(record[i*2+10]);
+        check1 += data[i];
+    }
+    check1 = ~check1 + 1;
+    uint8_t check2 = fromhex(record[count*2+9]) << 4 | fromhex(record[count*2+10]);
+    if (check1 != check2)
+        return IHEX_CKSUM;
+    switch (type) {
+        case 0:
+            write_mem(addr, data, count);
+            return count;
+        case 1:
+            return IHEX_EOF;
+        default:
+            return IHEX_RECTYPE;
+    }
+}
+
+uint8_t tohex(uint8_t nyb)
+{
+    if (0 <= nyb && nyb <= 9)
+        return '0' + nyb;
+    else if (0xa <= nyb && nyb <= 0xf)
+        return 'A' + nyb - 10;
+    else
+        return 0;
+}
+
+char *read_ihex_rec(uint16_t addr, uint8_t len) 
+{
+    static char record[512+11];
+    uint8_t membuf[256];
+    uint8_t check = len + (addr >> 8) + (addr & 0xff);
+    int i;
+
+    record[0] = ':';
+    record[1] = tohex(len >> 4);
+    record[2] = tohex(len & 0xf);
+    record[3] = tohex((addr >> 12) & 0xf);
+    record[4] = tohex((addr >> 8) & 0xf);
+    record[5] = tohex((addr >> 4) & 0xf);
+    record[6] = tohex(addr & 0xf);
+    record[7] = '0';
+    if (len > 0) {
+        record[8] = '0';
+        read_mem(addr, membuf, len);
+    } else {
+        check += 1;
+        record[8] = '1';
+    }
+    for (i = 0; i < len; i++) {
+        record[i*2+9] = tohex(membuf[i] >> 4);
+        record[i*2+10] = tohex(membuf[i] & 0xf);
+        check += membuf[i];
+    }
+    check = ~check + 1;
+    record[len*2+9] = tohex(check >> 4);
+    record[len*2+10] = tohex(check & 0xf);
+    for (i = len*2+11; i < 512+11; i++)
+        record[i] = 0;
+    return record;
+}

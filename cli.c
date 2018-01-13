@@ -12,6 +12,43 @@
 #define MAXBUF 80
 #define MAXARGS 3
 
+void cli_loadihex(char *argv[], int argc)
+{
+    int rc;
+    char buf[512+11];
+    do {
+        gets(buf);
+        rc = write_ihex_rec(buf);
+        if (rc < 0 && rc != IHEX_EOF)
+            printf("error %d reading ihex");
+    } while (rc != IHEX_EOF);
+}
+
+void cli_saveihex(char *argv[], int argc)
+{
+
+    uint16_t addr;
+    uint16_t length;
+    uint16_t i;
+    if (argc != 2) {
+        printf("usage: saveihex <start> <length>\n");
+        return;
+    }
+    sscanf(argv[0], "%x", &addr);
+    sscanf(argv[1], "%x", &length);
+    for (;;) {
+        if (length > 16) {
+            printf("%s\n", read_ihex_rec(addr, 16));
+            length -= 16;
+            addr += 16;
+        } else {
+            printf("%s\n", read_ihex_rec(addr, length));
+            break;
+        }
+    }
+    printf("%s\n", read_ihex_rec(0,0));
+}
+
 void cli_dump(char *argv[], int argc)
 {
     uint16_t addr;
@@ -60,7 +97,9 @@ cli_entry cli_cmds[] = {
     {"dump", "hex dump of memory range", &cli_dump},
     {"run", "execute code at address", &cli_run},
     {"bus", "display current bus status", &cli_bus},
-    {"altmon", "run altmon 8080 monitor", &cli_altmon}
+    {"altmon", "run altmon 8080 monitor", &cli_altmon},
+    {"loadihex", "load Intel HEX records to memory", &cli_loadihex},
+    {"saveihex", "load Intel HEX records to memory", &cli_saveihex}
 };
 
 #define NUM_CMDS (sizeof(cli_cmds)/sizeof(cli_entry))
