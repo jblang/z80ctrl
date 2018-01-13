@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "altmon.h"
 #include "bus.h"
@@ -12,7 +13,7 @@
 
 FATFS fs;
 
-void cli_loadihex(char *argv[], int argc)
+void cli_loadihex(int argc, char *argv[])
 {
     int rc;
     char buf[512+11];
@@ -24,7 +25,7 @@ void cli_loadihex(char *argv[], int argc)
     } while (rc != IHEX_EOF);
 }
 
-void cli_saveihex(char *argv[], int argc)
+void cli_saveihex(int argc, char *argv[])
 {
 
     uint16_t addr;
@@ -34,8 +35,8 @@ void cli_saveihex(char *argv[], int argc)
         printf_P(PSTR("usage: saveihex <start> <length>\n"));
         return;
     }
-    sscanf(argv[1], "%x", &addr);
-    sscanf(argv[2], "%x", &length);
+    addr = strtol(argv[1], NULL, 16) & 0xffff;
+    length = strtol(argv[2], NULL, 16) & 0xffff;
     for (;;) {
         if (length > 16) {
             printf_P(PSTR("%s\n"), read_ihex_rec(addr, 16));
@@ -49,7 +50,7 @@ void cli_saveihex(char *argv[], int argc)
     printf_P(PSTR("%s\n"), read_ihex_rec(0,0));
 }
 
-void cli_dump(char *argv[], int argc)
+void cli_dump(int argc, char *argv[])
 {
     uint16_t addr;
     uint16_t length;
@@ -57,34 +58,45 @@ void cli_dump(char *argv[], int argc)
         printf_P(PSTR("usage: dump <start> <length>\n"));
         return;
     }
-    sscanf(argv[1], "%x", &addr);
-    sscanf(argv[2], "%x", &length);
+    addr = strtol(argv[1], NULL, 16) & 0xffff;
+    length = strtol(argv[2], NULL, 16) & 0xffff;
     dump_mem(addr, length);
 }
 
-void cli_run(char *argv[], int argc)
+void cli_run(int argc, char *argv[])
 {
     uint16_t addr;
     if (argc != 2) {
         printf_P(PSTR("usage: run <address>\n"));
         return;
     }
-    sscanf(argv[1], "%x", &addr);
+    addr = strtol(argv[1], NULL, 16) & 0xffff;
     z80_run(addr);
 }
 
-void cli_bus(char *argv[], int argc)
+void cli_bank(int argc, char *argv[])
+{
+    uint8_t bank;
+    if (argc != 2) {
+        printf_P(PSTR("usage: bank <0-7>\n"));
+        return;
+    }
+    bank = strtol(argv[1], NULL, 16) & 0x7;
+    SET_BANK(bank);    
+}
+
+void cli_bus(int argc, char *argv[])
 {
     puts(bus_status());
 }
 
-void cli_altmon(char *argv[], int argc)
+void cli_altmon(int argc, char *argv[])
 {
     write_mem_P(0xf800, altmon_bin, altmon_bin_len);
     z80_run(0xf800);
 }
 
-void cli_ls(char *argv[], int argc)
+void cli_dir(int argc, char *argv[])
 {
  	FRESULT fr;
     FILINFO Finfo;
@@ -133,12 +145,12 @@ void cli_ls(char *argv[], int argc)
     };
 }
 
-void cli_help(char *argv[], int argc);
+void cli_help(int argc, char *argv[]);
 
 typedef struct _cli_entry {
     char *name;
     char *desc;
-    void (*func)(char **, int);
+    void (*func)(int, char*[]);
 } cli_entry;
 
 cli_entry cli_cmds[] = {
@@ -146,15 +158,16 @@ cli_entry cli_cmds[] = {
     {"dump", "hex dump of memory range", &cli_dump},
     {"run", "execute code at address", &cli_run},
     {"bus", "display current bus status", &cli_bus},
+    {"bank", "selects active 64K bank from 512K SRAM", &cli_bank},
     {"altmon", "run altmon 8080 monitor", &cli_altmon},
     {"loadhex", "load Intel HEX records to memory", &cli_loadihex},
     {"savehex", "save Intel HEX records from memory", &cli_saveihex},
-    {"ls", "shows a directory listing", &cli_ls}
+    {"dir", "shows a directory listing", &cli_dir}
 };
 
 #define NUM_CMDS (sizeof(cli_cmds)/sizeof(cli_entry))
 
-void cli_help(char *argv[], int argc)
+void cli_help(int argc, char *argv[])
 {
     int i;
     printf_P(PSTR("available commands:\n"));
@@ -192,7 +205,7 @@ void cli_loop(void) {
             }
             for (i = 0; i < NUM_CMDS; i++) {
                 if (strcmp(argv[0], cli_cmds[i].name) == 0) {
-                    cli_cmds[i].func(argv, argc);
+                    cli_cmds[i].func(argc, argv);
                     break;
                 }
             }
