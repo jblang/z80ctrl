@@ -13,6 +13,7 @@
 
 #include "defines.h"
 #include <avr/io.h>
+#include <avr/interrupt.h>
 #include "diskio.h"
 #include "mmc_avr.h"
 #include "spi.h"
@@ -66,7 +67,27 @@ BYTE Timer1, Timer2;	/* 100Hz decrement timer */
 static
 BYTE CardType;			/* Card type flags (b0:MMC, b1:SDv1, b2:SDv2, b3:Block addressing) */
 
+volatile UINT Timer;    /* Performance timer (100Hz increment) */
 
+ISR(TIMER0_COMPA_vect)
+{
+    Timer++;                        /* Performance counter for this module */
+    disk_timerproc();       /* Drive timer procedure of low level disk I/O module */
+}
+
+void start_timer(void)
+{
+	/* Start 100Hz system timer with TC0 */
+	OCR0A = F_CPU / 1024 / 100 - 1;
+	TCCR0A = _BV(WGM01);
+	TCCR0B = 0b101;
+	TIMSK0 = _BV(OCIE0A);
+	sei();
+}
+
+DWORD get_fattime (void) {
+    return 0;
+}
 
 /*-----------------------------------------------------------------------*/
 /* Power Control  (Platform dependent)                                   */
@@ -318,6 +339,7 @@ DSTATUS mmc_disk_initialize (void)
 {
 	BYTE n, cmd, ty, ocr[4];
 
+	start_timer();
 
 	power_off();						/* Turn off the socket power to reset the card */
 	for (Timer1 = 10; Timer1; ) ;		/* Wait for 100ms */
