@@ -110,13 +110,9 @@
 void clk_cycle(uint8_t cycles);
 void clk_run(void);
 void clk_stop(void);
-void z80_reset(void);
 void bus_master(void);
 void bus_slave(void);
 void bus_init(void);
-void bus_status(void);
-void bus_trace(uint16_t cycles);
-void read_mem(uint16_t addr, uint8_t * buf, uint16_t len);
-void write_mem(uint16_t addr, uint8_t * buf, uint16_t len);
+char *bus_status();
 
 #endif

@@ -1,7 +1,11 @@
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "altmon.h"
+#include "bus.h"
+#include "memory.h"
+#include "z80.h"
 #include "cli.h"
 
 #define WHITESPACE " \t\r\n"
