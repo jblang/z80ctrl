@@ -1,9 +1,10 @@
-#include "memory.h"
-#include "bus.h"
-
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <avr/pgmspace.h>
+
+#include "memory.h"
+#include "bus.h"
 
 // Read specified number of bytes from external memory to a buffer
 void read_mem(uint16_t addr, uint8_t *buf, uint16_t len)
@@ -39,6 +40,30 @@ void write_mem(uint16_t addr, uint8_t *buf, uint16_t len)
     uint16_t i;
     for (i = 0; i < len; i++) {
         SET_DATA(buf[i]);
+        WR_LO;
+        WR_HI;
+        addr++;
+        if ((addr & 0xFF) == 0) {
+            SET_ADDR(addr);
+        } else {
+            SET_ADDRLO(addr & 0xFF);
+        }
+    }
+    MREQ_HI;
+    DATA_INPUT;
+    bus_slave();
+}
+
+// Write specified number of bytes to external memory from a buffer
+void write_mem_P(uint16_t addr, uint8_t *buf, uint16_t len)
+{
+    bus_master();
+    DATA_OUTPUT;
+    MREQ_LO;
+    SET_ADDR(addr);
+    uint16_t i;
+    for (i = 0; i < len; i++) {
+        SET_DATA(pgm_read_byte(&buf[i]));
         WR_LO;
         WR_HI;
         addr++;

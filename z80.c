@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stdio.h>
+#include <avr/pgmspace.h>
 
 #include "z80.h"
 #include "bus.h"
@@ -54,7 +55,7 @@ void z80_run(uint16_t addr) {
         if (!GET_HALT) {
             clk_stop();
             CLK_LO;
-            printf("\n\nz80 halted\n");
+            printf_P(PSTR("\n\nz80 halted\n"));
             break;
         }
     }

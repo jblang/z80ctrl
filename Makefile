@@ -1,5 +1,5 @@
 BIN=z80ctrl
-FF_OBJS=diskio.o ff.o ffsystem.o ffunicode.o mmc_avr_spi.o
+FF_OBJS=diskio.o ff.o ffsystem.o mmc_avr_spi.o #ffunicode.o
 OBJS=z80ctrl.o uart.o spi.o iox.o bus.o memory.o z80.o cli.o $(FF_OBJS)
 
 CC=avr-gcc

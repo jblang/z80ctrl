@@ -80,7 +80,7 @@ void cli_bus(char *argv[], int argc)
 
 void cli_altmon(char *argv[], int argc)
 {
-    write_mem(0xf800, altmon_bin, altmon_bin_len);
+    write_mem_P(0xf800, altmon_bin, altmon_bin_len);
     z80_run(0xf800);
 }
 

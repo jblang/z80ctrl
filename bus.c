@@ -4,6 +4,7 @@
 #include "iox.h"
 
 #include <avr/interrupt.h>
+#include <avr/pgmspace.h>
 #include <util/delay.h>
 
 #include <stdio.h>
@@ -106,10 +107,10 @@ char *bus_status()
     uint8_t ctrlx = iox_read(CTRLX_GPIO);
     uint8_t data = GET_DATA;
 
-    sprintf(buf,
-        "CLK=%c M1=%c MREQ=%c IORQ=%c IOACK=%c RD=%c WR=%c RFSH=%c HALT=%c "
+    sprintf_P(buf,
+        PSTR("CLK=%c M1=%c MREQ=%c IORQ=%c IOACK=%c RD=%c WR=%c RFSH=%c HALT=%c "
         "INT=%c NMI=%c RESET=%c BUSRQ=%c BUSACK=%c BANK=%X ADDR=%04X "
-        "DATA=%02X %c\n",
+        "DATA=%02X %c\n"),
         HL(GET_CLK), 
         HL(GET_M1), 
         HL(GET_MREQ), 

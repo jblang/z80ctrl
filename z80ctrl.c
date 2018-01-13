@@ -1,5 +1,6 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <avr/pgmspace.h>
 #include <stdio.h>
 
 #include "defines.h"
@@ -19,7 +20,7 @@ int main(void)
     uart_init();
     stdout = stdin = &uart_str;
 
-    printf("z80ctrl 0.9 by J.B. Langston\n\n");
+    puts_P(PSTR("z80ctrl 0.9 by J.B. Langston\n\n"));
 
     bus_init();
 
