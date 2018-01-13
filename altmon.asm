@@ -126,7 +126,7 @@ monit	mvi	a,3		;reset 6850 uart
 
 	lxi	sp,SPTR
 	call	dspMsg		;display welcome banner
-	db	CR,LF,LF,'ALTMON 1.','1'+80h
+	db	CR,LF,LF,'ALTMON 1.',('1'+80h)
 
 ; start - command processing loop
 
@@ -145,7 +145,7 @@ start	lxi	sp,SPTR		;re-init stack pointer
 	cpi	'U'
 	rnc			;too large
 
-	lxi	h,cmdTbl+100h-2*'B'	;'B' indexes to start of cmdtbl
+	lxi	h,cmdTbl+100h-(2*'B')	;'B' indexes to start of cmdtbl
 	add	a		;2 bytes per entry
 	add	l
 	mov	l,a
@@ -158,7 +158,7 @@ start	lxi	sp,SPTR		;re-init stack pointer
 
 ; Command Table
 
-cmdTbl	dw	doboot		;B jump to Altair disk boot loader
+cmdTbl	dw	doBoot		;B jump to Altair disk boot loader
 	dw	compr		;C SSSS FFFF CCCC compare blocks
 	dw	disp		;D SSSS FFFF dump in hex
 	dw	exchg		;E SSSS FFFF DDDD exchange block
@@ -182,7 +182,7 @@ cmdTbl	dw	doboot		;B jump to Altair disk boot loader
 ; exec (G or J) - execute the program at the address
 ;--------------------------------------------------------------------------
 exec	call	dspMsg
-	db	'GOT','O'+80h
+	db	'GOT',('O'+80h)
 
 	call	ahex		;read address from keyboard
 	xchg
@@ -192,7 +192,7 @@ exec	call	dspMsg
 ; doBoot (B) - boot floppy disk by jumping to DBL PROM at FF00
 ;--------------------------------------------------------------------------
 doBoot	call	dspMsg
-	db	'BOO','T'+80h
+	db	'BOO',('T'+80h)
 
 	jmp	BOOT
 
@@ -200,7 +200,7 @@ doBoot	call	dspMsg
 ; chksum (Q) - compute checksum
 ;--------------------------------------------------------------------------
 chksum	call	dspMsg
-	db	'CSU','M'+80h
+	db	'CSU',('M'+80h)
 
 	call	tahex
 	mvi	b,0		;start checksum = 0
@@ -218,7 +218,7 @@ csloop	mov	a,m		;get data from memory
 ; tmem (T) - memory test routine
 ;--------------------------------------------------------------------------
 tmem	call	dspMsg
-	db	'TES','T'+80h
+	db	'TES',('T'+80h)
 
 	call	tahex		;read addresses
 	lxi	b,05a5ah	;init b,c
@@ -278,7 +278,7 @@ peve	mov	a,c		;look at c
 ; disp (D) - display memory contents
 ;--------------------------------------------------------------------------
 disp	call	dspMsg
-	db	'DUM','P'+80h
+	db	'DUM',('P'+80h)
 
 	call	tahex		;read addresses
 
@@ -324,7 +324,7 @@ dspAsc	call	ptcn		;display the character
 ; pgm (P) - program memory
 ;--------------------------------------------------------------------------
 pgm	call	dspMsg
-	db	'PG','M'+80h
+	db	'PG',('M'+80h)
 
 	call	ahex		;read address
 	xchg
@@ -355,7 +355,7 @@ con2	inx	h
 ; fill (K) - fill memory with a constant
 ;--------------------------------------------------------------------------
 fill	call	dspMsg
-	db	'FIL','L'+80h
+	db	'FIL',('L'+80h)
 
 	call	tahex		;read addresses
 	push	h		;start addr on stack
@@ -375,12 +375,12 @@ zloop	mov	m,c		;write into memory
 ; exchg (E) - exhange block of memory
 ;--------------------------------------------------------------------------
 moveb	call	dspMsg
-	db	'MOV','E'+80h
+	db	'MOV',('E'+80h)
 	xra	a		;a=0 means "move" command
 	jmp	doMove
 
 exchg	call	dspMsg
-	db	'EXC','H'+80h
+	db	'EXC',('H'+80h)
 				;a returned <> 0 means "exchange" command
 		
 doMove	mov	b,a		;save move/exchange flag in b
@@ -415,7 +415,7 @@ nexch	mov	m,c		;move source to destination
 ; ndmt (N or R) - non destructive memory test (size RAM)
 ;--------------------------------------------------------------------------
 ndmt	call	dspMsg
-	db	'RAMTO','P'+80h
+	db	'RAMTO',('P'+80h)
 
 	lxi	h,0ffffh	;start at zero
 
@@ -434,7 +434,7 @@ ndlop	inx	h
 ; compr (C) - compare two blocks of memory
 ;--------------------------------------------------------------------------
 compr	call	dspMsg
-	db	'COM','P'+80h
+	db	'COM',('P'+80h)
 
 	call	tahex		;read addresses
 	push	h		;source start on stack
@@ -459,12 +459,12 @@ vmlop	mov	a,m		;a=compare byte
 ; srch2 (F) - search for two bytes
 ;--------------------------------------------------------------------------
 srch1	call	dspMsg
-	db	'FIND','1'+80h
+	db	'FIND',('1'+80h)
 	xra	a		;zero flag means one byte search
 	jmp	doSrch
 
 srch2	call	dspMsg
-	db	'FIND','2'+80h
+	db	'FIND',('2'+80h)
 				;a returned <> 0 means two byte search
 
 doSrch	push	psw		;save 1/2 byte flag on stack
@@ -518,7 +518,7 @@ skp	call	bmp		;check if done
 ; poutp (O) - output data to a port
 ;--------------------------------------------------------------------------
 poutp	call	dspMsg
-	db	'OU','T'+80h
+	db	'OU',('T'+80h)
 
 	mvi	c,2
 	call	ahe0		;port number in e
@@ -540,7 +540,7 @@ poutp	call	dspMsg
 ; pinpt (I) - input data from a port
 ;--------------------------------------------------------------------------
 pinpt	call	dspMsg
-	db	'I','N'+80h
+	db	'I',('N'+80h)
 
 	mvi	c,2
 	call	ahe0		;port number to e
@@ -557,8 +557,8 @@ pinpt	call	dspMsg
 ;---------------------------------------------------------------------
 ; hexLoad (H or L) - load intel hex through 2SIO serial port 0 or 1
 ;---------------------------------------------------------------------
-hexload	call	dspMsg
-	db	'HEXLOA','D'+80h
+hexLoad	call	dspMsg
+	db	'HEXLOA',('D'+80h)
 
 	mvi	c,1		;read one hex digit
 	call	ahe0		;digit is in e
@@ -610,7 +610,7 @@ data	call	iByte		;read a data byte (2 hex digits)
 	jz	rcvLine		;checksum good, receive next line
 
 	call	dspMsg		;display error message
-	db	' ER','R'+80h
+	db	' ER',('R'+80h)
 				;fall into flush
 
 ; flush - flush rest of file as it comes in until no characters
