@@ -8,10 +8,6 @@
 #include "z80.h"
 #include "cli.h"
 
-#define WHITESPACE " \t\r\n"
-#define MAXBUF 80
-#define MAXARGS 3
-
 void cli_loadihex(char *argv[], int argc)
 {
     int rc;
@@ -30,12 +26,12 @@ void cli_saveihex(char *argv[], int argc)
     uint16_t addr;
     uint16_t length;
     uint16_t i;
-    if (argc != 2) {
+    if (argc != 3) {
         printf("usage: saveihex <start> <length>\n");
         return;
     }
-    sscanf(argv[0], "%x", &addr);
-    sscanf(argv[1], "%x", &length);
+    sscanf(argv[1], "%x", &addr);
+    sscanf(argv[2], "%x", &length);
     for (;;) {
         if (length > 16) {
             printf("%s\n", read_ihex_rec(addr, 16));
@@ -53,23 +49,23 @@ void cli_dump(char *argv[], int argc)
 {
     uint16_t addr;
     uint16_t length;
-    if (argc != 2) {
+    if (argc != 3) {
         printf("usage: dump <start> <length>\n");
         return;
     }
-    sscanf(argv[0], "%x", &addr);
-    sscanf(argv[1], "%x", &length);
+    sscanf(argv[1], "%x", &addr);
+    sscanf(argv[2], "%x", &length);
     dump_mem(addr, length);
 }
 
 void cli_run(char *argv[], int argc)
 {
     uint16_t addr;
-    if (argc != 1) {
+    if (argc != 2) {
         printf("usage: run <address>\n");
         return;
     }
-    sscanf(argv[0], "%x", &addr);
+    sscanf(argv[1], "%x", &addr);
     z80_run(addr);
 }
 
@@ -82,6 +78,11 @@ void cli_altmon(char *argv[], int argc)
 {
     write_mem(0xf800, altmon_bin, altmon_bin_len);
     z80_run(0xf800);
+}
+
+void cli_ls(char *argv[], int argc)
+{
+
 }
 
 void cli_help(char *argv[], int argc);
@@ -98,8 +99,8 @@ cli_entry cli_cmds[] = {
     {"run", "execute code at address", &cli_run},
     {"bus", "display current bus status", &cli_bus},
     {"altmon", "run altmon 8080 monitor", &cli_altmon},
-    {"loadihex", "load Intel HEX records to memory", &cli_loadihex},
-    {"saveihex", "load Intel HEX records to memory", &cli_saveihex}
+    {"loadhex", "load Intel HEX records to memory", &cli_loadihex},
+    {"savehex", "save Intel HEX records from memory", &cli_saveihex}
 };
 
 #define NUM_CMDS (sizeof(cli_cmds)/sizeof(cli_entry))
@@ -113,6 +114,10 @@ void cli_help(char *argv[], int argc)
     }
 }
 
+#define WHITESPACE " \t\r\n"
+#define MAXBUF 80
+#define MAXARGS 8
+
 void cli_loop(void) {
     char buf[MAXBUF];
     char *cmd;
@@ -124,20 +129,20 @@ void cli_loop(void) {
     for (;;) {
         printf("z80ctrl>");
         if (fgets(buf, sizeof buf - 1, stdin) != NULL) {
-            if ((cmd = strtok(buf, WHITESPACE)) == NULL)
+            if ((argv[0] = strtok(buf, WHITESPACE)) == NULL)
                 continue;            
-            for (argc = 0; argc < MAXARGS; argc++) {
+            for (argc = 1; argc < MAXARGS; argc++) {
                 if ((argv[argc] = strtok(NULL, WHITESPACE)) == NULL)
                     break;
             }
             for (i = 0; i < NUM_CMDS; i++) {
-                if (strcmp(cmd, cli_cmds[i].name) == 0) {
+                if (strcmp(argv[0], cli_cmds[i].name) == 0) {
                     cli_cmds[i].func(argv, argc);
                     break;
                 }
             }
             if (i == NUM_CMDS) {
-                printf("unknown command: %s. type help for list.\n", cmd);
+                printf("unknown command: %s. type help for list.\n", argv[0]);
             }
         }
     }
