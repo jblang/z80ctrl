@@ -24,7 +24,7 @@
 #define GPIOA0 0x12
 #define GPIOB0 0x13
 #define OLATA0 0x14
-#define OLATAB 0x15
+#define OLATB0 0x15
 
 // Register addresses in bank 1
 #define IODIRA1 0x00
