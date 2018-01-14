@@ -135,42 +135,52 @@ uint8_t fromhex(char hex)
         return 255;
 }
 
-int write_ihex_rec(char *record) 
+ihex_res write_ihex_rec(char *record) 
 {
+    ihex_res res;
     int i;
 
-    if (strlen(record) < 11)
-        return IHEX_FORMAT;
-    if (record[0] != ':')
-        return IHEX_FORMAT;
-    for (i = 1; i < strlen(record); i++) {
-        if (fromhex(record[i]) > 0xf)
-            return IHEX_FORMAT;
+    if (strlen(record) < 11) {
+        res.rc == IHEX_FORMAT;
+        return res;
     }
-    uint8_t count = fromhex(record[1]) << 4 | fromhex(record[2]);
-    if (strlen(record) < 11 + count)
-        return IHEX_COUNT;
-    uint16_t addr = fromhex(record[3]) << 12 | fromhex(record[4]) << 8 | fromhex(record[5]) << 4 | fromhex(record[6]);
-    uint8_t type = fromhex(record[7]) << 4 | fromhex(record[8]);
-    uint8_t check1 = count + (addr >> 8) + (addr & 0xff) + type;
+    if (record[0] != ':') {
+        res.rc = IHEX_FORMAT;
+        return res;
+    }
+    for (i = 1; i < strlen(record); i++) {
+        if (fromhex(record[i]) > 0xf && record[i] != '\r' && record[i] != '\n') {
+            res.rc = IHEX_FORMAT;
+            return res;
+        }
+    }
+    res.count = fromhex(record[1]) << 4 | fromhex(record[2]);
+    if (strlen(record) < 11 + res.count) {
+        res.rc = IHEX_COUNT;
+        return res;
+    }
+    res.addr = fromhex(record[3]) << 12 | fromhex(record[4]) << 8 | fromhex(record[5]) << 4 | fromhex(record[6]);
+    res.type = fromhex(record[7]) << 4 | fromhex(record[8]);
+    uint8_t check1 = res.count + (res.addr >> 8) + (res.addr & 0xff) + res.type;
     uint8_t data[256];
-    for (i = 0; i < count; i++) {
+    for (i = 0; i < res.count; i++) {
         data[i] = fromhex(record[i*2+9]) << 4 | fromhex(record[i*2+10]);
         check1 += data[i];
     }
     check1 = ~check1 + 1;
-    uint8_t check2 = fromhex(record[count*2+9]) << 4 | fromhex(record[count*2+10]);
-    if (check1 != check2)
-        return IHEX_CKSUM;
-    switch (type) {
-        case 0:
-            write_mem(addr, data, count);
-            return count;
-        case 1:
-            return IHEX_EOF;
-        default:
-            return IHEX_RECTYPE;
+    uint8_t check2 = fromhex(record[res.count*2+9]) << 4 | fromhex(record[res.count*2+10]);
+    if (check1 != check2) {
+        res.rc = IHEX_CKSUM;
+        return res;
     }
+    if (res.type == IHEX_DATA) {
+        write_mem(res.addr, data, res.count);
+        res.rc = IHEX_OK;
+    } else if (res.type == IHEX_EOF)
+        res.rc = IHEX_OK;
+    else
+        res.rc = IHEX_RECTYPE;
+    return res;
 }
 
 uint8_t tohex(uint8_t nyb)

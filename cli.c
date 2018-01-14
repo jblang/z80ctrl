@@ -13,26 +13,58 @@
 
 FATFS fs;
 
-void cli_loadihex(int argc, char *argv[])
+void cli_loadhex(int argc, char *argv[])
 {
-    int rc;
-    char buf[512+11];
-    do {
-        gets(buf);
-        rc = write_ihex_rec(buf);
-        if (rc < 0 && rc != IHEX_EOF)
-            printf_P(PSTR("error %d reading ihex\n"), rc);
-    } while (rc != IHEX_EOF);
+    FIL fp;
+    FRESULT fr;
+    ihex_res res;
+    char buf[524];
+    if (argc == 2) {
+        printf_P(PSTR("loading from %s\n"), argv[1]);
+        if ((fr = f_open(&fp, argv[1], FA_READ)) != FR_OK) {
+            printf_P(PSTR("error %d opening file\n"), fr);
+            return;
+        }        
+    } else {
+        printf_P(PSTR("loading from console; enter blank line to cancel\n"));
+    }
+    for (;;) {
+        if (argc == 2) {
+            if (f_gets(buf, 524, &fp) == NULL) {
+                puts_P(PSTR("error: unexpected eof\n"));
+                break;
+            }
+        } else {
+            gets(buf);
+            if (strlen(buf) == 0)
+                break;
+        }
+        res = write_ihex_rec(buf);
+        if (res.rc == IHEX_OK && res.type == IHEX_DATA && res.count > 0)
+            printf_P(PSTR("wrote %d bytes to %04x\n"), res.count, res.addr);
+        else if (res.rc == IHEX_OK && res.count == 0)
+            break;
+        else if (res.rc == IHEX_FORMAT)
+            printf_P(PSTR("error: invalid record format\n"));
+        else if (res.rc == IHEX_COUNT)
+            printf_P(PSTR("error: not enough bytes\n"));
+        else if (res.rc == IHEX_CKSUM)
+            printf_P(PSTR("error: checksum mismatch\n"));
+        else if (res.rc == IHEX_RECTYPE)
+            printf_P(PSTR("error: unsupported record type %d"), res.type);
+    }
+    if (argc == 2)
+        f_close(&fp);
 }
 
-void cli_saveihex(int argc, char *argv[])
+void cli_savehex(int argc, char *argv[])
 {
 
     uint16_t addr;
     uint16_t length;
     uint16_t i;
     if (argc != 3) {
-        printf_P(PSTR("usage: saveihex <start> <length>\n"));
+        printf_P(PSTR("usage: savehex <start> <length> <file>\n"));
         return;
     }
     addr = strtol(argv[1], NULL, 16) & 0xffff;
@@ -79,10 +111,9 @@ void cli_bank(int argc, char *argv[])
     uint8_t bank;
     if (argc != 2) {
         printf_P(PSTR("usage: bank <0-7>\n"));
-        return;
     }
-    bank = strtol(argv[1], NULL, 16) & 0x7;
-    SET_BANK(bank);    
+    bank = strtol(argv[1], NULL, 10) & 0x7;
+    SET_BANK(bank);
 }
 
 void cli_bus(int argc, char *argv[])
@@ -154,15 +185,15 @@ typedef struct _cli_entry {
 } cli_entry;
 
 cli_entry cli_cmds[] = {
-    {"help", "list available commands", &cli_help},
-    {"dump", "hex dump of memory range", &cli_dump},
-    {"run", "execute code at address", &cli_run},
-    {"bus", "display current bus status", &cli_bus},
-    {"bank", "selects active 64K bank from 512K SRAM", &cli_bank},
     {"altmon", "run altmon 8080 monitor", &cli_altmon},
-    {"loadhex", "load Intel HEX records to memory", &cli_loadihex},
-    {"savehex", "save Intel HEX records from memory", &cli_saveihex},
-    {"dir", "shows a directory listing", &cli_dir}
+    {"bus", "display current bus status", &cli_bus},
+    {"bank", "select active 64K bank", &cli_bank},
+    {"dir", "shows directory listing", &cli_dir},
+    {"dump", "dump memory in hex and ascii", &cli_dump},
+    {"help", "list available commands", &cli_help},
+    {"loadhex", "load intel hex file to memory", &cli_loadhex},
+    {"run", "execute code at address", &cli_run},
+    {"savehex", "save intel hex file from memory", &cli_savehex}
 };
 
 #define NUM_CMDS (sizeof(cli_cmds)/sizeof(cli_entry))
