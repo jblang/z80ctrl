@@ -83,7 +83,8 @@ int verify_mem(uint16_t start, uint8_t *src, uint16_t len, uint8_t log)
 {
     uint8_t buf[256];
     int errors = 0;
-    int i = 0, j = 0, buflen = 256;
+    uint32_t i = 0;
+    uint16_t j = 0, buflen = 256;
 
     while (i < len) {
         if (len - i < buflen)
@@ -92,7 +93,7 @@ int verify_mem(uint16_t start, uint8_t *src, uint16_t len, uint8_t log)
         for (j = 0; j < buflen; i++, j++) {
             if (buf[j] != src[i]) {
                 if (log)
-                    printf("Mismatch at %04x: expected %02x but read %02x\n", start+i, src[i], buf[j]);
+                    printf("%04x: expected %02x but read %02x\n", start+i, src[i], buf[j]);
                 errors++;
             }
         }
@@ -104,7 +105,8 @@ int verify_mem(uint16_t start, uint8_t *src, uint16_t len, uint8_t log)
 void dump_mem(uint16_t addr, uint16_t len)
 {
     uint8_t buf[16];
-    int i = 0, j = 0, buflen = 16;
+    uint8_t j = 0, buflen = 16;
+    uint32_t i = 0;
 
     while (i < len) {
         printf("%04X: ", addr + i);
@@ -195,7 +197,7 @@ uint8_t tohex(uint8_t nyb)
 
 char *read_ihex_rec(uint16_t addr, uint8_t len) 
 {
-    static char record[512+11];
+    static char record[512+12];
     uint8_t membuf[256];
     uint8_t check = len + (addr >> 8) + (addr & 0xff);
     int i;
@@ -223,7 +225,6 @@ char *read_ihex_rec(uint16_t addr, uint8_t len)
     check = ~check + 1;
     record[len*2+9] = tohex(check >> 4);
     record[len*2+10] = tohex(check & 0xf);
-    for (i = len*2+11; i < 512+11; i++)
-        record[i] = 0;
+    record[len*2+11] = '\0';
     return record;
 }
