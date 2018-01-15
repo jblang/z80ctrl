@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 #include "altmon.h"
+#include "dbl.h"
 #include "bus.h"
 #include "memory.h"
 #include "z80.h"
@@ -253,6 +254,12 @@ void cli_altmon(int argc, char *argv[])
     z80_run(0xf800);
 }
 
+void cli_boot(int argc, char *argv[])
+{
+    write_mem_P(0xff00, dbl_bin, dbl_bin_len);
+    z80_run(0xff00);
+}
+
 void cli_dir(int argc, char *argv[])
 {
  	FRESULT fr;
@@ -361,6 +368,7 @@ typedef struct _cli_entry {
 
 cli_entry cli_cmds[] = {
     {"altmon", "run altmon 8080 monitor", &cli_altmon},
+    {"boot", "boot from mounted disk", &cli_boot},
     {"bus", "display current bus status", &cli_bus},
     {"bank", "select active 64K bank", &cli_bank},
     {"dir", "shows directory listing", &cli_dir},
