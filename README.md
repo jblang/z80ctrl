@@ -150,22 +150,26 @@ The AVR is programmed with the [MightyCore](https://github.com/MCUdude/MightyCor
 The layout of the source code is as follows:
 - The specific ports and pins used for the Z80 bus interface and SPI chip selects are defined in `defines.h`.
 - `bus.h` provides macros to set addresses and data values and read or toggle the various control lines. This abstracts away the low-level details required to control these pins, and allows the client code to be written solely in terms of Z80 I/O lines (e.g., RD_HI, RD_LO, GET_WR, BUSRQ_LO, GET_BUSACK, and so on). 
-- Convenience functions are provided in `bus.c` to intialize the bus, enter and exit bus-master mode, do DMA transfers, reset and start the Z80, and trace the bus status during program execution.  Altair 8800 2SIO-compatible I/O ports for the Z80 are redirected to the UART on the AVR. 
+- Convenience functions are provided in `bus.c` to intialize the bus, control the clock, and enter and exit bus-master mode.
+- `memory.c` contains functions to do DMA transfers.
+- `z80.c` has functions start the Z80 and handle I/O requests from it. Reads and writes to the standard Altair 88-2SIO ports are redirected through the AVR's uart.
+- `diskemu.c` emulates an Altair 88-DISK controller to allow running CP/M and other disk-based programs.
 - The `uart.c` and `uart.h` files borrowed from the avr-libc [stdio demo](http://www.nongnu.org/avr-libc/user-manual/group__stdiodemo.html) allow the use of the C stdio library over serial.
 - `z80ctrl.c` contains the main function that presents a command-line monitor interface to allow programs to be loaded and run, memory to be inspected, and so forth. 
-- `cli.c` contains the command-line interface for controlling the Z80 and memory via the AVR.
+- `cli.c` contains the command-line monitor interface for controlling the Z80 and loading memory via the AVR.  When the AVR starts up, it presents a `z80ctrl>` prompt. Typing `help` at the prompt will list all available commands. Commands are provided to dump memory, fill memory, load and save Intel HEX files, mount and unmount disk images, and start the Z80 running from any address.
 
 ### Z80
 
-Thus far, I have tested the following code on the Z80:
-- I wrote a simple "hello, world" program in Z80 assembly language to test that the Z80 was able to successfully run code and use the serial I/O ports (`hello.asm`).  
-- The first "real" software I got to run unmodified was [Turnkey Monitor](http://www.autometer.de/unix4fun/z80pack/ftp/altair/turnmon.asm) , a simple monitor program for the Altair 8800b (`turnmon.asm`). 
-- I later discovered the more fully featured [Altair Monitor](http://altairclone.com/downloads/roms/Altair%20Monitor/) from the [Altair Clone](http://altairclone.com) project and switched to using it (`altmon.asm`).
+I have tested the following code on the Z80:
+- The first successful test was a simple "hello, world" program I wrote in Z80 assembly language.  I used this to test that the Z80 was able to successfully run code and use the serial I/O.  
+- The first "real" software I got to run unmodified was [Turnkey Monitor](http://www.autometer.de/unix4fun/z80pack/ftp/altair/turnmon.asm), a simple monitor program for the Altair 8800b. 
+- I later discovered the more fully featured [Altair Monitor](http://altairclone.com/downloads/roms/Altair%20Monitor/) from the [Altair Clone](http://altairclone.com) project and switched to using it. I have included the original source in the project as `altmon.asm` and `altmon.h` contains the binary in array so that it can be loaded into SRAM from the AVR's program memory. The z80ctrl monitor program has a built-in `altmon` command to load it into memory and launch it.
+- After adding disk emulation, I am able to use the [Altair Disk Boot Loader](http://altairclone.com/downloads/roms/DBL.ASM) to successfully boot CP/M.  I have likewise included a binary for the bootloader in the AVR's program memory and provided a `boot` command in the z80ctrl monitor to launch it. 
+- So far I have successfully booted CP/M using the `altcpm.dsk` image available from [SIMH](http://simh.trailing-edge.com/software.html) and `cpm22b20-63k.dsk` disk from the [Altair Clone](http://altairclone.com/downloads/cpm/) download site. However, the version on `cpm63k.dsk` and many of the other disk images from the same site hangs during boot after displaying the CP/M banner. I still need to investigate why.
+- I have successfully run programs from many of the other disk images linked above, including Ladder, Catchum, Zork, Microsoft BASIC, and more. The verson of CP/M on these disk images hangs if I try to boot from them, but they can be mounted on a second drive (B:), and run from there after booting from `cpm22b20-63k.dsk`.
 - I have tried unsuccessfully to run Altair 4K BASIC. It starts to load (prompts for memory, terminal width, etc.) but then hangs before issuing the ready prompt. According to [one source](http://www.autometer.de/unix4fun/z80pack/ftp/altair/), 4K BASIC is not compatible with the Z80 so the problem may not be on my end. 
 
-Once I implement bootloading and drive emulation using the SD Card, the ultimate goal is to get CP/M running.
-
-I am cross-assembling the programs using [z80asm](http://www.nongnu.org/z80asm/) for Zilog mnemonics, or [asm8080](https://github.com/begoon/asm8080) for Intel mnemonics. After assembling the programs, I use `xxd -i` to generate a C header file with an array containing the machine code. Eventually this process will be replaced or supplemented by loading Z80 binary images from the SD card.
+I am cross-assembling the programs using [z80asm](http://www.nongnu.org/z80asm/) for Zilog mnemonics, or [asm8080](https://github.com/begoon/asm8080) for Intel mnemonics. After assembling the programs, I use `xxd -i` to generate a C header file with an array containing the machine code.
 
 ## License
 
