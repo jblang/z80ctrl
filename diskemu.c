@@ -124,9 +124,9 @@ typedef struct _drive {
 } drive;
 
 #define NUMDRIVES 16
-#define NUMTRACKS 77
-#define NUMSECTORS 32
-#define SECTORSIZE 137
+#define NUMTRACKS 77ul
+#define NUMSECTORS 32ul
+#define SECTORSIZE 137ul
 
 // Drive deselect bit
 #define DESELECT 7
@@ -347,10 +347,15 @@ uint8_t drive_read(void)
     } else {
         ofs = selected->track * NUMSECTORS * SECTORSIZE;
         ofs += selected->sector * SECTORSIZE;
+        //printf("seeking track %d sector %d offset %u\n", selected->track, selected->sector, ofs);
         if ((fr = f_lseek(&selected->fp, ofs)) != FR_OK) {
             printf_P(PSTR("seek error: %d\n"), fr);
-        } else if ((fr = f_read(&selected->fp, sectorbuf, SECTORSIZE, &br)) != FR_OK) {
-            printf_P(PSTR("read error: %d\n"), fr);
+        } else {
+            //printf("reading... ");
+            if ((fr = f_read(&selected->fp, sectorbuf, SECTORSIZE, &br)) != FR_OK) {
+                printf_P(PSTR("read error: %d\n"), fr);
+            }
+            //printf("%u bytes read\n", br);
         }
         //printf("reading %02x from byte %d of sector %d, track %d\n", sectorbuf[0], 0, selected->sector, selected->track);
         selected->byte = 1;
