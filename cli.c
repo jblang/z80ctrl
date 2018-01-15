@@ -330,6 +330,27 @@ void cli_fill(int argc, char*argv[]) {
     }
 }
 
+void cli_mount(int argc, char *argv[])
+{
+    if (argc != 3) {
+        printf_P(PSTR("usage: mount <drive #> <filename>\n"));
+        return;
+    }
+    uint8_t drv = strtol(argv[1], NULL, 10);
+    char *filename = argv[2];
+    drive_mount(drv, filename);
+}
+
+void cli_unmount(int argc, char *argv[])
+{
+    if (argc != 2) {
+        printf_P(PSTR("usage: unmount <drive #>\n"));
+        return;
+    }
+    uint8_t drv = strtol(argv[1], NULL, 10);
+    drive_unmount(drv);
+}
+
 void cli_help(int argc, char *argv[]);
 
 typedef struct _cli_entry {
@@ -347,8 +368,10 @@ cli_entry cli_cmds[] = {
     {"fill", "fill memory with byte", &cli_fill},
     {"help", "list available commands", &cli_help},
     {"loadhex", "load intel hex file to memory", &cli_loadhex},
+    {"mount", "mount a disk image", &cli_mount},
     {"run", "execute code at address", &cli_run},
-    {"savehex", "save intel hex file from memory", &cli_savehex}
+    {"savehex", "save intel hex file from memory", &cli_savehex},
+    {"unmount", "unmount a disk image", &cli_unmount}
 };
 
 #define NUM_CMDS (sizeof(cli_cmds)/sizeof(cli_entry))

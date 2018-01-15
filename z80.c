@@ -4,6 +4,7 @@
 
 #include "z80.h"
 #include "bus.h"
+#include "diskemu.h"
 
 void z80_reset(void)
 {
@@ -37,6 +38,30 @@ void z80_run(uint16_t addr) {
                         DATA_OUTPUT;
                     } else if (!GET_WR) {
                         UDR0 = GET_DATA;
+                    }
+                    break;
+                case DRIVE_STATUS:
+                    if (!GET_RD) {
+                        SET_DATA(drive_status());
+                        DATA_OUTPUT;
+                    } else if (!GET_WR) {
+                        drive_select(GET_DATA);
+                    }
+                    break;
+                case DRIVE_CONTROL:
+                    if (!GET_RD) {
+                        SET_DATA(drive_sector());
+                        DATA_OUTPUT;
+                    } else if (!GET_WR) {
+                        drive_control(GET_DATA);
+                    }
+                    break;
+                case DRIVE_DATA:
+                    if (!GET_RD) {
+                        SET_DATA(drive_read());
+                        DATA_OUTPUT;
+                    } else if (!GET_WR) {
+                        drive_write(GET_DATA);
                     }
                     break;
                 default:
