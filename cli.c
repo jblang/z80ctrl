@@ -236,6 +236,7 @@ void cli_bank(int argc, char *argv[])
     uint8_t bank;
     if (argc != 2) {
         printf_P(PSTR("usage: bank <0-7>\n"));
+        return;
     }
     bank = strtol(argv[1], NULL, 10) & 0x7;
     SET_BANK(bank);
@@ -305,6 +306,30 @@ void cli_dir(int argc, char *argv[])
     };
 }
 
+void cli_fill(int argc, char*argv[]) {
+    if (argc != 4) {
+        printf_P(PSTR("usage: fill <start> <length> <value>\n"));
+        return;
+    }
+    uint16_t addr = strtol(argv[1], NULL, 16) & 0xffff;
+    uint32_t length = strtol(argv[2], NULL, 16);
+    uint8_t data = strtol(argv[3], NULL, 16) & 0xff;
+    uint8_t buf[256];
+    uint16_t i;
+    for (i = 0; i < 256; i++)
+        buf[i] = data;
+    for (;;) {
+        if (length > 256) {
+            write_mem(addr, buf, 256);
+            length -= 256;
+            addr += 256;
+        } else {
+            write_mem(addr, buf, length);
+            break;
+        }
+    }
+}
+
 void cli_help(int argc, char *argv[]);
 
 typedef struct _cli_entry {
@@ -319,6 +344,7 @@ cli_entry cli_cmds[] = {
     {"bank", "select active 64K bank", &cli_bank},
     {"dir", "shows directory listing", &cli_dir},
     {"dump", "dump memory in hex and ascii", &cli_dump},
+    {"fill", "fill memory with byte", &cli_fill},
     {"help", "list available commands", &cli_help},
     {"loadhex", "load intel hex file to memory", &cli_loadhex},
     {"run", "execute code at address", &cli_run},
