@@ -193,10 +193,15 @@ void write_sector(void)
     ofs = selected->track * NUMSECTORS * SECTORSIZE;
     ofs += selected->sector * SECTORSIZE;
 
+    //printf("seeking track %d sector %d offset %u\n", selected->track, selected->sector, ofs);
     if ((fr = f_lseek(&selected->fp, ofs)) != FR_OK) {
         printf_P(PSTR("seek error: %d\n"), fr);
-    } else if ((fr = f_write(&selected->fp, sectorbuf, SECTORSIZE, &bw)) != FR_OK) {
-        printf_P(PSTR("write error: %d\n"), fr);
+    } else {
+        //printf("writing... ");
+        if ((fr = f_write(&selected->fp, sectorbuf, SECTORSIZE, &bw)) != FR_OK) {
+            printf_P(PSTR("write error: %d\n"), fr);
+        }
+        //printf("%d bytes\n", bw);
     }
     selected->status &= ~(1 << S_WRITERDY);
     selected->byte = 0xff;
@@ -236,7 +241,7 @@ uint8_t drive_status()
         //printf("returning status %x\n", selected->status);
         return ~selected->status;
     } else {
-        //printf("drive status error: no drive selected\n");
+        printf("drive status error: no drive selected\n");
         return 0xFF;
     }
 }
@@ -244,7 +249,7 @@ uint8_t drive_status()
 void drive_control(uint8_t cmd) 
 {
     if (!selected) {
-        //printf("drive control error: no drive selected");
+        printf("drive control error: no drive selected");
         return;
     }
 
@@ -252,6 +257,8 @@ void drive_control(uint8_t cmd)
         if (selected->track < NUMTRACKS-1)
             selected->track++;
         selected->status &= ~(1 << S_TRACK0);
+        if (dirtysector)
+            write_sector();
         selected->sector = 0xff;
         selected->byte = 0xff;
         //printf("stepping in: track %d\n", selected->track);
@@ -262,10 +269,15 @@ void drive_control(uint8_t cmd)
             selected->track--;
         if (selected->track == 0)
             selected->status |= (1 << S_TRACK0);
+        if (dirtysector)
+            write_sector();
         selected->sector = 0xff;
         selected->byte = 0xff;
         //printf("stepping out: track %d\n", selected->track);
     }
+
+    if (dirtysector)
+        write_sector();
 
     if (cmd & (1 << C_LOAD)) {
         //printf("loading head\n");
@@ -284,7 +296,7 @@ void drive_control(uint8_t cmd)
     //if (cmd & (1 << C_LOWER))
 
     if (cmd & (1 << C_WRITE)) {
-        //printf("preparing write");
+        //printf("preparing write\n");
         selected->byte = 0;
         selected->status |= (1 << S_WRITERDY);
     }
@@ -293,15 +305,14 @@ void drive_control(uint8_t cmd)
 uint8_t drive_sector(void) 
 {
     if (!selected) {
-        //printf("drive sector error: no drive selected\n");
+        printf("drive sector error: no drive selected\n");
         return 0;
     }
     if (dirtysector)
         write_sector();
     if (selected->status & (1 << S_HEADLOAD)) {
-        if (selected->sector < NUMSECTORS) {
-            selected->sector++;
-        } else {
+        selected->sector++;
+        if (selected->sector >= NUMSECTORS) {
             selected->sector = 0;
         }
         selected->byte = 0xff;
@@ -315,17 +326,19 @@ uint8_t drive_sector(void)
 void drive_write(uint8_t data) 
 {
     if (!selected) {
-        //printf("drive write error: no drive selected\n");
+        printf("drive write error: no drive selected\n");
         return;
     }
 
     //printf("writing %02x to byte %d of sector %d, track %d\n", data, selected->byte, selected->sector, selected->track);
     sectorbuf[selected->byte] = data;
 
-    if (selected->byte < SECTORSIZE)
+    if (selected->byte < SECTORSIZE) {
+        dirtysector = 1;
         selected->byte++;
-    else
+    } else {
         write_sector();
+    }
 }
 
 uint8_t drive_read(void) 
@@ -336,7 +349,7 @@ uint8_t drive_read(void)
     uint8_t i;
 
     if (!selected) {
-        //printf("drive read error: no drive selected\n");
+        printf("drive read error: no drive selected\n");
         return;
     }
 
