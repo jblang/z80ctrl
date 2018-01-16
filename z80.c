@@ -66,8 +66,7 @@ void z80_run(uint16_t addr) {
                     break;
                 default:
                     if (!GET_RD) {
-                        SET_DATA(0x3F);
-                        DATA_OUTPUT;
+                        SET_DATA(0xFF);
                     }
             }
             IOACK_LO;
