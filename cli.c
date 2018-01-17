@@ -6,6 +6,7 @@
 
 #include "altmon.h"
 #include "dbl.h"
+#include "simhboot.h"
 #include "bus.h"
 #include "memory.h"
 #include "z80.h"
@@ -254,9 +255,15 @@ void cli_altmon(int argc, char *argv[])
     z80_run(0xf800);
 }
 
-void cli_boot(int argc, char *argv[])
+void cli_dboot(int argc, char *argv[])
 {
     write_mem_P(0xff00, dbl_bin, dbl_bin_len);
+    z80_run(0xff00);
+}
+
+void cli_sboot(int argc, char *argv[])
+{
+    write_mem_P(0xff00, simhboot_bin, simhboot_bin_len);
     z80_run(0xff00);
 }
 
@@ -368,9 +375,9 @@ typedef struct _cli_entry {
 
 cli_entry cli_cmds[] = {
     {"altmon", "run altmon 8080 monitor", &cli_altmon},
-    {"boot", "boot from mounted disk", &cli_boot},
     {"bus", "display current bus status", &cli_bus},
     {"bank", "select active 64K bank", &cli_bank},
+    {"dboot", "boot disk using Altair DBL", &cli_dboot},
     {"dir", "shows directory listing", &cli_dir},
     {"dump", "dump memory in hex and ascii", &cli_dump},
     {"fill", "fill memory with byte", &cli_fill},
@@ -379,6 +386,7 @@ cli_entry cli_cmds[] = {
     {"mount", "mount a disk image", &cli_mount},
     {"run", "execute code at address", &cli_run},
     {"savehex", "save intel hex file from memory", &cli_savehex},
+    {"sboot", "boot disk using SIMH bootloader", &cli_sboot},
     {"unmount", "unmount a disk image", &cli_unmount}
 };
 

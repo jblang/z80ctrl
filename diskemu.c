@@ -124,7 +124,7 @@ typedef struct _drive {
 } drive;
 
 #define NUMDRIVES 16
-#define NUMTRACKS 77ul
+#define NUMTRACKS 254ul // Altair disk has 77 but SIMH allows disk images with more
 #define NUMSECTORS 32ul
 #define SECTORSIZE 137ul
 
