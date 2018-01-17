@@ -125,7 +125,7 @@ Note: RESET# is connected to DTR through a 0.1uf capacitor: `RESET# -||- DTR`. R
 
 ### Design Notes
 
-The ATmega1284p doesn't have enough I/O to interface with all of the Z80's bus lines, so I used an I/O expander to provide two additional 8-bit I/O ports.  I have tried to optimize performance by connecting the most freqently-changed signals directly to the AVR, and connecting those less-frequently changed are on the I/O expander.  The AVR has direct connections for the LSB of the address bus, the data bus, and following control lines: MREQ, IORQ, RD, WR, M1 and HALT.  
+The ATmega1284p doesn't have enough I/O to interface with all of the Z80's bus lines, so I used an I/O expander to provide two additional 8-bit I/O ports.  I have tried to optimize performance by connecting the most freqently-changed signals directly to the AVR, and connecting those less-frequently changed to the I/O expander.  The AVR has direct connections for the LSB of the address bus, the data bus, and following control lines: MREQ, IORQ, RD, WR, M1 and HALT.  
 
 The MSB of the address bus, the 3-bit bank address for the 512K SRAM, and the remaining control lines--INT, NMI, RESET, BUSRQ, and BUSACK--are on the I/O expander. This arrangement allows the AVR to do faster DMA than would be possible if the entire address bus were on the I/O expander. With just the upper 8 bits of the address on the expander, the AVR only has to use the slower SPI interface to change the MSB of the address bus once every 256 bytes of memory instead of for every byte. 
 
@@ -169,7 +169,7 @@ I have tested the following code on the Z80:
 - I have successfully run programs from many of the other disk images linked above, including Ladder, Catchum, Zork, Microsoft BASIC, and more.
 - I have tried unsuccessfully to run Altair 4K BASIC. It starts to load (prompts for memory, terminal width, etc.) but then hangs before issuing the ready prompt. According to [one source](http://www.autometer.de/unix4fun/z80pack/ftp/altair/), 4K BASIC is not compatible with the Z80 so the problem may not be on my end. 
 
-I am cross-assembling the programs using [z80asm](http://www.nongnu.org/z80asm/) for Zilog mnemonics, or [asm8080](https://github.com/begoon/asm8080) for Intel mnemonics. After assembling the programs, I use `xxd -i` to generate a C header file with an array containing the machine code.
+I am cross-assembling the programs using [z80asm](http://www.nongnu.org/z80asm/) for Zilog mnemonics, or [asm8080](http://asm8080.sourceforge.net/) for Intel mnemonics. After assembling the programs, I use `xxd -i` to generate a C header file with an array containing the machine code.
 
 ## License
 
