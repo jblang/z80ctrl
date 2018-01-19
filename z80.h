@@ -5,6 +5,6 @@
 
 void z80_reset(void);
 void z80_run(uint16_t addr);
-void z80_trace(int cycles);
+void z80_trace(uint16_t addr);
 
 #endif

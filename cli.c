@@ -236,6 +236,17 @@ void cli_run(int argc, char *argv[])
     z80_run(addr);
 }
 
+void cli_trace(int argc, char *argv[])
+{
+    uint16_t addr;
+    if (argc != 2) {
+        printf_P(PSTR("usage: trace <address>\n"));
+        return;
+    }
+    addr = strtol(argv[1], NULL, 16) & 0xffff;
+    z80_trace(addr);
+}
+
 void cli_bank(int argc, char *argv[])
 {
     uint8_t bank;
@@ -377,6 +388,7 @@ cli_entry cli_cmds[] = {
     {"run", "execute code at address", &cli_run},
     {"savehex", "save intel hex file from memory", &cli_savehex},
     {"sboot", "boot disk using SIMH bootloader", &cli_sboot},
+    {"trace", "trace bus status during execution", &cli_trace},
     {"unmount", "unmount a disk image", &cli_unmount}
 };
 
