@@ -211,15 +211,18 @@ void cli_savehex(int argc, char *argv[])
 
 void cli_dump(int argc, char *argv[])
 {
-    uint16_t addr;
-    uint16_t length;
-    if (argc != 3) {
-        printf_P(PSTR("usage: dump <start> <length>\n"));
+    uint16_t start, end;
+    if (argc < 2) {
+        printf_P(PSTR("usage: dump <start> [end]\n"));
         return;
     }
-    addr = strtol(argv[1], NULL, 16) & 0xffff;
-    length = strtol(argv[2], NULL, 16) & 0xffff;
-    dump_mem(addr, length);
+    start = strtol(argv[1], NULL, 16) & 0xffff;
+    if (argc < 3)
+        end = start + 0xff;
+    else
+        end = strtol(argv[2], NULL, 16) & 0xffff;
+    printf("%04x %04x\n", start, end);
+    dump_mem(start, end);
 }
 
 void cli_run(int argc, char *argv[])
@@ -322,26 +325,13 @@ void cli_dir(int argc, char *argv[])
 
 void cli_fill(int argc, char*argv[]) {
     if (argc != 4) {
-        printf_P(PSTR("usage: fill <start> <length> <value>\n"));
+        printf_P(PSTR("usage: fill <start> <end> <value>\n"));
         return;
     }
-    uint16_t addr = strtol(argv[1], NULL, 16) & 0xffff;
-    uint32_t length = strtol(argv[2], NULL, 16);
-    uint8_t data = strtol(argv[3], NULL, 16) & 0xff;
-    uint8_t buf[256];
-    uint16_t i;
-    for (i = 0; i < 256; i++)
-        buf[i] = data;
-    for (;;) {
-        if (length > 256) {
-            write_mem(addr, buf, 256);
-            length -= 256;
-            addr += 256;
-        } else {
-            write_mem(addr, buf, length);
-            break;
-        }
-    }
+    uint16_t start = strtol(argv[1], NULL, 16) & 0xffff;
+    uint16_t end = strtol(argv[2], NULL, 16) & 0xffff;
+    uint8_t value = strtol(argv[3], NULL, 16) & 0xff;
+    fill_mem(start, end, value);
 }
 
 void cli_mount(int argc, char *argv[])

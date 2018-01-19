@@ -102,15 +102,16 @@ int verify_mem(uint16_t start, uint8_t *src, uint16_t len, uint8_t log)
 }
 
 // Hex dump memory block to console
-void dump_mem(uint16_t addr, uint16_t len)
+void dump_mem(uint16_t start, uint16_t end)
 {
     uint8_t buf[16];
-    uint8_t j = 0, buflen = 16;
-    uint32_t i = 0;
+    uint8_t j;
+    uint8_t buflen = 16;
+    uint32_t i = start;
 
-    while (i < len) {
-        printf("%04X: ", addr + i);
-        read_mem(addr + i, buf, buflen);
+    while (i <= end) {
+        printf("%04X: ", i);
+        read_mem(i, buf, buflen);
         for (j = 0; j < buflen; j++) {
             printf("%02X ", buf[j]);
         }
@@ -122,6 +123,23 @@ void dump_mem(uint16_t addr, uint16_t len)
                 printf(".");
         }
         printf("\n");
+    }
+}
+
+void fill_mem(uint16_t start, uint16_t end, uint8_t value)
+{
+    uint8_t buf[256];
+    uint16_t i;
+    for (i = 0; i < 256; i++)
+        buf[i] = value;
+    for (;;) {
+        if (end - start > 256) {
+            write_mem(start, buf, 256);
+            start += 256;
+        } else {
+            write_mem(start, buf, end - start + 1);
+            break;
+        }
     }
 }
 
