@@ -79,17 +79,17 @@ void write_mem_P(uint16_t addr, uint8_t *buf, uint16_t len)
 }
 
 // Verify specified number of bytes from external memory against a buffer
-int verify_mem(uint16_t start, uint8_t *src, uint16_t len, uint8_t log)
+int verify_mem(uint16_t start, uint16_t end, uint8_t *src, uint8_t log)
 {
     uint8_t buf[256];
     int errors = 0;
-    uint32_t i = 0;
     uint16_t j = 0, buflen = 256;
+    uint32_t i = start;
 
-    while (i < len) {
-        if (len - i < buflen)
-            buflen = len - i;
-        read_mem(start+i, buf, buflen);
+    while (i <= end) {
+        if (end - i + 1 < buflen)
+            buflen = end - i + 1;
+        read_mem(start, buf, buflen);
         for (j = 0; j < buflen; i++, j++) {
             if (buf[j] != src[i]) {
                 if (log)
@@ -141,108 +141,4 @@ void fill_mem(uint16_t start, uint16_t end, uint8_t value)
             break;
         }
     }
-}
-
-uint8_t fromhex(char hex)
-{
-    if ('0' <= hex && hex <= '9')
-        return hex - '0';
-    else if ('A' <= hex && hex <= 'F')
-        return hex - 'A' + 10;
-    else if ('a' <= hex && hex <= 'f')
-        return hex - 'a' + 10;
-    else
-        return 255;
-}
-
-ihex_res write_ihex_rec(char *record) 
-{
-    ihex_res res;
-    int i;
-
-    if (strlen(record) < 11) {
-        res.rc == IHEX_FORMAT;
-        return res;
-    }
-    if (record[0] != ':') {
-        res.rc = IHEX_FORMAT;
-        return res;
-    }
-    for (i = 1; i < strlen(record); i++) {
-        if (fromhex(record[i]) > 0xf && record[i] != '\r' && record[i] != '\n') {
-            res.rc = IHEX_FORMAT;
-            return res;
-        }
-    }
-    res.count = fromhex(record[1]) << 4 | fromhex(record[2]);
-    if (strlen(record) < 11 + res.count) {
-        res.rc = IHEX_COUNT;
-        return res;
-    }
-    res.addr = fromhex(record[3]) << 12 | fromhex(record[4]) << 8 | fromhex(record[5]) << 4 | fromhex(record[6]);
-    res.type = fromhex(record[7]) << 4 | fromhex(record[8]);
-    uint8_t check1 = res.count + (res.addr >> 8) + (res.addr & 0xff) + res.type;
-    uint8_t data[256];
-    for (i = 0; i < res.count; i++) {
-        data[i] = fromhex(record[i*2+9]) << 4 | fromhex(record[i*2+10]);
-        check1 += data[i];
-    }
-    check1 = ~check1 + 1;
-    uint8_t check2 = fromhex(record[res.count*2+9]) << 4 | fromhex(record[res.count*2+10]);
-    if (check1 != check2) {
-        res.rc = IHEX_CKSUM;
-        return res;
-    }
-    if (res.type == IHEX_DATA) {
-        write_mem(res.addr, data, res.count);
-        res.rc = IHEX_OK;
-    } else if (res.type == IHEX_EOF)
-        res.rc = IHEX_OK;
-    else
-        res.rc = IHEX_RECTYPE;
-    return res;
-}
-
-uint8_t tohex(uint8_t nyb)
-{
-    if (0 <= nyb && nyb <= 9)
-        return '0' + nyb;
-    else if (0xa <= nyb && nyb <= 0xf)
-        return 'A' + nyb - 10;
-    else
-        return 0;
-}
-
-char *read_ihex_rec(uint16_t addr, uint8_t len) 
-{
-    static char record[512+12];
-    uint8_t membuf[256];
-    uint8_t check = len + (addr >> 8) + (addr & 0xff);
-    int i;
-
-    record[0] = ':';
-    record[1] = tohex(len >> 4);
-    record[2] = tohex(len & 0xf);
-    record[3] = tohex((addr >> 12) & 0xf);
-    record[4] = tohex((addr >> 8) & 0xf);
-    record[5] = tohex((addr >> 4) & 0xf);
-    record[6] = tohex(addr & 0xf);
-    record[7] = '0';
-    if (len > 0) {
-        record[8] = '0';
-        read_mem(addr, membuf, len);
-    } else {
-        check += 1;
-        record[8] = '1';
-    }
-    for (i = 0; i < len; i++) {
-        record[i*2+9] = tohex(membuf[i] >> 4);
-        record[i*2+10] = tohex(membuf[i] & 0xf);
-        check += membuf[i];
-    }
-    check = ~check + 1;
-    record[len*2+9] = tohex(check >> 4);
-    record[len*2+10] = tohex(check & 0xf);
-    record[len*2+11] = '\0';
-    return record;
 }

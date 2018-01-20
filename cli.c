@@ -12,6 +12,7 @@
 #include "z80.h"
 #include "cli.h"
 #include "ff.h"
+#include "ihex.h"
 
 FATFS fs;
 
@@ -87,7 +88,8 @@ void cli_loadhex(int argc, char *argv[])
     FIL fp;
     FRESULT fr;
     ihex_res res;
-    char buf[524];
+    char ihex[524];
+    uint8_t bin[256];
     char *filename = NULL;
     uint16_t total = 0;
     uint16_t line = 0;
@@ -105,7 +107,7 @@ void cli_loadhex(int argc, char *argv[])
     }
     for (;;) {
         if (filename != NULL) {
-            if (f_gets(buf, 524, &fp) == NULL) {
+            if (f_gets(ihex, 524, &fp) == NULL) {
                 if (f_error(&fp))
                     printf_P(PSTR("error: unable to read file\n"));
                 else if (f_eof(&fp))
@@ -113,13 +115,14 @@ void cli_loadhex(int argc, char *argv[])
                 break;
             }
         } else {
-            gets(buf);
-            if (strlen(buf) == 0)
+            gets(ihex);
+            if (strlen(ihex) == 0)
                 break;
         }
         line++;
-        res = write_ihex_rec(buf);
+        res = ihex_to_bin(ihex, bin);
         if (res.rc == IHEX_OK && res.type == IHEX_DATA && res.count > 0) {
+            write_mem(res.addr, bin, res.count);
             printf_P(PSTR("loaded 0x%02X bytes to 0x%04X\n"), res.count, res.addr);
             total += res.count;
         }
@@ -144,23 +147,26 @@ void cli_loadhex(int argc, char *argv[])
         }
 }
 
+#define BYTESPERLINE 16
+
 void cli_savehex(int argc, char *argv[])
 {
     FRESULT fr;
     FIL fp;
 
-    uint16_t addr;
-    uint16_t length;
+    uint32_t start;
+    uint16_t end;
     uint8_t count;
     char *filename = NULL;
-    char * record;
+    char bin[BYTESPERLINE];
+    char ihex[BYTESPERLINE*2+12];
     uint16_t i;
     if (argc < 3) {
-        printf_P(PSTR("usage: savehex <start> <length> <file>\n"));
+        printf_P(PSTR("usage: savehex <start> <end> [file]\n"));
         return;
     }
-    addr = strtol(argv[1], NULL, 16) & 0xffff;
-    length = strtol(argv[2], NULL, 16) & 0xffff;
+    start = strtol(argv[1], NULL, 16) & 0xffff;
+    end = strtol(argv[2], NULL, 16) & 0xffff;
     if (argc == 4) {
         filename = argv[3];
         if ((fr = f_open(&fp, filename, FA_WRITE | FA_CREATE_ALWAYS)) != FR_OK) {
@@ -171,32 +177,29 @@ void cli_savehex(int argc, char *argv[])
         }        
     }
     for (;;) {
-        if (length > 16)
-            count = 16;
+        if (end - start + 1 > BYTESPERLINE)
+            count = BYTESPERLINE;
         else
-            count = length;
-
-        printf("saving 0x%02X bytes from 0x%04X\n", count, addr);
-        record = read_ihex_rec(addr, count);
-        length -= count;
-        addr += count;
+            count = end - start + 1;
+        read_mem(start, bin, count);
+        bin_to_ihex(bin, ihex, start, count);
         if (filename != NULL) {
-            if (f_printf(&fp, "%s\n", record) == EOF) {
+            if (f_printf(&fp, "%s\n", ihex) == EOF) {
                 printf_P(PSTR("error writing file\n"));
                 break;
             }
-            if (length == 0) {
-                if (f_printf(&fp, "%s\n", read_ihex_rec(0,0)) == EOF) {
-                    printf_P(PSTR("error writing file\n"));
-                }
-                break;
-            }
         } else {
-            puts(record);
-            if (length == 0) {
-                puts(read_ihex_rec(0,0));
-                break;
-            }
+            puts(ihex);
+        }
+        start += count;
+        if (start > end) {
+            bin_to_ihex(bin, ihex, 0, 0);
+            if (filename != NULL) {
+                if (f_printf(&fp, "%s\n", ihex) == EOF)
+                    printf_P(PSTR("error writing file\n"));
+            } else
+                puts(ihex);
+            break;
         }
     }
     if (filename != NULL) {
