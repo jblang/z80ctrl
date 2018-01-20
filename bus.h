@@ -113,6 +113,5 @@ void clk_stop(void);
 void bus_master(void);
 void bus_slave(void);
 void bus_init(void);
-char *bus_status();
 
 #endif

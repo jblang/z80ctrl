@@ -230,24 +230,149 @@ void cli_dump(int argc, char *argv[])
 
 void cli_run(int argc, char *argv[])
 {
-    uint16_t addr;
-    if (argc != 2) {
-        printf_P(PSTR("usage: run <address>\n"));
-        return;
+    if (argc >= 2) {
+        uint16_t addr = strtol(argv[1], NULL, 16) & 0xffff;
+        z80_reset(addr);
     }
-    addr = strtol(argv[1], NULL, 16) & 0xffff;
-    z80_run(addr);
+    z80_run();
 }
 
-void cli_trace(int argc, char *argv[])
+void cli_reset(int argc, char *argv[])
 {
-    uint16_t addr;
-    if (argc != 2) {
-        printf_P(PSTR("usage: trace <address>\n"));
+    uint16_t addr = 0;
+    if (argc >= 2) {
+        addr = strtol(argv[1], NULL, 16) & 0xffff;
+    }
+    z80_reset(addr);
+}
+
+void cli_debug(int argc, char *argv[])
+{
+    uint32_t cycles = 0;
+    if (argc >= 2)
+        cycles = strtol(argv[1], NULL, 16);            
+    z80_trace(cycles);
+}
+
+void cli_status(int argc, char *argv[])
+{
+    z80_status();
+}
+
+void breakwatch_status(char *name, uint16_t start, uint16_t end)
+{
+    if (start < end)
+        printf_P(PSTR("\t%s: %04x-%04x\n"), name, start, end);
+    else if (start == end)
+        printf_P(PSTR("\t%s: %04x\n"), name, start);
+    else
+        printf_P(PSTR("\t%s: disabled\n"), name);
+}
+
+void cli_breakwatch(int argc, char *argv[])
+{
+    uint16_t start = 0;
+    uint16_t end = 0xffff;
+    if (argc == 1) {
+        if (strcmp(argv[0], "break") == 0) {
+            printf_P(PSTR("break status:\n"));
+            breakwatch_status("memrd", memrd_break_start, memrd_break_end);
+            breakwatch_status("memwr", memwr_break_start, memwr_break_end);
+            breakwatch_status("iord", iord_break_start, iord_break_end);
+            breakwatch_status("iowr", iowr_break_start, iowr_break_end);
+            breakwatch_status("opfetch", opfetch_break_start, opfetch_break_end);
+        } else {
+            printf_P(PSTR("watch status:\n"));
+            breakwatch_status("memrd", memrd_watch_start, memrd_watch_end);
+            breakwatch_status("memwr", memwr_watch_start, memwr_watch_end);
+            breakwatch_status("iord", iord_watch_start, iord_watch_end);
+            breakwatch_status("iowr", iowr_watch_start, iowr_watch_end);
+            breakwatch_status("opfetch", opfetch_watch_start, opfetch_watch_end);
+        }
+        printf_P(PSTR("\nusage:\n\t%s <type> [start] [end]\n"), argv[0]);
+        printf_P(PSTR("\t%s <type> off to disable type\n"), argv[0]);
+        printf_P(PSTR("\t%s off to disable all\n"), argv[0]);
         return;
     }
-    addr = strtol(argv[1], NULL, 16) & 0xffff;
-    z80_trace(addr);
+    if (argc >= 3) {
+        if (strcmp(argv[2], "off") == 0) {
+            start = 0xffff;
+            end = 0;
+        } else {
+            start = strtol(argv[2], NULL, 16);
+            if (argc >= 4)
+                end = strtol(argv[3], NULL, 16);
+            else
+                end = start;
+        }
+    }
+    if (strcmp(argv[1], "memrd") == 0) {
+        if (strcmp(argv[0], "break") == 0) {
+            memrd_break_start = start;
+            memrd_break_end = end;
+        } else {
+            memrd_watch_start = start;
+            memrd_watch_end = end;
+        }
+    } else if (strcmp(argv[1], "memwr") == 0) {
+        if (strcmp(argv[0], "break") == 0) {
+            memwr_break_start = start;
+            memwr_break_end = end;
+        } else {
+            memwr_watch_start = start;
+            memwr_watch_end = end;
+        }
+    } else if (strcmp(argv[1], "iord") == 0) {
+        if (strcmp(argv[0], "break") == 0) {
+            iord_break_start = start;
+            iord_break_end = end;
+        } else {
+            iord_watch_start = start;
+            iord_watch_end = end;
+        }
+    } else if (strcmp(argv[1], "iowr") == 0) {
+        if (strcmp(argv[0], "break") == 0) {
+            iowr_break_start = start;
+            iowr_break_end = end;
+        } else {
+            iowr_watch_start = start;
+            iowr_watch_end = end;
+        }
+    } else if (strcmp(argv[1], "opfetch") == 0) {
+        if (strcmp(argv[0], "break") == 0) {
+            opfetch_break_start = start;
+            opfetch_break_end = end;
+        } else {
+            opfetch_watch_start = start;
+            opfetch_watch_end = end;
+        }
+    } else if (strcmp(argv[1], "off") == 0) {
+        if (strcmp(argv[0], "break") == 0) {
+            memrd_break_start = 0xffff;
+            memrd_break_end = 0;
+            memwr_break_start = 0xffff;
+            memwr_break_end = 0;
+            iord_break_start = 0xff;
+            iord_break_end = 0;
+            iowr_break_start = 0xff;
+            iowr_break_end = 0;
+            opfetch_break_start = 0xffff;
+            opfetch_break_end = 0;
+        } else {
+            memrd_watch_start = 0xffff;
+            memrd_watch_end = 0;
+            memwr_watch_start = 0xffff;
+            memwr_watch_end = 0;
+            iord_watch_start = 0xff;
+            iord_watch_end = 0;
+            iowr_watch_start = 0xff;
+            iowr_watch_end = 0;
+            opfetch_watch_start = 0xffff;
+            opfetch_watch_end = 0;
+        }
+    } else {
+        printf_P(PSTR("error: unknown type\n"));
+    }
 }
 
 void cli_bank(int argc, char *argv[])
@@ -261,27 +386,25 @@ void cli_bank(int argc, char *argv[])
     SET_BANK(bank);
 }
 
-void cli_bus(int argc, char *argv[])
-{
-    puts(bus_status());
-}
-
 void cli_altmon(int argc, char *argv[])
 {
     write_mem_P(0xf800, altmon_bin, altmon_bin_len);
-    z80_run(0xf800);
+    z80_reset(0xf800);
+    z80_run();
 }
 
 void cli_dboot(int argc, char *argv[])
 {
     write_mem_P(0xff00, dbl_bin, dbl_bin_len);
-    z80_run(0xff00);
+    z80_reset(0xff00);
+    z80_run();
 }
 
 void cli_sboot(int argc, char *argv[])
 {
     write_mem_P(0xff00, simhboot_bin, simhboot_bin_len);
-    z80_run(0xff00);
+    z80_reset(0xff00);
+    z80_run();
 }
 
 void cli_dir(int argc, char *argv[])
@@ -379,9 +502,10 @@ typedef struct _cli_entry {
 
 cli_entry cli_cmds[] = {
     {"altmon", "run altmon 8080 monitor", &cli_altmon},
-    {"bus", "display current bus status", &cli_bus},
     {"bank", "select active 64K bank", &cli_bank},
-    {"dboot", "boot disk using Altair DBL", &cli_dboot},
+    {"break", "set breakpoints", &cli_breakwatch},
+    {"dboot", "boot disk using Altair disk bootloader", &cli_dboot},
+    {"debug", "debug the processor N cycles", &cli_debug},
     {"dir", "shows directory listing", &cli_dir},
     {"dump", "dump memory in hex and ascii", &cli_dump},
     {"fill", "fill memory with byte", &cli_fill},
@@ -389,10 +513,12 @@ cli_entry cli_cmds[] = {
     {"loadhex", "load intel hex file to memory", &cli_loadhex},
     {"mount", "mount a disk image", &cli_mount},
     {"run", "execute code at address", &cli_run},
+    {"reset", "reset the processor, with optional vector", &cli_reset},
     {"savehex", "save intel hex file from memory", &cli_savehex},
     {"sboot", "boot disk using SIMH bootloader", &cli_sboot},
-    {"trace", "trace bus status during execution", &cli_trace},
-    {"unmount", "unmount a disk image", &cli_unmount}
+    {"status", "display current status", &cli_status},
+    {"unmount", "unmount a disk image", &cli_unmount},
+    {"watch", "set watch points", &cli_breakwatch}
 };
 
 #define NUM_CMDS (sizeof(cli_cmds)/sizeof(cli_entry))
