@@ -5,6 +5,7 @@
 #include "z80.h"
 #include "bus.h"
 #include "diskemu.h"
+#include "opcodes.h"
 
 // Breakpoints and watches
 uint16_t memrd_watch_start = 0xffff;
@@ -120,37 +121,29 @@ void z80_status()
     uint8_t ctrlx = iox_read(CTRLX_GPIO);
     uint8_t data = GET_DATA;
 
-    printf_P(
-        PSTR("clk=%c m1=%c mreq=%c iorq=%c ioack=%c rd=%c wr=%c rfsh=%c halt=%c "
-        "int=%c nmi=%c reset=%c busrq=%c busack=%c bank=%X addr=%04X "
-        "data=%02X %c\n"),
-        HL(GET_CLK), 
-        HL(GET_M1), 
-        HL(GET_MREQ), 
-        HL(GET_IORQ), 
-        HL(GET_IOACK),
-        HL(GET_RD), 
-        HL(GET_WR), 
-#ifdef RFSH
-        HL(GET_RFSH), 
-#else
-        'X',
-#endif
-        HL(GET_HALT), 
-        HL(ctrlx & (1 << INTERRUPT)), 
-        HL(ctrlx & (1 << NMI)), 
-        HL(ctrlx & (1 << RESET)), 
-        HL(ctrlx & (1 << BUSRQ)), 
-        HL(ctrlx & (1 << BUSACK)),
-        ((ctrlx & BANKMASK) >> BANKADDR), 
-        GET_ADDR, 
-        data,
-        0x20 <= data && data <= 0x7e ? data : ' ');
+    if (!GET_M1)
+        printf("op fetch\t");
+    else if (!GET_MREQ && !GET_RD)
+        printf("mem read\t");
+    else if (!GET_MREQ && !GET_WR)
+        printf("mem write\t");
+    else if (!GET_IORQ && !GET_RD)
+        printf("io read\t");
+    else if (!GET_IORQ && !GET_WR)
+        printf("io write\t");
+    printf("%04x\t%02x\t", GET_ADDR, GET_DATA);
+    if (!GET_M1)
+        printf("%s", opcodes[data]);
+    else if (0x20 <= data && data <= 0x7e ? data : ' ')
+        printf("%c", data);
+    printf("\n");
 
-        // wait until output is fully transmitted to avoid
-        // interfering with UART status for running program
-        loop_until_bit_is_set(UCSR0A, UDRE0);
+    // wait until output is fully transmitted to avoid
+    // interfering with UART status for running program
+    loop_until_bit_is_set(UCSR0A, UDRE0);
 }
+
+#define MEM_DEBUG (opfetch_watch_start <= opfetch_watch_end || opfetch_break_start <= opfetch_break_end || memrd_watch_start <= memrd_watch_end || memrd_break_start <= memrd_break_end || memwr_watch_start <= memwr_watch_end || memwr_break_start <= memwr_break_end)
 
 // Trace the bus state for specified number of clock cycles
 void z80_trace(uint32_t cycles)
@@ -158,10 +151,8 @@ void z80_trace(uint32_t cycles)
     uint32_t c = 0;
     while (GET_HALT && (cycles == 0 || c < cycles)) {
         CLK_HI;
-        CLK_LO;
-        uint16_t addr = GET_ADDR;
         if (!GET_IORQ) {
-            addr &= 0xff;
+            uint8_t addr = GET_ADDRLO;
             if ((!GET_WR && iowr_watch_start <= addr && addr <= iowr_watch_end) ||
                 (!GET_RD && iord_watch_start <= addr && addr <= iord_watch_end))
                 z80_status();
@@ -171,7 +162,8 @@ void z80_trace(uint32_t cycles)
             if ((!GET_WR && iowr_break_start <= addr && addr <= iowr_break_end) ||
                 (!GET_RD && iord_break_start <= addr && addr <= iord_break_end))
                 break;
-        } else if (!GET_MREQ) {
+        } else if (!GET_MREQ && MEM_DEBUG) {
+            uint16_t addr = GET_ADDR;
             if (!GET_M1 && opfetch_watch_start <= addr && addr <= opfetch_watch_end)
                 z80_status();
             else if ((!GET_RD && memrd_watch_start <= addr && addr <= memrd_watch_end) ||
@@ -183,6 +175,7 @@ void z80_trace(uint32_t cycles)
                     (!GET_WR && memwr_break_start <= addr && addr <= memwr_break_end))
                 break;
         }
+        CLK_LO;
         c++;
     }
 }
