@@ -5,7 +5,9 @@ This is an AVR-based bootloader and I/O firmware for a Z80 single-board computer
 
 ## Hardware
 
-![breadboard](breadboard.jpg)
+[![Hardware overview video](https://img.youtube.com/vi/M8EIAxMpA-o/0.jpg)](https://www.youtube.com/watch?v=M8EIAxMpA-o)
+
+*Click to view on YouTube.*
 
 ### Bill of Materials
 
@@ -141,7 +143,9 @@ With the Z80 bus interface, UART RX/TX, SPI MISO/MOSI/SCK, and chip selects for 
 
 ## Software
 
-![monitor](monitor.png)
+[![Software overview video](https://img.youtube.com/vi/5hJ0k5ZuQRE/0.jpg)](https://www.youtube.com/watch?v=5hJ0k5ZuQRE)
+
+*Click to view on YouTube.*
 
 ### AVR
 
