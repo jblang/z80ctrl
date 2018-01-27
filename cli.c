@@ -480,6 +480,10 @@ void cli_fill(int argc, char*argv[]) {
     fill_mem(start, end, value);
 }
 
+void cli_bus(int argc, char *argv[]) {
+    bus_status();
+}
+
 void cli_mount(int argc, char *argv[])
 {
     if (argc != 3) {
@@ -512,6 +516,7 @@ typedef struct _cli_entry {
 cli_entry cli_cmds[] = {
     {"altmon", "run altmon 8080 monitor", &cli_altmon},
     {"bank", "select active 64K bank", &cli_bank},
+    {"bus", "display low-level bus status", &cli_bus},
     {"break", "set breakpoints", &cli_breakwatch},
     {"dboot", "boot disk using Altair disk bootloader", &cli_dboot},
     {"d", "shorthand to continue debugging", &cli_debug},

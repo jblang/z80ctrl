@@ -61,6 +61,46 @@ void bus_slave(void)
     BUSRQ_HI;
 }
 
+#define HL(signal) ((signal) ? 'H' : 'L')
+
+// Log current bus status
+void bus_status()
+{
+    uint8_t ctrlx = iox_read(CTRLX_GPIO);
+    uint8_t data = GET_DATA;
+
+    printf_P(
+        PSTR("clk=%c m1=%c mreq=%c iorq=%c ioack=%c rd=%c wr=%c rfsh=%c halt=%c "
+        "int=%c nmi=%c reset=%c busrq=%c busack=%c bank=%X addr=%04X "
+        "data=%02X %c\n"),
+        HL(GET_CLK), 
+        HL(GET_M1), 
+        HL(GET_MREQ), 
+        HL(GET_IORQ), 
+        HL(GET_IOACK),
+        HL(GET_RD), 
+        HL(GET_WR), 
+#ifdef RFSH
+        HL(GET_RFSH), 
+#else
+        'X',
+#endif
+        HL(GET_HALT), 
+        HL(ctrlx & (1 << INTERRUPT)), 
+        HL(ctrlx & (1 << NMI)), 
+        HL(ctrlx & (1 << RESET)), 
+        HL(ctrlx & (1 << BUSRQ)), 
+        HL(ctrlx & (1 << BUSACK)),
+        ((ctrlx & BANKMASK) >> BANKADDR), 
+        GET_ADDR, 
+        data,
+        0x20 <= data && data <= 0x7e ? data : ' ');
+
+        // wait until output is fully transmitted to avoid
+        // interfering with UART status for running program
+        loop_until_bit_is_set(UCSR0A, UDRE0);
+}
+
 // Initialize bus
 void bus_init(void)
 {
