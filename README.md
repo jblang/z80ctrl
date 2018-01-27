@@ -1,129 +1,22 @@
 # z80ctrl
 
-This is an AVR-based bootloader and I/O firmware for a Z80 single-board computer.  The AVR loads an external SRAM with code for the Z80 to run. Once the Z80 is running, AVR also provides debugging facilities, serial I/O, disk emulation, and potentially other peripherals for the Z80.  [Several](https://hackaday.io/project/7354-zaviour-board-avrz80-hybrid) [other](http://benryves.com/journal/3662496) [people](https://www.apress.com/us/book/9781484214268) have had the idea to combine an AVR with a Z80 before me, but have shared very little of the code necessary for others to build a fully-functioning SBC. I aim to change that with this project. I have taken inspiration from these projects but I designed this specific circuit and software implementation myself.  My implementation also introduces several innovations not present in previous projects. These are described in the design notes section below.
+This is an AVR-based bootloader and I/O firmware for a Z80-based computer.  The AVR loads an SRAM with code for the Z80 to run. Once the Z80 is running, AVR also provides serial I/O, disk emulation, debugging facilities, and potentially other peripherals for the Z80.
 
+[Several](http://benryves.com/journal/3662496) [other](https://hackaday.io/project/7354-zaviour-board-avrz80-hybrid) [people](https://www.apress.com/us/book/9781484214268) [had](https://hackaday.io/project/19000-a-4-4ics-z80-homemade-computer-on-breadboard) the idea to combine an AVR with a Z80 before me, but these projects either didn't share any code or didn't provide all the capabilities that I wanted. I have taken inspiration from these projects but I designed this specific circuit and software implementation myself. The innovations not present in previous projects are described in the design notes section below.
 
 ## Hardware
 
+I made a YouTube video giving an overview of the hardware linked from the image below.
+
 [![Hardware overview video](https://img.youtube.com/vi/M8EIAxMpA-o/0.jpg)](https://www.youtube.com/watch?v=M8EIAxMpA-o)
 
-*Click to view on YouTube.*
+I have provided a bill of materials and table of pin-to-pin connections for the breadboarded circuit in [breadboard.md](breadboard.md).
 
-### Bill of Materials
+I ordered an [RC2014](https://rc2014.co.uk/) retrocomputer kit and I intend to make this project into a plug-in module for the RC2014, which will replace the clock, serial, rom, and CF boards, so that all you need for a fully functional computer is my module plus the backplane, CPU, and memory board. 
 
-- Zilog [Z84C010PEG](http://www.mouser.com/ds/2/450/ps0178-19386.pdf) 10MHz Z80 CPU
-- Alliance [AS6C4008](http://www.mouser.com/ds/2/12/AS6C4008-1265427.pdf) 512KB SRAM chip
-- Atmel [ATmega1284p](http://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-42719-ATmega1284P_Datasheet.pdf) AVR microcontroller
-- Microchip [MCP23S18](http://ww1.microchip.com/downloads/en/DeviceDoc/22103a.pdf) SPI I/O expander
-- [74HCT74](http://www.ti.com/general/docs/lit/getliterature.tsp?genericPartNumber=SN74HCT74&fileType=pdf) dual D-type flip-flop
-- [LM1117](http://www.ti.com/lit/ds/symlink/lm1117.pdf) 3.3V regulator
-- Silicon Labs [CP2102](https://www.silabs.com/documents/public/data-sheets/CP2102-9.pdf) USB-to-TTL serial breakout
-- Pololu [ls01a](https://www.pololu.com/product/2595) 4 channel level shifter
-- Pololu [sdc01a](https://www.pololu.com/product/2597) microSD breakout
-- 20MHz crystal with 20 pf load caps for AVR
-- Various 0.01uf bypass and 10uf filter caps
+Besides the reduced part count, my implementation has a few other advantages over the stock RC2014. It can read disk images off a FAT32-formatted SD Card and has full compatiblity with unmodified Altair 8800 disk images and disk images from the SIMH emulator project. It also has single-step debugging, breakpoints, and watchpoints that will trace the execution of the Z80 in real-time.
 
-### Connections
-
-The prototype has been built on two full-size breadboards using dupont wire.  In lieu of a schematic for now, here is a table of connections. Pin names are followed by pin numbers are in parentheses.  Please refer to notes after each table for connections marked with an asterisk.
-
-#### Memory, Address, and Control Busses
-
-| Z80          | 74HCT74    | Atmega1284P | MCP23S18    | AS6C4008 | Power |
-|--------------|------------|-------------|-------------|----------|-------|
-| A0 (30)      |            | PA0 (40)    |             | A0 (12)  |       |
-| A1 (31)      |            | PA1 (39)    |             | A1 (11)  |       |
-| A2 (32)      |            | PA2 (38)    |             | A2 (10)  |       |
-| A3 (33)      |            | PA3 (37)    |             | A3 (9)   |       |
-| A4 (34)      |            | PA4 (36)    |             | A4 (8)   |       |
-| A5 (35)      |            | PA5 (35)    |             | A5 (7)   |       |
-| A6 (36)      |            | PA6 (34)    |             | A6 (6)   |       |
-| A7 (37)      |            | PA7 (33)    |             | A7 (5)   |       |
-| A8 (38)      |            |             | GPA0 (20)   | A8 (27)  |       |
-| A9 (39)      |            |             | GPA1 (21)   | A9 (26)  |       |
-| A10 (40)     |            |             | GPA2 (22)   | A10 (23) |       |
-| A11 (1)      |            |             | GPA3 (23)   | A11 (25) |       |
-| A12 (2)      |            |             | GPA4 (24)   | A12 (4)  |       |
-| A13 (3)      |            |             | GPA5 (25)   | A13 (28) |       |
-| A14 (4)      |            |             | GPA6 (26)   | A14 (3)  |       |
-| A15 (5)      |            |             | GPA7 (27)   | A15 (31) |       |
-|              |            |             | GPB5 (8)    | A16 (2)  |       |
-|              |            |             | GPB6 (9)    | A17 (30) |       |
-|              |            |             | GPB7 (10)   | A18 (1)  |       |
-| D0 (14)      |            | PC0 (22)    |             | DQ0 (13) |       |
-| D1 (15)      |            | PC1 (23)    |             | DQ1 (14) |       |
-| D2 (12)      |            | PC2 (24)    |             | DQ2 (15) |       |
-| D3 (8)       |            | PC3 (25)    |             | DQ3 (17) |       |
-| D4 (7)       |            | PC4 (26)    |             | DQ4 (18) |       |
-| D5 (9)       |            | PC5 (27)    |             | DQ5 (19) |       |
-| D6 (10)      |            | PC6 (28)    |             | DQ6 (20) |       |
-| D7 (13)      |            | PC7 (29)    |             | DQ7 (21) |       |
-| M1# (27)     |            | PB1 (2)     |             |          |       |
-| MREQ# (19)   |            | PD3 (17)    |             | CE# (22) |       |
-| IORQ# (20)   | 1PRE# (4)  | PD2 (16)    |             |          |       |
-| RD# (21)     |            | PD5 (19)    |             | OE# (24) |       |
-| WR# (22)     |            | PD4 (18)    |             | WE# (29) |       |
-| RFSH# (28)   |            |             |             |          |       |
-| HALT# (18)*  |            | PB2 (3)*    |             |          | GND*  |
-| WAIT# (24)   | 1Q# (6)    |             |             |          |       |
-| INT# (16)    |            |             | GPB0 (3)    |          |       |
-| NMI# (17)    |            |             | GPB1 (4)    |          |       |
-| RESET# (26)  |            |             | GPB2 (5)    |          |       |
-| BUSREQ# (25) |            |             | GPB3 (6)    |          |       |
-| BUSACK# (23) |            |             | GPB4 (7)    |          |       |
-| CLK (6)      |            | PD6 (20)    |             |          |       |
-|              | 1CLR# (1)  | PD7 (21)    |             |          |       |
-|              | 1D (2)     |             |             |          | GND   |
-|              | 1CLK (3)   |             |             |          | GND   |
-|              | 2CLR# (13) |             |             |          | 5V    |
-|              | 2D (12)    |             |             |          | 5V    |
-|              | 2CLK (11)  |             |             |          | 5V    |
-|              | 2PRE# (12) |             |             |          | 5V    |
-|              |            | PB4 (5)     | CS# (12)    |          |       |
-|              |            |             | RESET# (16) |          | 5V    |
-|              |            | SCK (8)     | SCK (13)    |          |       |
-|              |            | MISO (7)    | SO (15)     |          |       |
-|              |            | MOSI (6)    | SI (14)     |          |       |
-|              |            | PB3 (4)     |             |          |       |
-|              |            | XTAL1 (13)* |             |          |       |
-|              |            | XTAL2 (12)* |             |          |       |
-| +5V (11)     | VCC (14)   | VCC (10)    | VDD (11)    | VCC (32) | 5V*   |
-| GND (29)     | GND (7)    | GND (11)    | VSS (1)     | VSS (16) | GND*  |
-
-Notes:
-1. HALT# connected to PB6 through a diode: `PB6 ->|- HALT#`. PB6 is also connected through a momentary push button to ground.
-2. Atmega1284p XTAL1 and XTAL2 connected to 20MHz full swing crystal oscillator with 20 pf load capacitors to GND on each pin.
-3. Each chip has a 0.1uf bypass capacitor from 5V to GND.
-
-#### SD Card
-
-| Atmega1284p | LS01A   | SDC01A   | LM1117T-3.3V | Power |
-|-------------|---------|----------|--------------|-------|
-| SCK (8)     | H1 (2)  |          |              |       |
-| MISO (7)    | H2 (3)  |          |              |       |
-| MOSI (6)    | H3 (4)  |          |              |       |
-| PB3 (4)     | H4 (5)  |          |              |       |
-|             | L1 (9)  | SCLK (5) |              |       |
-|             | L2 (8)  | DO (4)   |              |       |
-|             | L3 (7)  | DI (3)   |              |       |
-|             | L4 (6)  | CS# (6)  |              |       |
-| VCC (10)    | HV (1)  |          | INPUT*       | 5V    |
-|             | LV (10) | VDD (2)  | OUTPUT*      | 3V    |
-| GND (11)    |         | GND (1)  | GND*         | GND   |
-
-Note: Input and output pins of LM117T-3.3V each have 10uf filter capacitor to GND.
-
-#### Serial Adapter
-
-| ATmega1284p | CP2102 | Power    |
-|-------------|--------|----------|
-| RESET# (9)* | DTR*   | 5V, GND* |
-| RXD0 (14)   | TXO    |          |
-| TXD0 (15)   | RXI    |          |
-| VCC (10)    | VCC    | 5V       |
-| GND (11)    | GND    | GND      |
-
-Note: RESET# is connected to DTR through a 0.1uf capacitor: `RESET# -||- DTR`. RESET# is also connected through a 10K pullup resistor to 5V and through a momentary push button to GND.
+I have created a [schematic](hardware/z80ctrl.pdf) and PCB design for the proposed plug-in module in KiCad. All the design files are located in the `hardware` subdirectory.  Note that this design is currently untested and will remain so until I get the RC2014 assembled and built a prototype of my module. If you want to build the hardware that this software currently runs on, use the circuit described breadboard.md.
 
 ### Design Notes
 
@@ -139,41 +32,46 @@ The HALT input on the AVR is connected to the Z80 through a diode so that it can
 
 PB0 on the AVR is used as an output to flash an LED by the bootloader, so it cannot safely be connected to an output signal on the Z80.  By using PB0 as the chip select for the SD card, and connecting the LED from PB0 through a resistor to 5V, the bootloader LED doubles as a drive activity light, coming on when the SD chip select is low.
 
-With the Z80 bus interface, UART RX/TX, SPI MISO/MOSI/SCK, and chip selects for the I/O expander and SD card, the AVR has 1 I/O pin left, which I currently have connected to the RFSH line for debugging purposes.  If needed in the future, it can be used for another chip select instead since the RFSH signal is only required for DRAM.  Alternatively the three available chip selects could be used as address lines for a 74HCT138 3-to-8-line decoder to provide chip selects for up to 8 SPI devices.
+With the Z80 bus interface, UART RX/TX, SPI MISO/MOSI/SCK, and chip selects for the I/O expander and SD card, the AVR has 1 I/O pin left, which I currently have connected to the RFSH line for debugging purposes.
+
+On the proposed RC2014 plug-in module, I have added I/O decoding logic to allow the AVR to be assigned to none, all, or a selectable block of 64 I/O ports ($00-$3F, $40-$7F, $80-$BF and $C0-$FF). The flip flop will only trigger a wait state if the I/O address is within the selected range. This will allow the use of other peripherals alongside the AVR.  I'm using half of a 74HC139 dual 2-to-4 decoder to do this, and the other half will be used as an SPI chip select multiplexer to allow the AVR to control up to 4 SPI peripherals with just 2 I/O pins.  I plan to export the SPI signals to the user pins on the RC2014 bus, and add cuttable traces so that this is optional.  The RC2014 USER1-6 will be mapped to SCK, MISO, MOSI, IO expander chip select, and 2 unassigned chip select lines, respectively. The MCP23S17 I/O expander has a 3-bit serial addressing scheme so it should be possible to add up to 7 additional I/O expanders to the bus with only a single chip select line shared between all 8 I/O expanders.
 
 ## Software
 
-[![Software overview video](https://img.youtube.com/vi/5hJ0k5ZuQRE/0.jpg)](https://www.youtube.com/watch?v=5hJ0k5ZuQRE)
+I have also made a YouTube video demonstating some of the software capabilities, including the built-in monitor and the ability to run CP/M.  Click the image below to view.
 
-*Click to view on YouTube.*
+[![Software overview video](https://img.youtube.com/vi/5hJ0k5ZuQRE/0.jpg)](https://www.youtube.com/watch?v=5hJ0k5ZuQRE)
 
 ### AVR
 
-The AVR is programmed with the [MightyCore](https://github.com/MCUdude/MightyCore) bootloader to allow it to be reprogrammed through the serial interface.  Although I am using the MightyCore bootloader, I do not use the Arduino libraries; only avr-libc. I use the [fatfs](http://elm-chan.org/fsw/ff/00index_e.html) library to provide access to a FAT32-formatted SD-card containing ROM and disk images for the Z80.
+The AVR contains a built-in monitor program to allow control of the Z80.  When the AVR starts up, it presents a `z80ctrl>` prompt. Typing `help` at the prompt will list all available commands. Commands are provided to dump memory, fill memory, load and save Intel HEX files, mount and unmount disk images, and start the Z80 running from any address.
 
 The layout of the source code is as follows:
-- The specific ports and pins used for the Z80 bus interface and SPI chip selects are defined in `defines.h`.
-- `bus.h` provides macros to set addresses and data values and read or toggle the various control lines. This abstracts away the low-level details required to control these pins, and allows the client code to be written solely in terms of Z80 I/O lines (e.g., RD_HI, RD_LO, GET_WR, BUSRQ_LO, GET_BUSACK, and so on). 
-- Convenience functions are provided in `bus.c` to intialize the bus, control the clock, and enter and exit bus-master mode.
-- `memory.c` contains functions to do DMA transfers.
-- `z80.c` has functions start the Z80 and handle I/O requests from it. Reads and writes to the standard Altair 88-2SIO ports are redirected through the AVR's uart.
+
+- `defines.h` contains the specific ports and pins used for the Z80 bus interface and SPI chip selects.
+- `bus.h` provides macros to set the address and data bus and read or toggle the various control lines. This abstracts control of these signals away from the specific hardware implementation. It should be possible, for example, to port this code to an ATmega2560 without needing an IO expander, simply by modifying `bus.h` and `defines.h`.
+- `bus.c` provides functions to intialize the bus, control the clock, and enter and exit bus-master mode.
+- `memory.c` contains functions to do DMA transfers, and various convenience functions to dump, fill, and verify blocks of memory.
+- `spi.c` and `iox.c` provide functions for the low-level control of the SPI bus in general and the IO Expander specifically.
+- `ff.c`, `ffsystem.c`, `ffunicode.c`, and `mmc_avr_spi.c` are from the FatFS project and provide access via SPI to the FAT32 filesystem contained on the microSD card.
+- `z80.c` has functions run and debug the Z80 and handle I/O requests from it. 
 - `diskemu.c` emulates an Altair 88-DISK controller to allow running CP/M and other disk-based programs.
+- `ihex.c` contains functions to read and write Intel HEX files.
+- `cli.c` contains the command-line monitor interface for controlling the Z80 and loading memory via the AVR.  
 - The `uart.c` and `uart.h` files borrowed from the avr-libc [stdio demo](http://www.nongnu.org/avr-libc/user-manual/group__stdiodemo.html) allow the use of the C stdio library over serial.
-- `z80ctrl.c` contains the main function that presents a command-line monitor interface to allow programs to be loaded and run, memory to be inspected, and so forth. 
-- `cli.c` contains the command-line monitor interface for controlling the Z80 and loading memory via the AVR.  When the AVR starts up, it presents a `z80ctrl>` prompt. Typing `help` at the prompt will list all available commands. Commands are provided to dump memory, fill memory, load and save Intel HEX files, mount and unmount disk images, and start the Z80 running from any address.
+- `z80ctrl.c` contains the main function that starts initializes the bus and starts the command-line monitor interface. 
+
+The AVR is programmed with the [MightyCore](https://github.com/MCUdude/MightyCore) bootloader to allow it to be reprogrammed through the serial interface.  Although I am using the MightyCore bootloader, I do not use the Arduino libraries; only avr-libc. I use the [fatfs](http://elm-chan.org/fsw/ff/00index_e.html) library to provide access to a FAT32-formatted SD-card containing ROM and disk images for the Z80.
 
 ### Z80
 
-I have tested the following code on the Z80:
-- The first successful test was a simple "hello, world" program I wrote in Z80 assembly language.  I used this to test that the Z80 was able to successfully run code and use the serial I/O.  
-- The first "real" software I got to run unmodified was [Turnkey Monitor](http://www.autometer.de/unix4fun/z80pack/ftp/altair/turnmon.asm), a simple monitor program for the Altair 8800b. 
-- I later discovered the more fully featured [Altair Monitor](http://altairclone.com/downloads/roms/Altair%20Monitor/) from the [Altair Clone](http://altairclone.com) project and switched to using it. I have included the original source in the project as `altmon.asm` and `altmon.h` contains the binary in array so that it can be loaded into SRAM from the AVR's program memory. The z80ctrl monitor program has a built-in `altmon` command to load it into memory and launch it.
-- After adding disk emulation, I am able to use the [Altair Disk Boot Loader](http://altairclone.com/downloads/roms/DBL.ASM) to successfully boot CP/M.  I have likewise included a binary for the bootloader in the AVR's program memory and provided a `boot` command in the z80ctrl monitor to launch it. 
-- So far I have successfully booted CP/M using the `altcpm.dsk` image available from [SIMH](http://simh.trailing-edge.com/software.html) and various CP/M images from the [Altair Clone](http://altairclone.com/downloads/cpm/) download site.
-- I have successfully run programs from many of the other disk images linked above, including Ladder, Catchum, Zork, Microsoft BASIC, and more.
-- I have tried unsuccessfully to run Altair 4K BASIC. It starts to load (prompts for memory, terminal width, etc.) but then hangs before issuing the ready prompt. According to [one source](http://www.autometer.de/unix4fun/z80pack/ftp/altair/), 4K BASIC is not compatible with the Z80 so the problem may not be on my end. 
+The current version of this software is able to run many unmodified 8080 and Z80 programs and disk images from the following sources:
 
-I am cross-assembling the programs using [z80asm](http://www.nongnu.org/z80asm/) for Zilog mnemonics, or [asm8080](http://asm8080.sourceforge.net/) for Intel mnemonics. After assembling the programs, I use `xxd -i` to generate a C header file with an array containing the machine code.
+- [Altair Clone](http://altairclone.com) project's [download](http://altairclone.com/downloads/) site.  The disk images here should be booted using the standard Altair Disk Bootloader via the `dboot` monitor command.
+- [SIMH AltairZ80](https://schorn.ch/altair.html) emulator project. These disk images should be booted using the SIMH bootloader via the `sboot` monitor command.
+- [Z80pack](http://www.autometer.de/unix4fun/z80pack/) hex files and disk images for the Altair 8800 and IMSAI 8080.
+- Note that Altair Basic will not run on the Z80. This is due to subtle incompatibilites between the 8080 and Z80 status registers and is not anything specific to my project.
+- For cross-assembling your own programs, I suggest using [z80asm](http://www.nongnu.org/z80asm/) for Zilog mnemonics, or [asm8080](http://asm8080.sourceforge.net/) for Intel mnemonics. After assembling the programs, a hex file can be generated using the `objcopy` command from GNU binutils.  For the built-in `altmon`, `sboot`, and `dboot` monitor commands, I used `xxd -i` to generate C header files with an array containing the machine code.
 
 ## License
 
