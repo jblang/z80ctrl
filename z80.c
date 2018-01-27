@@ -44,6 +44,10 @@ void z80_reset(uint16_t addr)
 
 #define SIO0_STATUS 0x10
 #define SIO0_DATA 0x11
+#define SIOA_CONTROL 0x80
+#define SIOA_DATA 0x81
+#define SIOB_CONTROL 0x82
+#define SIOB_DATA 0x83
 
 void z80_iorq(void)
 {
@@ -54,12 +58,35 @@ void z80_iorq(void)
                 DATA_OUTPUT;
             }
             break;
+        case SIOA_CONTROL:
+            if (!GET_RD) {
+                // CTS and DCD always high
+                SET_DATA((1 << 3) | (1  << 5) | ((UCSR0A >> (UDRE0 - 2)) & 0x4) | ((UCSR0A >> RXC0) & 0x1));
+                DATA_OUTPUT;
+            }
+            break;
+        case SIOB_CONTROL:
+            if (!GET_RD) {
+                // CTS and DCD always high
+                SET_DATA((1 << 3) | (1  << 5) | ((UCSR1A >> (UDRE1 - 2)) & 0x4) | ((UCSR1A >> RXC1) & 0x1));
+                DATA_OUTPUT;
+            }
+            break;
         case SIO0_DATA:
+        case SIOA_DATA:
             if (!GET_RD) {
                 SET_DATA(UDR0);
                 DATA_OUTPUT;
             } else if (!GET_WR) {
                 UDR0 = GET_DATA;
+            }
+            break;
+        case SIOB_DATA:
+            if (!GET_RD) {
+                SET_DATA(UDR1);
+                DATA_OUTPUT;
+            } else if (!GET_WR) {
+                UDR1 = GET_DATA;
             }
             break;
         case DRIVE_STATUS:
