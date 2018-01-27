@@ -248,7 +248,16 @@ void cli_reset(int argc, char *argv[])
 
 void cli_debug(int argc, char *argv[])
 {
-    uint32_t cycles = 0;
+    if (argc >= 2) {
+        uint16_t addr = strtol(argv[1], NULL, 16) & 0xffff;
+        z80_reset(addr);
+    }
+    z80_trace(0);
+}
+
+void cli_step(int argc, char *argv[])
+{
+    uint32_t cycles = 1;
     if (argc >= 2)
         cycles = strtol(argv[1], NULL, 16);            
     z80_trace(cycles);
@@ -505,7 +514,8 @@ cli_entry cli_cmds[] = {
     {"bank", "select active 64K bank", &cli_bank},
     {"break", "set breakpoints", &cli_breakwatch},
     {"dboot", "boot disk using Altair disk bootloader", &cli_dboot},
-    {"debug", "debug the processor N cycles", &cli_debug},
+    {"d", "shorthand to continue debugging", &cli_debug},
+    {"debug", "debug code at address", &cli_debug},
     {"dir", "shows directory listing", &cli_dir},
     {"dump", "dump memory in hex and ascii", &cli_dump},
     {"fill", "fill memory with byte", &cli_fill},
@@ -517,6 +527,8 @@ cli_entry cli_cmds[] = {
     {"savehex", "save intel hex file from memory", &cli_savehex},
     {"sboot", "boot disk using SIMH bootloader", &cli_sboot},
     {"status", "display current status", &cli_status},
+    {"s", "shorthand for step", &cli_step},
+    {"step", "step processor N cycles", &cli_step},
     {"unmount", "unmount a disk image", &cli_unmount},
     {"watch", "set watch points", &cli_breakwatch}
 };
