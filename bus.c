@@ -92,7 +92,11 @@ void bus_init(void)
     SET_BANK(0);
 
     // Reset the processor
-    z80_reset();
+    RESET_LO;
+    clk_cycle(3);
+    RESET_HI;
+    IOACK_LO;
+    IOACK_HI;
 
     // Make bidirectional signals inputs
     bus_slave();
