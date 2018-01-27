@@ -118,7 +118,6 @@ void z80_run(void)
 // Log current bus status
 void z80_status()
 {
-    uint8_t ctrlx = iox_read(CTRLX_GPIO);
     uint8_t data = GET_DATA;
 
     if (!GET_M1)
@@ -134,7 +133,7 @@ void z80_status()
     printf("%04x\t%02x\t", GET_ADDR, GET_DATA);
     if (!GET_M1)
         printf("%s", opcodes[data]);
-    else if (0x20 <= data && data <= 0x7e ? data : ' ')
+    else if (0x20 <= data && data <= 0x7e)
         printf("%c", data);
     printf("\n");
 
@@ -149,33 +148,30 @@ void z80_status()
 void z80_trace(uint32_t cycles)
 {
     uint32_t c = 0;
-    while (GET_HALT && (cycles == 0 || c < cycles)) {
+    uint8_t brk = 0;
+    while (GET_HALT && (cycles == 0 || c < cycles) && !brk) {
+        CLK_LO;
         CLK_HI;
         if (!GET_IORQ) {
             uint8_t addr = GET_ADDRLO;
             if ((!GET_WR && iowr_watch_start <= addr && addr <= iowr_watch_end) ||
                 (!GET_RD && iord_watch_start <= addr && addr <= iord_watch_end))
                 z80_status();
-
-            z80_iorq();
-
             if ((!GET_WR && iowr_break_start <= addr && addr <= iowr_break_end) ||
                 (!GET_RD && iord_break_start <= addr && addr <= iord_break_end))
-                break;
+                brk = 1;
+            z80_iorq();
         } else if (!GET_MREQ && MEM_DEBUG) {
             uint16_t addr = GET_ADDR;
-            if (!GET_M1 && opfetch_watch_start <= addr && addr <= opfetch_watch_end)
+            if ((!GET_M1 && opfetch_watch_start <= addr && addr <= opfetch_watch_end) ||
+                (!GET_RD && memrd_watch_start <= addr && addr <= memrd_watch_end) ||
+                (!GET_WR && memwr_watch_start <= addr && addr <= memwr_watch_end))
                 z80_status();
-            else if ((!GET_RD && memrd_watch_start <= addr && addr <= memrd_watch_end) ||
-                    (!GET_WR && memwr_watch_start <= addr && addr <= memwr_watch_end))
-                z80_status();
-            if (!GET_M1 && opfetch_break_start <= addr && addr <= opfetch_break_end)
-                break;
-            else if ((!GET_RD && memrd_break_start <= addr && addr <= memrd_break_end) ||
-                    (!GET_WR && memwr_break_start <= addr && addr <= memwr_break_end))
-                break;
+            if ((!GET_M1 && opfetch_break_start <= addr && addr <= opfetch_break_end) ||
+                (!GET_RD && memrd_break_start <= addr && addr <= memrd_break_end) ||
+                (!GET_WR && memwr_break_start <= addr && addr <= memwr_break_end))
+                brk = 1;
         }
-        CLK_LO;
         c++;
     }
 }
