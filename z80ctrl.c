@@ -15,8 +15,6 @@ FATFS fs;
 
 int main(void)
 {
-    FRESULT rc;
-
     uart_init();
     stdout = stdin = &uart_str;
 
