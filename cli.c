@@ -384,6 +384,7 @@ void cli_breakwatch(int argc, char *argv[])
     }
 }
 
+#ifdef SET_BANK
 void cli_bank(int argc, char *argv[])
 {
     uint8_t bank;
@@ -394,6 +395,7 @@ void cli_bank(int argc, char *argv[])
     bank = strtol(argv[1], NULL, 10) & 0x7;
     SET_BANK(bank);
 }
+#endif
 
 void cli_altmon(int argc, char *argv[])
 {
@@ -515,7 +517,9 @@ typedef struct _cli_entry {
 
 cli_entry cli_cmds[] = {
     {"altmon", "run altmon 8080 monitor", &cli_altmon},
+#ifdef SET_BANK
     {"bank", "select active 64K bank", &cli_bank},
+#endif
     {"bus", "display low-level bus status", &cli_bus},
     {"break", "set breakpoints", &cli_breakwatch},
     {"dboot", "boot disk using Altair disk bootloader", &cli_dboot},

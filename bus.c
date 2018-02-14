@@ -46,8 +46,12 @@ void bus_master(void)
     IOACK_HI;
     while (GET_BUSACK)  // wait for BUSACK to go low
         CLK_TOGGLE;
-    CTRL_HI;
-    CTRL_OUTPUT;        
+    MREQ_HI;
+    RD_HI;
+    WR_HI;
+    MREQ_OUTPUT;
+    RD_OUTPUT;
+    WR_OUTPUT;
     ADDR_OUTPUT;
     DATA_INPUT;
 }
@@ -55,7 +59,9 @@ void bus_master(void)
 // Return control of the bus to the Z80
 void bus_slave(void)
 {
-    CTRL_INPUT;
+    MREQ_INPUT;
+    RD_INPUT;
+    WR_INPUT;
     ADDR_INPUT;
     DATA_INPUT;
     BUSRQ_HI;
@@ -71,28 +77,34 @@ void bus_status()
 
     printf_P(
         PSTR("clk=%c m1=%c mreq=%c iorq=%c ioack=%c rd=%c wr=%c rfsh=%c halt=%c "
-        "int=%c nmi=%c reset=%c busrq=%c busack=%c bank=%X addr=%04X "
+        "int=%c nmi=%c reset=%c busrq=%c busack=%c "
+#ifdef BANKMASK
+        "bank=%X "
+#endif
+        "addr=%04X "
         "data=%02X %c\n"),
-        HL(GET_CLK), 
-        HL(GET_M1), 
-        HL(GET_MREQ), 
-        HL(GET_IORQ), 
+        HL(GET_CLK),
+        HL(GET_M1),
+        HL(ctrlx & (1 << MREQ)),
+        HL(GET_IORQ),
         HL(GET_IOACK),
-        HL(GET_RD), 
-        HL(GET_WR), 
+        HL(GET_RD),
+        HL(GET_WR),
 #ifdef RFSH
-        HL(GET_RFSH), 
+        HL(ctrlx & (1 << RFSH)),
 #else
         'X',
 #endif
         HL(GET_HALT), 
-        HL(ctrlx & (1 << INTERRUPT)), 
-        HL(ctrlx & (1 << NMI)), 
-        HL(ctrlx & (1 << RESET)), 
-        HL(ctrlx & (1 << BUSRQ)), 
+        HL(ctrlx & (1 << INTERRUPT)),
+        HL(ctrlx & (1 << NMI)),
+        HL(ctrlx & (1 << RESET)),
+        HL(ctrlx & (1 << BUSRQ)),
         HL(ctrlx & (1 << BUSACK)),
-        ((ctrlx & BANKMASK) >> BANKADDR), 
-        GET_ADDR, 
+#ifdef BANKMASK
+        ((ctrlx & BANKMASK) >> BANKADDR),
+#endif
+        GET_ADDR,
         data,
         0x20 <= data && data <= 0x7e ? data : ' ');
 
@@ -112,16 +124,20 @@ void bus_init(void)
     NMI_OUTPUT;
     RESET_OUTPUT;
     BUSRQ_OUTPUT;
+#ifdef BANK_OUTPUT
     BANK_OUTPUT;
+#endif
     IOACK_OUTPUT;
     CLK_OUTPUT;
 
     IORQ_INPUT;
     BUSACK_INPUT;
     M1_INPUT;
+#ifdef RFSH_INPUT
     RFSH_INPUT;
+#endif
     HALT_INPUT;
-    
+
     // Pullup on halt so it can be used with a switch
     HALT_PULLUP;
 
@@ -129,7 +145,9 @@ void bus_init(void)
     INT_HI;
     NMI_HI;
     BUSRQ_HI;
+#ifdef SET_BANK
     SET_BANK(0);
+#endif
 
     // Reset the processor
     RESET_LO;

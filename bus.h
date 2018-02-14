@@ -6,14 +6,9 @@
 
 // CPU control /////////////////////////////////////////////////////////////////
 
-#define HALT_INPUT CTRL2_DDR &= ~(1 << HALT)
-#define HALT_PULLUP CTRL2_PORT |= (1 << HALT)
-#define GET_HALT (CTRL2_PIN & (1 << HALT))
-
-#define IOACK_OUTPUT CTRL_DDR |= (1 << IOACK)
-#define GET_IOACK (CTRL_PIN & (1 << IOACK))
-#define IOACK_HI CTRL_PORT |= (1 << IOACK)
-#define IOACK_LO CTRL_PORT &= ~(1 << IOACK)
+#define HALT_INPUT HALT_DDR &= ~(1 << HALT)
+#define HALT_PULLUP HALT_PORT |= (1 << HALT)
+#define GET_HALT (HALT_PIN & (1 << HALT))
 
 #define INT_OUTPUT iox_write(CTRLX_IODIR, iox_read(CTRLX_IODIR) & ~(1 << INTERRUPT))
 #define GET_INT (iox_read(CTRLX_GPIO) & (1 << INTERRUPT))
@@ -42,40 +37,34 @@
 
 // System control //////////////////////////////////////////////////////////////
 
-#define CTRL_INPUT CTRL_DDR &= ~((1 << MREQ) | (1 << WR) | (1 << RD))
-#define CTRL_OUTPUT CTRL_DDR |= ((1 << MREQ) | (1 << WR) | (1 << RD))
-#define CTRL_HI CTRL_PORT |= ((1 << MREQ) | (1 << WR) | (1 << RD))
+#define RD_INPUT RD_DDR &= ~(1 << RD)
+#define RD_OUTPUT RD_DDR |= (1 << RD)
+#define GET_RD (RD_PIN & (1 << RD))
+#define RD_HI RD_PORT |= (1 << RD)
+#define RD_LO RD_PORT &= ~(1 << RD)
 
-#ifdef M1
-#define M1_INPUT CTRL2_DDR &= ~(1 << M1)
-#define GET_M1 (CTRL2_PIN & (1 << M1))
-#else
-#define M1_INPUT
-#define GET_M1 1
-#endif
+#define WR_INPUT WR_DDR &= ~(1 << WR)
+#define WR_OUTPUT WR_DDR |= (1 << WR)
+#define GET_WR (WR_PIN & (1 << WR))
+#define WR_HI WR_PORT |= (1 << WR)
+#define WR_LO WR_PORT &= ~(1 << WR)
 
-#define GET_MREQ (CTRL_PIN & (1 << MREQ))
-#define MREQ_HI CTRL_PORT |= (1 << MREQ)
-#define MREQ_LO CTRL_PORT &= ~(1 << MREQ)
+#define M1_INPUT M1_DDR &= ~(1 << M1)
+#define GET_M1 (M1_PIN & (1 << M1))
 
-#define IORQ_INPUT CTRL_DDR &= ~(1 << IORQ)
-#define GET_IORQ (CTRL_PIN & (1 << IORQ))
+#define MREQ_INPUT iox_write(CTRLX_IODIR, iox_read(CTRLX_IODIR) | (1 << MREQ))
+#define MREQ_OUTPUT iox_write(CTRLX_IODIR, iox_read(CTRLX_IODIR) & ~(1 << MREQ))
+#define GET_MREQ (iox_read(CTRLX_GPIO) & (1 << MREQ))
+#define MREQ_LO iox_write(CTRLX_GPIO, iox_read(CTRLX_GPIO) & ~(1 << MREQ))
+#define MREQ_HI iox_write(CTRLX_GPIO, iox_read(CTRLX_GPIO) | (1 << MREQ))
 
-#define GET_RD (CTRL_PIN & (1 << RD))
-#define RD_HI CTRL_PORT |= (1 << RD)
-#define RD_LO CTRL_PORT &= ~(1 << RD)
+#define IORQ_INPUT IORQ_DDR &= ~(1 << IORQ)
+#define GET_IORQ (IORQ_PIN & (1 << IORQ))
 
-#define GET_WR (CTRL_PIN & (1 << WR))
-#define WR_HI CTRL_PORT |= (1 << WR)
-#define WR_LO CTRL_PORT &= ~(1 << WR)
-
-#ifdef RFSH
-#define RFSH_INPUT CTRL2_DDR &= ~(1 << RFSH)
-#define GET_RFSH (CTRL2_PIN & (1 << RFSH))
-#else
-#define RFSH_INPUT
-#define GET_RFSH 1
-#endif
+#define IOACK_OUTPUT IOACK_DDR |= (1 << IOACK)
+#define GET_IOACK (IOACK_PIN & (1 << IOACK))
+#define IOACK_HI IOACK_PORT |= (1 << IOACK)
+#define IOACK_LO IOACK_PORT &= ~(1 << IOACK)
 
 // Address bus /////////////////////////////////////////////////////////////////
 
@@ -88,9 +77,11 @@
 #define GET_ADDR (GET_ADDRLO | (GET_ADDRHI << 8))
 #define SET_ADDR(addr) (SET_ADDRLO((addr) & 0xFF), SET_ADDRHI((addr) >> 8))
 
+#ifdef BANKMASK
 #define BANK_OUTPUT iox_write(CTRLX_IODIR, iox_read(CTRLX_IODIR) & ~BANKMASK)
 #define GET_BANK ((iox_read(CTRLX_GPIO) & BANKMASK) >> BANKADDR)
 #define SET_BANK(bank) iox_write(CTRLX_GPIO, (iox_read(CTRLX_GPIO) & ~BANKMASK) | (((bank) << BANKADDR) & BANKMASK))
+#endif
 
 // Data bus ///////////////////////////////////////////////////////////////////
 
@@ -101,11 +92,11 @@
 
 // Clock ///////////////////////////////////////////////////////////////////////
 
-#define CLK_OUTPUT CTRL_DDR |= (1 << CLK)
-#define GET_CLK (CTRL_PIN & (1 << CLK))
-#define CLK_HI CTRL_PORT |= (1 << CLK)
-#define CLK_LO CTRL_PORT &= ~(1 << CLK)
-#define CLK_TOGGLE CTRL_PIN |= (1 << CLK)
+#define CLK_OUTPUT CLK_DDR |= (1 << CLK)
+#define GET_CLK (CLK_PIN & (1 << CLK))
+#define CLK_HI CLK_PORT |= (1 << CLK)
+#define CLK_LO CLK_PORT &= ~(1 << CLK)
+#define CLK_TOGGLE CLK_PIN |= (1 << CLK)
 
 void clk_cycle(uint8_t cycles);
 void clk_run(void);

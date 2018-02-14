@@ -19,8 +19,8 @@
 #define SCK 7
 #define MISO 6
 #define MOSI 5
-#define IOX_CS 4
-#define SD_CS 0
+#define IOX_CS 3
+#define SD_CS 4
 
 // Data bus on local port
 #define DATA_DDR DDRC
@@ -38,35 +38,56 @@
 #define ADDRHI_GPIO GPIOA0
 
 // CPU control lines on local port
-#define CTRL_DDR DDRD
-#define CTRL_PORT PORTD
-#define CTRL_PIN PIND
-#define IORQ 2
-#define IORQ_vect INT1_vect
-#define MREQ 3
-#define WR 4
-#define RD 5
-#define CLK 6
-#define IOACK 7
 
-#define CTRL2_DDR DDRB
-#define CTRL2_PORT PORTB
-#define CTRL2_PIN PINB
-#define M1 1
-//#define RFSH 2
-#define HALT 2
+#define IOACK_DDR DDRB
+#define IOACK_PORT PORTB
+#define IOACK_PIN PINB
+#define IOACK 0
+
+#define IORQ_DDR DDRB
+#define IORQ_PORT PORTB
+#define IORQ_PIN PINB
+#define IORQ 1
+
+#define RD_DDR DDRD
+#define RD_PORT PORTD
+#define RD_PIN PIND
+#define RD 4
+
+#define WR_DDR DDRD
+#define WR_PORT PORTD
+#define WR_PIN PIND
+#define WR 5
+
+#define CLK_DDR DDRD
+#define CLK_PORT PORTD
+#define CLK_PIN PIND
+#define CLK 6
+
+#define M1_DDR DDRB
+#define M1_PORT PORTB
+#define M1_PIN PINB
+#define M1 2
+
+#define HALT_DDR DDRD
+#define HALT_PORT PORTD
+#define HALT_PIN PIND
+#define HALT 7
 
 // CPU control lines on i/o expander
 #define CTRLX_IODIR IODIRB0
 #define CTRLX_GPPU GPPUB0
 #define CTRLX_GPIO GPIOB0
-#define INTERRUPT 0
-#define NMI 1
+//#define SDCD 0
+//#define RFSH 1
 #define RESET 2
-#define BUSRQ 3
+#define INTERRUPT 3
 #define BUSACK 4
-#define BANKADDR 5
-#define BANKMASK ((1<<BANKADDR) | (1<<(BANKADDR+1)) | (1<<(BANKADDR+2)))
+#define MREQ 5
+#define BUSRQ 6
+#define NMI 7
+//#define BANKADDR 5
+//#define BANKMASK ((1<<BANKADDR) | (1<<(BANKADDR+1)) | (1<<(BANKADDR+2)))
 
 #define DRV_MMC 0
 
