@@ -6,9 +6,9 @@
 
 void spi_init(void)
 {
-    SPI_DDR |= (1 << MOSI) | (1 << SCK) | (1 << IOX_CS) | (1 << SD_CS);
+    SPI_DDR |= (1 << MOSI) | (1 << SCK) | CSADDRMASK;
     SPI_DDR &= ~(1 << MISO);
-    SPI_PORT |= (1 << IOX_CS) | (1 << SD_CS);
+    AUX2_SEL;
     SPSR = (1 << SPI2X);
     SPCR = (1 << SPE) | (1 << MSTR);
     spi_fast();

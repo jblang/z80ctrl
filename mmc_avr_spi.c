@@ -19,8 +19,8 @@
 #include "spi.h"
 
 /* Peripheral controls (Platform dependent) */
-#define CS_LOW()		SPI_PORT &= ~(1 << SD_CS)	/* Set MMC_CS = low */
-#define	CS_HIGH()		SPI_PORT |= (1 << SD_CS)	/* Set MMC_CS = high */
+#define CS_LOW()		SD_SEL	/* Set MMC_CS = low */
+#define	CS_HIGH()		AUX2_SEL	/* Set MMC_CS = high */
 #define MMC_CD			1		/* Test if card detected.   yes:true, no:false, default:true */
 #define MMC_WP			0		/* Test if write protected. yes:true, no:false, default:false */
 #define	FCLK_SLOW()		spi_slow()	/* Set SPI clock for initialization (100-400kHz) */

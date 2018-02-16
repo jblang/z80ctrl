@@ -12,14 +12,14 @@ void iox_init(void)
 
 void iox_begin(uint8_t mode, uint8_t addr)
 {
-    SPI_PORT &= ~(1 << IOX_CS);
+    IOX_SEL;
     spi_exchange(SPI_ADDR | mode);
     spi_exchange(addr);
 }
 
 void iox_end(void)
 {
-    SPI_PORT |= (1 << IOX_CS);
+    AUX2_SEL;
 }
 
 uint8_t iox_read(uint8_t addr)

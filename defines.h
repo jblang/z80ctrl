@@ -19,8 +19,13 @@
 #define SCK 7
 #define MISO 6
 #define MOSI 5
-#define IOX_CS 3
-#define SD_CS 4
+#define CSADDR 3
+#define CSADDRMASK ((1 << CSADDR) | (1 << CSADDR+1))
+
+#define IOX_SEL SPI_PORT = SPI_PORT & ~CSADDRMASK | (0x0 << CSADDR)
+#define SD_SEL SPI_PORT = SPI_PORT & ~CSADDRMASK | (0x1 << CSADDR)
+#define AUX1_SEL SPI_PORT = SPI_PORT & ~CSADDRMASK | (0x2 << CSADDR)
+#define AUX2_SEL SPI_PORT = SPI_PORT & ~CSADDRMASK | (0x3 << CSADDR)
 
 // Data bus on local port
 #define DATA_DDR DDRC
