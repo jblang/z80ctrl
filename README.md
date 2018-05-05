@@ -1,5 +1,7 @@
 # z80ctrl
 
+![z80ctrl photo](board.jpg)
+
 This is an AVR-based bootloader and I/O firmware for a Z80-based computer.  I have made a [series of videos](https://www.youtube.com/watch?v=M8EIAxMpA-o&list=PLwP_dSEH4Oi_jAljWQ1H-TBiBL34LqYYm) demonstrating the design and features of the system.  In brief, the AVR loads an SRAM with code for the Z80 to run. Once the Z80 is running, AVR also provides serial I/O, disk emulation, debugging facilities, and potentially other peripherals for the Z80.
 
 [Several](http://benryves.com/journal/3662496) [other](https://hackaday.io/project/7354-zaviour-board-avrz80-hybrid) [people](https://www.apress.com/us/book/9781484214268) [had](https://hackaday.io/project/19000-a-4-4ics-z80-homemade-computer-on-breadboard) the idea to combine an AVR with a Z80 before me, but these projects either didn't share any code or didn't provide all the capabilities that I wanted. I have taken inspiration from these projects but I designed this specific circuit and software implementation myself. The innovations not present in previous projects are described in the design notes section below.
