@@ -146,6 +146,7 @@ void z80_run(void)
 void z80_status()
 {
     uint8_t data = GET_DATA;
+    uint16_t addr = GET_ADDR;
 
     if (!GET_M1)
         printf("op fetch\t");
@@ -159,10 +160,33 @@ void z80_status()
         printf("io write\t");
     printf("%04x\t%02x\t", GET_ADDR, GET_DATA);
     if (!GET_M1)
-        printf("%s", opcodes[data]);
+        if (opcodes[data][0] == '2') {
+            clk_cycle(3);
+            addr = GET_DATA;
+            clk_cycle(3);
+            addr |= GET_DATA << 8;
+            printf(opcodes[data]+1, addr);
+        } else if (opcodes[data][0] == '1') {
+            clk_cycle(3);
+            addr = GET_DATA;
+            printf(opcodes[data]+1, addr);
+        } else if (opcodes[data][0] == '+') {
+            clk_cycle(3);
+            addr += (int8_t)GET_DATA + 2;
+            printf(opcodes[data]+1, addr);
+        } else if (opcodes[data][0] == '*') {
+            printf(opcodes[data]);
+        } else {
+            printf(opcodes[data]);
+        }
     else if (0x20 <= data && data <= 0x7e)
         printf("%c", data);
     printf("\n");
+
+    while (!GET_MREQ) {
+        CLK_LO;
+        CLK_HI;
+    }
 
     // wait until output is fully transmitted to avoid
     // interfering with UART status for running program
