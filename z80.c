@@ -29,6 +29,7 @@ uint8_t iowr_break_end = 0;
 uint16_t opfetch_break_start = 0xffff;
 uint16_t opfetch_break_end = 0;
 
+// Reset the Z80
 void z80_reset(uint16_t addr)
 {
     uint8_t reset_vect[] = { 0xc3, (addr & 0xFF), (addr >> 8) };
@@ -49,6 +50,7 @@ void z80_reset(uint16_t addr)
 #define SIOB_CONTROL 0x82
 #define SIOB_DATA 0x83
 
+// Handle Z80 IO request
 void z80_iorq(void)
 {
     switch (GET_ADDRLO) {
@@ -126,6 +128,7 @@ void z80_iorq(void)
     IOACK_HI;
 }
 
+// Run the Z80 at full speed
 void z80_run(void)
 {
     clk_run();
@@ -142,12 +145,13 @@ void z80_run(void)
 
 #define HL(signal) ((signal) ? 'H' : 'L')
 
-// Log current bus status
+// Log current 
 void z80_status()
 {
     uint8_t data = GET_DATA;
     uint16_t addr = GET_ADDR;
 
+    // Log current bus operation
     if (!GET_M1)
         printf("op fetch\t");
     else if (!GET_MREQ && !GET_RD)
@@ -155,34 +159,52 @@ void z80_status()
     else if (!GET_MREQ && !GET_WR)
         printf("mem write\t");
     else if (!GET_IORQ && !GET_RD)
-        printf("io read\t");
+        printf("io read\t\t");
     else if (!GET_IORQ && !GET_WR)
         printf("io write\t");
-    printf("%04x\t%02x\t", GET_ADDR, GET_DATA);
+
+    // Log current address and data byte
+    printf("%04x\t%02x ", GET_ADDR, GET_DATA);
+
+    // Handle instruction fetch
     if (!GET_M1)
+        // Get remaining instruction bytes
+        // Lookup instruction length and mnemonic for opcode
         if (opcodes[data][0] == '2') {
+            // Two-byte operand (address)
             clk_cycle(3);
             addr = GET_DATA;
+            printf("%02x ", GET_DATA);
             clk_cycle(3);
             addr |= GET_DATA << 8;
+            printf("%02x\t", GET_DATA);
             printf(opcodes[data]+1, addr);
         } else if (opcodes[data][0] == '1') {
+            // One-byte operand (immediate)
             clk_cycle(3);
             addr = GET_DATA;
+            printf("%02x\t\t", GET_DATA);
             printf(opcodes[data]+1, addr);
         } else if (opcodes[data][0] == '+') {
+            // One-byte operand (relative address)
             clk_cycle(3);
             addr += (int8_t)GET_DATA + 2;
+            printf("%02x\t\t", GET_DATA);
             printf(opcodes[data]+1, addr);
         } else if (opcodes[data][0] == '*') {
-            printf(opcodes[data]);
+            // Two-byte opcode
+            printf("\t\t%s", opcodes[data]);
         } else {
-            printf(opcodes[data]);
+            printf("\t\t%s", opcodes[data]);
         }
+
+    // If not instruction fetch, output printable ASCII chacters
     else if (0x20 <= data && data <= 0x7e)
-        printf("%c", data);
+        printf("\t\t%c", data);
+
     printf("\n");
 
+    // Finish current memory cycle
     while (!GET_MREQ) {
         CLK_LO;
         CLK_HI;
@@ -195,7 +217,7 @@ void z80_status()
 
 #define MEM_DEBUG (opfetch_watch_start <= opfetch_watch_end || opfetch_break_start <= opfetch_break_end || memrd_watch_start <= memrd_watch_end || memrd_break_start <= memrd_break_end || memwr_watch_start <= memwr_watch_end || memwr_break_start <= memwr_break_end)
 
-// Trace the bus state for specified number of clock cycles
+// Trace reads and writes for the specified number of instructions
 void z80_trace(uint32_t cycles)
 {
     uint32_t c = 0;

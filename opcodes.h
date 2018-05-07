@@ -1,6 +1,15 @@
 #ifndef OPCODES_H
 #define OPCODES_H
 
+// Reference: http://www.z80.info/z80oplist.txt
+
+// First byte encodes instruction type:
+// 1 = single byte immediate operand
+// 2 = two byte address operand
+// + = one byte relative address operand
+// * = two byte opcode
+// other = single byte instruction (no operand)
+
 char *opcodes[] = {
         "nop",
         "2ld bc,&%04x",
