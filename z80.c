@@ -5,7 +5,7 @@
 #include "z80.h"
 #include "bus.h"
 #include "diskemu.h"
-#include "opcodes.h"
+#include "disasm.h"
 
 // Breakpoints and watches
 uint16_t memrd_watch_start = 0xffff;
@@ -150,6 +150,7 @@ void z80_status()
 {
     uint8_t data = GET_DATA;
     uint16_t addr = GET_ADDR;
+    char mnemonic[64];
 
     // Log current bus operation
     if (!GET_M1)
@@ -164,39 +165,41 @@ void z80_status()
         printf("io write\t");
 
     // Log current address and data byte
-    printf("%04x\t%02x ", GET_ADDR, GET_DATA);
+    printf("%04X\t%02X ", GET_ADDR, GET_DATA);
 
     // Handle instruction fetch
-    if (!GET_M1)
+    if (!GET_M1) {
+        disasm(0, GET_DATA, mnemonic);
         // Get remaining instruction bytes
         // Lookup instruction length and mnemonic for opcode
-        if (opcodes[data][0] == '2') {
+        if (mnemonic[0] == '2') {
             // Two-byte operand (address)
             clk_cycle(3);
             addr = GET_DATA;
-            printf("%02x ", GET_DATA);
+            printf("%02X ", GET_DATA);
             clk_cycle(3);
             addr |= GET_DATA << 8;
-            printf("%02x\t", GET_DATA);
-            printf(opcodes[data]+1, addr);
-        } else if (opcodes[data][0] == '1') {
+            printf("%02X\t", GET_DATA);
+            printf(mnemonic+1, addr);
+        } else if (mnemonic[0] == '1') {
             // One-byte operand (immediate)
             clk_cycle(3);
             addr = GET_DATA;
-            printf("%02x\t\t", GET_DATA);
-            printf(opcodes[data]+1, addr);
-        } else if (opcodes[data][0] == '+') {
+            printf("%02X\t\t", GET_DATA);
+            printf(mnemonic+1, addr);
+        } else if (mnemonic[0] == '+') {
             // One-byte operand (relative address)
             clk_cycle(3);
             addr += (int8_t)GET_DATA + 2;
-            printf("%02x\t\t", GET_DATA);
-            printf(opcodes[data]+1, addr);
-        } else if (opcodes[data][0] == '*') {
+            printf("%02X\t\t", GET_DATA);
+            printf(mnemonic+1, addr);
+        } else if (mnemonic[0] == '*') {
             // Two-byte opcode
-            printf("\t\t%s", opcodes[data]);
+            printf("\t\t%s", mnemonic);
         } else {
-            printf("\t\t%s", opcodes[data]);
+            printf("\t\t%s", mnemonic);
         }
+    }
 
     // If not instruction fetch, output printable ASCII chacters
     else if (0x20 <= data && data <= 0x7e)
