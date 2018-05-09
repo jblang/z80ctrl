@@ -6,13 +6,6 @@
 
 // reference: http://www.z80.info/decoding.htm
 
-// first byte of mnemonic encodes instruction length:
-// 1 = single byte immediate operand
-// 2 = two byte address operand
-// + = one byte relative address operand
-// * = opcode prefix
-// other = single byte instruction (no operand)
-
 // 8-bit registers
 char *r[] = {
     "B",
@@ -22,7 +15,13 @@ char *r[] = {
     "H",
     "L",
     "(HL)",
-    "A"
+    "A",
+    "IXH",
+    "IXL",
+    "(IX+%02XH)",
+    "IYH",
+    "IYL",
+    "(IY+%02XH)"
 };
 
 // 16-bit register pairs
@@ -73,7 +72,7 @@ char *rot[] = {
 // interrupt modes
 char *im[] = {
     "0",
-    "0/1",
+    "0",
     "1",
     "2"
 };
@@ -98,29 +97,20 @@ char *bli[] = {
     "OTDR"
 };
 
-// misc ops for x = 0, z = 0
-char *x0z0ops[] = {
-    "NOP",
-    "EX AF,AF'",
-    "+DJNZ %04XH",
-    "+JR %04XH",
-    "+JR %s,%s"
-};
-
 // load ops for x = 0, z = 2
-char *x0z2ops[] = {
+char *ldops[] = {
     "LD (BC),A",
     "LD A,(BC)",
     "LD (DE),A",
     "LD A,(DE)",
-    "2LD (%04XH),HL",
-    "2LD HL,(%04XH)",
-    "2LD (%04XH),A",
-    "2LD A,(%04XH)"        
+    "LD (%04XH),HL",
+    "LD HL,(%04XH)",
+    "LD (%04XH),A",
+    "LD A,(%04XH)"        
 };
 
 // accumulator and flag ops for x = 0, z = 7
-char *x0z7ops[] = {
+char *afops[] = {
     "RLCA",
     "RRCA",
     "RLA",
@@ -140,19 +130,63 @@ char *x3z1q1ops[] = {
 };
 
 // misc operations for x = 3, z = 3
-char *x3z3ops[] = {
-    "2JP %04XH",
-    "*CB",
-    "1OUT (&%02X),A",
-    "1IN A,(&%02X)",
+char *exintops[] = {
     "EX (SP),HL",
     "EX DE,HL",
     "DI",
     "EI"
 };
 
-uint8_t disasm(uint8_t prefix, uint8_t opcode, char *mnemonic)
+char *edx1z7ops[] = {
+    "LD I,A",
+    "LD R,A",
+    "LD A,I",
+    "LD A,R",
+    "RRD",
+    "RLD",
+    "NOP",
+    "NOP"
+};
+
+uint8_t disasm(uint16_t addr, uint8_t *input, char *output)
 {
+    uint8_t opcode = 0;
+    uint16_t prefix = 0;
+    uint8_t displ = 0;
+    uint8_t imm = 0;
+    uint8_t i = 0;
+    enum {HL, IX, IY} idxmode = HL;
+
+    // Consume any number of leading 0xDD and 0xFD bytes
+    // and set index mode according to last one encountered.
+    for (;;) {
+            opcode = input[i++];
+            if (opcode == 0xDD)
+                    idxmode = IX;
+            else if (opcode == 0xFD)
+                    idxmode = IY;
+            else {
+                    // Encountering 0xED changes index mode back to default
+                    if (opcode == 0xED)
+                            idxmode = HL;
+                    // Any byte other than 0xDD or 0xFD terminates the loop
+                    break;
+            }
+    }
+
+    // Select lookup table based on prefix byte
+    // and fetch displacement if required
+    if (opcode == 0xED) {
+            prefix = 0xED;
+            opcode = input[i++];
+    } else if (opcode == 0xCB) {
+            if (idxmode != HL)
+                    displ = input[i++];
+            prefix = 0xCB;
+            opcode = input[i++];
+    } else if (idxmode != HL && (opcode & 0x40 == 4 || opcode & 0xc0 == 0x40))
+            displ = input[i++];
+
     // bit slice the opcode
     uint8_t x = (opcode & 0xc0) >> 6;       // x = opcode[7:6]
     uint8_t y = (opcode & 0x3a) >> 3;       // y = opcode[5:3]
@@ -161,112 +195,192 @@ uint8_t disasm(uint8_t prefix, uint8_t opcode, char *mnemonic)
     uint8_t q = (opcode & 0x08) >> 3;       // q = opcode[3]
     uint8_t yz = ((y & 3) << 2) | (z & 3);  // yz = {opcode[1:0], opcode[4:3]}
 
-    //printf(" [%X %X %X <%X:%X> %X] ", x, z, y, p, q, yz);
+    printf("%x %02x %02x [%X %X %X <%X:%X> %X] ", idxmode, prefix, opcode, x, z, y, p, q, yz);
     switch (prefix) {
+        case 0xCB:
+            switch (x) {
+                case 0:
+                    sprintf(output, "%s %s", rot[y], r[z]);
+                    break;
+                case 1:
+                    sprintf(output, "BIT %X,%s", y, r[z]);
+                    break;
+                case 2:
+                    sprintf(output, "RES %X,%s", y, r[z]);
+                    break;
+                case 3:
+                    sprintf(output, "SET %X,%s", y, r[z]);
+                    break;                
+            }
+            break;
+        case 0xED:
+            switch (x) {
+                case 1:
+                    switch (z) {
+                        case 0:
+                            sprintf(output, (y == 6) ? "IN (C)" : "IN %s,(C)", r[y]);
+                            break;
+                        case 1:
+                            sprintf(output, (y == 6) ? "OUT (C)" : "OUT %s,(C)", r[y]);
+                            break;
+                        case 2:
+                            sprintf(output, (q == 0) ? "SBC HL,%s" : "ADC HL,%s", rp[p]);
+                            break;
+                        case 3:
+                            addr = input[i++] | (input[i++] << 8);
+                            if (q == 0) 
+                                sprintf(output, "LD (%04XH),%s", addr, rp[p]);
+                            else
+                                sprintf(output, "LD %s,(%04XH)", addr, rp[p]);
+                            break;
+                        case 4:
+                            sprintf(output, "NEG");
+                            break;
+                        case 5:
+                            sprintf(output, (y == 1) ? "RETI" : "RETN");
+                            break;
+                        case 6:
+                            sprintf(output, "IM %s", im[y&0x3]);
+                            break;
+                        case 7:
+                            sprintf(output, edx1z7ops[y]);
+                            break;
+                    }
+                    break;
+                case 2:
+                    if (z <= 3 && y >= 4)
+                        sprintf(output, bli[yz]);
+                    else
+                        sprintf(output, "illegal opcode");
+                    break;
+                default:
+                    sprintf(output, "illegal opcode");
+                    break;
+            }
+            break;
         default:
             // un-prefixed opcodes
             switch (x) {
                 case 0:
                     switch (z) {
                         case 0:
-                            if (y < 4)
-                                // assorted ops
-                                strcpy(mnemonic, x0z0ops[y]);
-                            else
-                                // relative jump
-                                sprintf(mnemonic, x0z0ops[4], cc[y-4], "%04XH");
+                            switch (y) {
+                                case 0:
+                                    sprintf(output, "NOP");
+                                    break;
+                                case 1:
+                                    sprintf(output, "EX AF,AF'");
+                                    break;
+                                case 2:
+                                    addr += (int8_t)input[i++] + 2;
+                                    sprintf(output, "DJNZ %04XH", addr);
+                                    break;
+                                case 3:
+                                    addr += (int8_t)input[i++] + 2;
+                                    sprintf(output, "JR %04XH", addr);
+                                    break;
+                                default:
+                                    addr += (int8_t)input[i++] + 2;
+                                    sprintf(output, "JR %s,%04XH", cc[y-4], addr);
+                                    break;
+                            }
                             break;
                         case 1:
-                            if (q == 0)
-                                // 16-bit immediate load
-                                sprintf(mnemonic, "2LD %s,%s", rp[p], "%04XH");
-                            else
-                                // 16-bid immediate add
-                                sprintf(mnemonic, "ADD HL,%s", rp[p]);
+                            if (q == 0) {
+                                addr = input[i++] | (input[i++] << 8);
+                                sprintf(output, "LD %s,%04XH", rp[p], addr);
+                            } else
+                                sprintf(output, "ADD HL,%s", rp[p]);
                             break;
                         case 2:
-                            // indirect loading
-                            strcpy(mnemonic, x0z2ops[y]);
+                            if (y < 4)
+                                sprintf(output, ldops[y]);
+                            else {
+                                addr = input[i++] | (input[i++] << 8);
+                                sprintf(output, ldops[y], addr); 
+                            }
                             break;
                         case 3:
-                            // 16-bit inc/dec
-                            sprintf(mnemonic, (q == 0) ? "INC %s" : "DEC %s", rp[p]);
+                            sprintf(output, (q == 0) ? "INC %s" : "DEC %s", rp[p]);
                             break;
                         case 4:
-                            // 8-bit inc
-                            sprintf(mnemonic, "INC %s", r[y]);
+                            sprintf(output, "INC %s", r[y]);
                             break;
                         case 5:
-                            // 8-bit dec
-                            sprintf(mnemonic, "DEC %s", r[y]);
+                            sprintf(output, "DEC %s", r[y]);
                             break;
                         case 6:
-                            // 8-bit load immediate
-                            sprintf(mnemonic, "1LD %s,%s", r[y], "&%02X");
+                            imm = input[i++];
+                            sprintf(output, "LD %s,%02XH", r[y], imm);
                             break;
                         case 7:
-                            // assorted operations on accumulator/flags
-                            strcpy(mnemonic, x0z7ops[y]);
+                            sprintf(output, afops[y]);
                             break;
                     }
                     break;
                 case 1:
                     if (z == 6 && y == 6)
-                        // exception: halt replaces ld (hl),(hl)
-                        strcpy(mnemonic, "HALT");
+                        sprintf(output, "HALT");
                     else
-                        // 8-bit loading
-                        sprintf(mnemonic, "LD %s,%s", r[y], r[z]);
+                        sprintf(output, "LD %s,%s", r[y], r[z]);
                     break;
                 case 2:
-                    // operate on accumulator and register/memory location
-                    sprintf(mnemonic, alu[y], r[z]);
+                    sprintf(output, alu[y], r[z]);
                     break;
                 case 3:
                     switch (z) {
                         case 0:
-                            // conditional return
-                            sprintf(mnemonic, "RET %s", cc[y]);
+                            sprintf(output, "RET %s", cc[y]);
                             break;
                         case 1: 
                             if (q == 0)
-                                // pop to register pair
-                                sprintf(mnemonic, "POP %s", p < 3 ? rp[p] : rp[4]);
+                                sprintf(output, "POP %s", p < 3 ? rp[p] : rp[4]);
                             else
-                                // various operations
-                                strcpy(mnemonic, x3z1q1ops[p]);
+                                sprintf(output, x3z1q1ops[p]);
                             break;
                         case 2:
-                            // conditional jump
-                            sprintf(mnemonic, "2JP %s,%s", cc[y], "%04XH");
+                            addr = input[i++] | (input[i++] << 8);
+                            sprintf(output, "JP %s,%04XH", cc[y], addr);
                             break;
                         case 3:
-                            // assorted operations
-                            strcpy(mnemonic, x3z3ops[y]);
+                            switch(y) {
+                                case 0:
+                                    addr = input[i++] | (input[i++] << 8);                                    
+                                    sprintf(output, "JP %04XH", addr);
+                                    break;
+                                case 1:
+                                    break;
+                                case 2:
+                                    imm = input[i++];
+                                    sprintf(output, "OUT (%02XH),A", imm);
+                                    break;
+                                case 3:
+                                    imm = input[i++];
+                                    sprintf(output, "IN A,(%02XH)", imm);
+                                    break;
+                                default:
+                                    sprintf(output, exintops[y-4]);
+                                    break;
+                            }
                             break;
                         case 4:
-                            // conditional call
-                            sprintf(mnemonic, "2CALL %s,%s", cc[y], "%04XH");
+                            addr = input[i++] | (input[i++] << 8);
+                            sprintf(output, "CALL %s,%04XH", cc[y], addr);
                             break;
                         case 5:
                             if (q == 0)
-                                // push register pair
-                                sprintf(mnemonic, "PUSH %s", p < 4 ? rp[p] : rp[5]);
-                            else if (p == 0)
-                                // unconditional call
-                                strcpy(mnemonic, "2CALL %04XH");
-                            else
-                                // opcode prefixes
-                                sprintf(mnemonic, "*%02X", opcode);
+                                sprintf(output, "PUSH %s", p < 3 ? rp[p] : rp[4]);
+                            else if (p == 0) {
+                                addr = input[i++] | (input[i++] << 8);
+                                sprintf(output, "CALL %04XH", addr);
+                            } 
                             break;
                         case 6:
-                            // operate on accumulator and immediate operand
-                            mnemonic[0] = '1';
-                            sprintf(mnemonic+1, alu[y], "&%02X");
+                            imm = input[i++];
+                            sprintf(output, "%s %02XH", alu[y], imm);
                             break;
                         case 7:
-                            // restart
-                            sprintf(mnemonic, "RST &%02X", y*8);
+                            sprintf(output, "RST %02XH", y*8);
                             break;
                     }
                     break;

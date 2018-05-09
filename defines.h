@@ -61,6 +61,11 @@
 #define IORQ_PIN PINB
 #define IORQ 1
 
+#define M1_DDR DDRB
+#define M1_PORT PORTB
+#define M1_PIN PINB
+#define M1 2
+
 #define RD_DDR DDRD
 #define RD_PORT PORTD
 #define RD_PIN PIND
@@ -76,11 +81,6 @@
 #define CLK_PIN PIND
 #define CLK 6
 
-#define M1_DDR DDRB
-#define M1_PORT PORTB
-#define M1_PIN PINB
-#define M1 2
-
 #define HALT_DDR DDRD
 #define HALT_PORT PORTD
 #define HALT_PIN PIND
@@ -91,7 +91,7 @@
 #define CTRLX_GPPU GPPUB0
 #define CTRLX_GPIO GPIOB0
 //#define SDCD 0
-//#define RFSH 1
+#define RFSH 1
 #define RESET 2
 #define INTERRUPT 3
 #define BUSACK 4

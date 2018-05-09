@@ -3,6 +3,6 @@
 
 #include <stdint.h>
 
-uint8_t disasm(uint8_t prefix, uint8_t opcode, char *mnemonic);
+uint8_t disasm(uint16_t addr, uint8_t *input, char *output);
 
 #endif

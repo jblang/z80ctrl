@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+extern uint16_t bus_watch_start;
+extern uint16_t bus_watch_end;
 extern uint16_t memrd_watch_start;
 extern uint16_t memrd_watch_end;
 extern uint16_t memwr_watch_start;
@@ -27,6 +29,6 @@ extern uint16_t opfetch_break_end;
 void z80_reset(uint16_t addr);
 void z80_status(void);
 void z80_run(void);
-void z80_trace(uint32_t cycles);
+void z80_debug(uint32_t cycles);
 
 #endif

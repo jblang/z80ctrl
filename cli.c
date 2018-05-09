@@ -252,7 +252,7 @@ void cli_debug(int argc, char *argv[])
         uint16_t addr = strtol(argv[1], NULL, 16) & 0xffff;
         z80_reset(addr);
     }
-    z80_trace(0);
+    z80_debug(0);
 }
 
 void cli_step(int argc, char *argv[])
@@ -260,12 +260,12 @@ void cli_step(int argc, char *argv[])
     uint32_t cycles = 1;
     if (argc >= 2)
         cycles = strtol(argv[1], NULL, 16);            
-    z80_trace(cycles);
+    z80_debug(cycles);
 }
 
 void cli_status(int argc, char *argv[])
 {
-    z80_status();
+    z80_busshort(bus_status());
 }
 
 void breakwatch_status(char *name, uint16_t start, uint16_t end)
@@ -292,6 +292,7 @@ void cli_breakwatch(int argc, char *argv[])
             breakwatch_status("opfetch", opfetch_break_start, opfetch_break_end);
         } else {
             printf_P(PSTR("watch status:\n"));
+            breakwatch_status("bus", bus_watch_start, bus_watch_end);
             breakwatch_status("memrd", memrd_watch_start, memrd_watch_end);
             breakwatch_status("memwr", memwr_watch_start, memwr_watch_end);
             breakwatch_status("iord", iord_watch_start, iord_watch_end);
@@ -315,7 +316,12 @@ void cli_breakwatch(int argc, char *argv[])
                 end = start;
         }
     }
-    if (strcmp(argv[1], "memrd") == 0) {
+    if (strcmp(argv[1], "bus") == 0) {
+        if (strcmp(argv[0], "watch") == 0) {
+            bus_watch_start = start;
+            bus_watch_end = end;
+        }
+    } else if (strcmp(argv[1], "memrd") == 0) {
         if (strcmp(argv[0], "break") == 0) {
             memrd_break_start = start;
             memrd_break_end = end;
@@ -483,7 +489,7 @@ void cli_fill(int argc, char*argv[]) {
 }
 
 void cli_bus(int argc, char *argv[]) {
-    bus_status();
+    z80_buslog(bus_status());
 }
 
 void cli_mount(int argc, char *argv[])

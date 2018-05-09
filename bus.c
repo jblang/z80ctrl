@@ -11,11 +11,20 @@
 
 void clk_cycle(uint8_t cycles)
 {
-    CLK_LO;
     uint8_t i;
     for (i = 0; i < cycles; i++) {
         CLK_HI;
         CLK_LO;
+    }
+}
+
+void clk_trace(uint8_t cycles)
+{
+    uint8_t i;
+    for (i = 0; i < cycles; i++) {
+        CLK_HI;
+        CLK_LO;
+        bus_status();
     }
 }
 
@@ -67,50 +76,15 @@ void bus_slave(void)
     BUSRQ_HI;
 }
 
-#define HL(signal) ((signal) ? 'H' : 'L')
-
 // Log current bus status
-void bus_status()
+bus_stat bus_status()
 {
-    uint8_t ctrlx = iox_read(CTRLX_GPIO);
-    uint8_t data = GET_DATA;
-
-    printf_P(
-        PSTR("clk=%c m1=%c mreq=%c iorq=%c ioack=%c rd=%c wr=%c rfsh=%c halt=%c "
-        "int=%c nmi=%c reset=%c busrq=%c busack=%c "
-#ifdef BANKMASK
-        "bank=%X "
-#endif
-        "addr=%04X "
-        "data=%02X %c\n"),
-        HL(GET_CLK),
-        HL(GET_M1),
-        HL(ctrlx & (1 << MREQ)),
-        HL(GET_IORQ),
-        HL(GET_IOACK),
-        HL(GET_RD),
-        HL(GET_WR),
-#ifdef RFSH
-        HL(ctrlx & (1 << RFSH)),
-#else
-        'X',
-#endif
-        HL(GET_HALT), 
-        HL(ctrlx & (1 << INTERRUPT)),
-        HL(ctrlx & (1 << NMI)),
-        HL(ctrlx & (1 << RESET)),
-        HL(ctrlx & (1 << BUSRQ)),
-        HL(ctrlx & (1 << BUSACK)),
-#ifdef BANKMASK
-        ((ctrlx & BANKMASK) >> BANKADDR),
-#endif
-        GET_ADDR,
-        data,
-        0x20 <= data && data <= 0x7e ? data : ' ');
-
-        // wait until output is fully transmitted to avoid
-        // interfering with UART status for running program
-        loop_until_bit_is_set(UCSR0A, UDRE0);
+    bus_stat status;
+    status.flags.bytes.lo = GET_XFLAGS;
+    status.flags.bytes.hi = GET_BFLAGS | GET_DFLAGS;
+    status.data = GET_DATA;
+    status.addr = GET_ADDR;
+    return status;
 }
 
 // Initialize bus

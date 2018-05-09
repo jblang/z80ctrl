@@ -8,6 +8,8 @@
 #include "disasm.h"
 
 // Breakpoints and watches
+uint16_t bus_watch_start = 0xffff;
+uint16_t bus_watch_end = 0;
 uint16_t memrd_watch_start = 0xffff;
 uint16_t memrd_watch_end = 0;
 uint16_t memwr_watch_start = 0xffff;
@@ -145,109 +147,172 @@ void z80_run(void)
 
 #define HL(signal) ((signal) ? 'H' : 'L')
 
-// Log current 
-void z80_status()
+void z80_buslog(bus_stat status)
 {
-    uint8_t data = GET_DATA;
-    uint16_t addr = GET_ADDR;
-    char mnemonic[64];
+    printf_P(
+        PSTR("clk=%c m1=%c mreq=%c iorq=%c ioack=%c rd=%c wr=%c rfsh=%c halt=%c "
+        "int=%c nmi=%c reset=%c busrq=%c busack=%c "
+#ifdef BANKMASK
+        "bank=%X "
+#endif
+        "addr=%04X "
+        "data=%02X %c\n"),
+        HL(status.flags.bits.clk),
+        HL(status.flags.bits.m1),
+        HL(status.flags.bits.mreq),
+        HL(status.flags.bits.iorq),
+        HL(status.flags.bits.ioack),
+        HL(status.flags.bits.rd),
+        HL(status.flags.bits.wr),
+        HL(status.flags.bits.rfsh),
+        HL(status.flags.bits.halt), 
+        HL(status.flags.bits.interrupt),
+        HL(status.flags.bits.nmi),
+        HL(status.flags.bits.reset),
+        HL(status.flags.bits.busrq),
+        HL(status.flags.bits.busack),
+        status.addr,
+        status.data,
+        0x20 <= status.data && status.data <= 0x7e ? status.data : ' ');
 
-    // Log current bus operation
-    if (!GET_M1)
-        printf("op fetch\t");
-    else if (!GET_MREQ && !GET_RD)
-        printf("mem read\t");
-    else if (!GET_MREQ && !GET_WR)
-        printf("mem write\t");
-    else if (!GET_IORQ && !GET_RD)
-        printf("io read\t\t");
-    else if (!GET_IORQ && !GET_WR)
-        printf("io write\t");
-
-    // Log current address and data byte
-    printf("%04X\t%02X ", GET_ADDR, GET_DATA);
-
-    // Handle instruction fetch
-    if (!GET_M1) {
-        disasm(0, GET_DATA, mnemonic);
-        // Get remaining instruction bytes
-        // Lookup instruction length and mnemonic for opcode
-        if (mnemonic[0] == '2') {
-            // Two-byte operand (address)
-            clk_cycle(3);
-            addr = GET_DATA;
-            printf("%02X ", GET_DATA);
-            clk_cycle(3);
-            addr |= GET_DATA << 8;
-            printf("%02X\t", GET_DATA);
-            printf(mnemonic+1, addr);
-        } else if (mnemonic[0] == '1') {
-            // One-byte operand (immediate)
-            clk_cycle(3);
-            addr = GET_DATA;
-            printf("%02X\t\t", GET_DATA);
-            printf(mnemonic+1, addr);
-        } else if (mnemonic[0] == '+') {
-            // One-byte operand (relative address)
-            clk_cycle(3);
-            addr += (int8_t)GET_DATA + 2;
-            printf("%02X\t\t", GET_DATA);
-            printf(mnemonic+1, addr);
-        } else if (mnemonic[0] == '*') {
-            // Two-byte opcode
-            printf("\t\t%s", mnemonic);
-        } else {
-            printf("\t\t%s", mnemonic);
-        }
-    }
-
-    // If not instruction fetch, output printable ASCII chacters
-    else if (0x20 <= data && data <= 0x7e)
-        printf("\t\t%c", data);
-
-    printf("\n");
-
-    // Finish current memory cycle
-    while (!GET_MREQ) {
-        CLK_LO;
-        CLK_HI;
-    }
-
-    // wait until output is fully transmitted to avoid
-    // interfering with UART status for running program
-    loop_until_bit_is_set(UCSR0A, UDRE0);
+        // wait until output is fully transmitted to avoid
+        // interfering with UART status for running program
+        loop_until_bit_is_set(UCSR0A, UDRE0);    
 }
 
-#define MEM_DEBUG (opfetch_watch_start <= opfetch_watch_end || opfetch_break_start <= opfetch_break_end || memrd_watch_start <= memrd_watch_end || memrd_break_start <= memrd_break_end || memwr_watch_start <= memwr_watch_end || memwr_break_start <= memwr_break_end)
+void z80_busshort(bus_stat status)
+{
+    printf_P(
+        PSTR("\t%04x %02x %c    %s %s    %s %s %s %s %s %s %s %s\n"),
+        status.addr,
+        status.data,
+        0x20 <= status.data && status.data <= 0x7e ? status.data : ' ',
+        !status.flags.bits.rd ? "rd  " :
+        !status.flags.bits.wr ? "wr  " :
+        !status.flags.bits.rfsh ? "rfsh" : "    ",
+        !status.flags.bits.mreq ? "mem" :
+        !status.flags.bits.iorq ? "io " : "   ",
+        !status.flags.bits.m1 ? "m1" : "  ",
+        !status.flags.bits.halt ? "halt" : "    ", 
+        !status.flags.bits.interrupt ? "int" : "   ",
+        !status.flags.bits.nmi ? "nmi" : "   ",
+        !status.flags.bits.reset ? "rst" : "   ",
+        !status.flags.bits.busrq ? "busrq" : "     ",
+        !status.flags.bits.busack ? "busack" : "      ",
+        !status.flags.bits.ioack ? "ioack" : "     ");
+
+        // wait until output is fully transmitted to avoid
+        // interfering with UART status for running program
+        loop_until_bit_is_set(UCSR0A, UDRE0);    
+}
+
+#define MAXREAD 64
+
+#define INRANGE(start, end, test) ((start) <= (test) && (test) <= (end))
+
+#define PREFIX(b) (b == 0xCB || b == 0xDD || b == 0xED || b == 0xFD)
+
+// Determine if we are at the start of a new instruction
+// Thanks to Alan Kamrowski II for working this logic out
+uint8_t newinstr(uint8_t current)
+{
+  static uint8_t previous, previous2;
+  uint8_t result;
+ 
+    switch (previous) {
+        case 0xcb:
+            if (previous2 == 0xcb || previous2 == 0xdd || previous2 == 0xfd)
+                // if previous2 is 0xcb, then previous must be an opcode
+                // if previous2 is 0xdd or 0xfd, then previous must be a 2nd prefix
+                // either way, current must be start of a new instruction
+                result = 1;
+            else 
+                result = 0;
+            break;
+        case 0xed:
+            if (previous2 == 0xcb)
+                // previous must be an opcode, so current must be start of a new instruction
+                result = 1;
+            else 
+                result = 0;
+            break;
+        case 0xdd:
+        case 0xfd:
+            if (previous2 == 0xcb)
+                // previous must be an opcode, so current must be start of a new instruction
+                result = 1;
+            else
+                if (current == 0xdd || current == 0xed || current == 0xfd)
+                    // previous is essentially a nop, so current must be start of a new instruction
+                    result = 1;
+                else 
+                    result = 0;
+            break;
+        default:
+            // otherwise, previous must be an opcode, so current must be start of a new instruction
+            result = 1;
+            break;
+    }
+
+    // roll opcodes
+    previous2 = previous;
+    previous = current;
+
+    return result;
+}
 
 // Trace reads and writes for the specified number of instructions
-void z80_trace(uint32_t cycles)
+void z80_debug(uint32_t cycles)
 {
+    uint8_t reads[MAXREAD];
+    char mnemonic[255];
+    uint8_t i = 0;
+    uint8_t prefix = 0;
+    bus_stat status, oldstatus = bus_status(), start;
     uint32_t c = 0;
-    uint8_t brk = 0;
+    uint8_t brk = 0, logged = 0;
+
     while (GET_HALT && (cycles == 0 || c < cycles) && !brk) {
         CLK_LO;
         CLK_HI;
-        if (!GET_IORQ) {
-            uint8_t addr = GET_ADDRLO;
-            if ((!GET_WR && iowr_watch_start <= addr && addr <= iowr_watch_end) ||
-                (!GET_RD && iord_watch_start <= addr && addr <= iord_watch_end))
-                z80_status();
-            if ((!GET_WR && iowr_break_start <= addr && addr <= iowr_break_end) ||
-                (!GET_RD && iord_break_start <= addr && addr <= iord_break_end))
-                brk = 1;
+        logged = 0;
+        status = bus_status();
+        if (!status.flags.bits.mreq) {
+            if (oldstatus.flags.bits.rd && !status.flags.bits.rd) {
+                if (!status.flags.bits.m1 && newinstr(status.data)) {
+                    if (INRANGE(opfetch_watch_start, opfetch_watch_end, start.addr)) {
+                        disasm(start.addr, reads, mnemonic);
+                        printf("\t%04x\t%s\n", start.addr, mnemonic);
+                    }
+                    start = status;
+                    i = 0;
+                    c++;
+                    brk = INRANGE(opfetch_break_start, opfetch_break_end, status.addr));
+                }
+                if (i < MAXREAD)
+                    reads[i++] = status.data;
+                if (logged = INRANGE(memrd_watch_start, memrd_watch_end, status.addr))
+                    z80_busshort(status);
+                brk = INRANGE(memrd_break_start, memrd_break_end, status.addr);
+            } else if (oldstatus.flags.bits.wr && !status.flags.bits.wr) {
+                if (logged = INRANGE(memwr_watch_start, memwr_watch_end, status.addr))
+                    z80_busshort(status);
+                brk = INRANGE(memwr_break_start, memwr_break_end, status.addr);
+            }
+        } else if (!status.flags.bits.iorq) {
+            if (oldstatus.flags.bits.rd && !status.flags.bits.rd) {
+                if (logged = INRANGE(iord_watch_start, iord_watch_end, status.addr & 0xff))
+                    z80_busshort(status);
+                brk = INRANGE(iord_break_start, iord_break_end, status.addr & 0xff);
+            } else if (oldstatus.flags.bits.wr && !status.flags.bits.wr) {
+                if (logged = INRANGE(iowr_watch_start, iowr_watch_end, status.addr & 0xff))
+                    z80_busshort(status);
+                brk = INRANGE(iowr_break_start, iowr_break_end, status.addr & 0xff);
+            }
             z80_iorq();
-        } else if (!GET_MREQ && MEM_DEBUG) {
-            uint16_t addr = GET_ADDR;
-            if ((!GET_M1 && opfetch_watch_start <= addr && addr <= opfetch_watch_end) ||
-                (!GET_RD && memrd_watch_start <= addr && addr <= memrd_watch_end) ||
-                (!GET_WR && memwr_watch_start <= addr && addr <= memwr_watch_end))
-                z80_status();
-            if ((!GET_M1 && opfetch_break_start <= addr && addr <= opfetch_break_end) ||
-                (!GET_RD && memrd_break_start <= addr && addr <= memrd_break_end) ||
-                (!GET_WR && memwr_break_start <= addr && addr <= memwr_break_end))
-                brk = 1;
-        }
-        c++;
+        }        
+        if (!logged && INRANGE(bus_watch_start, bus_watch_end, status.addr))
+            z80_busshort(status);
+        oldstatus = status;
     }
 }

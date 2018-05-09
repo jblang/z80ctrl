@@ -4,6 +4,13 @@
 #include "defines.h"
 #include <avr/io.h>
 
+// Flags ///////////////////////////////////////////////////////////////////////
+
+#define GET_BFLAGS (PINB & ((1<<IOACK) | (1<<IORQ) | (1<<M1)))
+#define GET_DFLAGS (PIND & ((1<<RD) | (1<<WR) | (1<<CLK) | (1<<HALT)))
+#define GET_XFLAGS (iox_read(CTRLX_GPIO) & ((1<<RFSH) | (1<<RESET) | (1<<INTERRUPT) | \
+                                        (1<<BUSACK) | (1<<MREQ) | (1<<BUSRQ) | (1<<NMI)))
+
 // CPU control /////////////////////////////////////////////////////////////////
 
 #define HALT_INPUT HALT_DDR &= ~(1 << HALT)
@@ -98,12 +105,50 @@
 #define CLK_LO CLK_PORT &= ~(1 << CLK)
 #define CLK_TOGGLE CLK_PIN |= (1 << CLK)
 
+typedef struct _flag_bits {
+        uint8_t : 1;
+        uint8_t rfsh : 1;
+        uint8_t reset : 1;
+        uint8_t interrupt : 1;
+        uint8_t busack : 1;
+        uint8_t mreq : 1;
+        uint8_t busrq : 1;
+        uint8_t nmi : 1;
+
+        uint8_t ioack : 1;
+        uint8_t iorq : 1;
+        uint8_t m1: 1;
+        uint8_t : 1;
+        uint8_t rd : 1;
+        uint8_t wr : 1;
+        uint8_t clk : 1;
+        uint8_t halt : 1;
+} flag_bits;
+
+typedef struct _flag_bytes {
+        uint8_t lo;
+        uint8_t hi;
+} flag_bytes;
+
+typedef union _flag_union {
+        flag_bytes bytes;
+        flag_bits bits;
+} flag_union;
+
+typedef struct _bus_stat {
+        flag_union flags;
+        uint16_t addr;
+        uint8_t data;
+} bus_stat;
+
 void clk_cycle(uint8_t cycles);
+void clk_trace(uint8_t cycles);
 void clk_run(void);
 void clk_stop(void);
 void bus_master(void);
 void bus_slave(void);
-void bus_status(void);
+bus_stat bus_status(void);
 void bus_init(void);
+
 
 #endif
