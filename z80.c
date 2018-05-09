@@ -261,58 +261,70 @@ uint8_t newinstr(uint8_t current)
     return result;
 }
 
+uint8_t z80_tick()
+{
+    uint8_t lastrd = GET_RD;
+    uint8_t lastwr = GET_WR;
+    uint8_t logged = 0;
+    uint8_t brk = 0;
+
+    CLK_LO;
+    CLK_HI;
+    bus_stat status = bus_status();
+    if (!status.flags.bits.mreq) {
+        if (lastrd && !status.flags.bits.rd) {
+            if (logged = INRANGE(memrd_watch_start, memrd_watch_end, status.addr))
+                z80_busshort(status);
+            brk = INRANGE(memrd_break_start, memrd_break_end, status.addr);
+        } else if (lastwr && !status.flags.bits.wr) {
+            if (logged = INRANGE(memwr_watch_start, memwr_watch_end, status.addr))
+                z80_busshort(status);
+            brk = INRANGE(memwr_break_start, memwr_break_end, status.addr);
+        }
+    } else if (!status.flags.bits.iorq) {
+        if (lastrd && !status.flags.bits.rd) {
+            if (logged = INRANGE(iord_watch_start, iord_watch_end, status.addr & 0xff))
+                z80_busshort(status);
+            brk = INRANGE(iord_break_start, iord_break_end, status.addr & 0xff);
+        } else if (lastwr && !status.flags.bits.wr) {
+            if (logged = INRANGE(iowr_watch_start, iowr_watch_end, status.addr & 0xff))
+                z80_busshort(status);
+            brk = INRANGE(iowr_break_start, iowr_break_end, status.addr & 0xff);
+        }
+        z80_iorq();
+    }        
+    if (!logged && INRANGE(bus_watch_start, bus_watch_end, status.addr))
+        z80_busshort(status);
+    
+    return brk;
+}
+
+uint8_t z80_read()
+{
+    uint8_t data;
+    while (GET_MREQ || GET_RD)
+        z80_tick();
+    data = GET_DATA;
+    while (!GET_MREQ || !GET_RD)
+        z80_tick();
+    return data;
+}
+
 // Trace reads and writes for the specified number of instructions
 void z80_debug(uint32_t cycles)
 {
-    uint8_t reads[MAXREAD];
     char mnemonic[255];
-    uint8_t i = 0;
-    uint8_t prefix = 0;
-    bus_stat status, oldstatus = bus_status(), start;
     uint32_t c = 0;
-    uint8_t brk = 0, logged = 0;
+    uint8_t brk = 0;
 
     while (GET_HALT && (cycles == 0 || c < cycles) && !brk) {
-        CLK_LO;
-        CLK_HI;
-        logged = 0;
-        status = bus_status();
-        if (!status.flags.bits.mreq) {
-            if (oldstatus.flags.bits.rd && !status.flags.bits.rd) {
-                if (!status.flags.bits.m1 && newinstr(status.data)) {
-                    if (INRANGE(opfetch_watch_start, opfetch_watch_end, start.addr)) {
-                        disasm(start.addr, reads, mnemonic);
-                        printf("\t%04x\t%s\n", start.addr, mnemonic);
-                    }
-                    start = status;
-                    i = 0;
-                    c++;
-                    brk = INRANGE(opfetch_break_start, opfetch_break_end, status.addr));
-                }
-                if (i < MAXREAD)
-                    reads[i++] = status.data;
-                if (logged = INRANGE(memrd_watch_start, memrd_watch_end, status.addr))
-                    z80_busshort(status);
-                brk = INRANGE(memrd_break_start, memrd_break_end, status.addr);
-            } else if (oldstatus.flags.bits.wr && !status.flags.bits.wr) {
-                if (logged = INRANGE(memwr_watch_start, memwr_watch_end, status.addr))
-                    z80_busshort(status);
-                brk = INRANGE(memwr_break_start, memwr_break_end, status.addr);
-            }
-        } else if (!status.flags.bits.iorq) {
-            if (oldstatus.flags.bits.rd && !status.flags.bits.rd) {
-                if (logged = INRANGE(iord_watch_start, iord_watch_end, status.addr & 0xff))
-                    z80_busshort(status);
-                brk = INRANGE(iord_break_start, iord_break_end, status.addr & 0xff);
-            } else if (oldstatus.flags.bits.wr && !status.flags.bits.wr) {
-                if (logged = INRANGE(iowr_watch_start, iowr_watch_end, status.addr & 0xff))
-                    z80_busshort(status);
-                brk = INRANGE(iowr_break_start, iowr_break_end, status.addr & 0xff);
-            }
-            z80_iorq();
-        }        
-        if (!logged && INRANGE(bus_watch_start, bus_watch_end, status.addr))
-            z80_busshort(status);
-        oldstatus = status;
+        brk = z80_tick();
+        if (!GET_M1 && !GET_MREQ && !GET_RD) {
+            uint16_t addr = GET_ADDR;
+            c++;
+            disasm(addr, z80_read, mnemonic);
+            if (INRANGE(opfetch_watch_start, opfetch_watch_end, addr))
+                printf("\t%04x\t%s\n", addr, mnemonic);
+        }
     }
 }

@@ -148,19 +148,18 @@ char *edx1z7ops[] = {
     "NOP"
 };
 
-uint8_t disasm(uint16_t addr, uint8_t *input, char *output)
+uint8_t disasm(uint16_t addr, uint8_t (*input)(), char *output)
 {
     uint8_t opcode = 0;
     uint16_t prefix = 0;
     uint8_t displ = 0;
     uint8_t imm = 0;
-    uint8_t i = 0;
     enum {HL, IX, IY} idxmode = HL;
 
     // Consume any number of leading 0xDD and 0xFD bytes
     // and set index mode according to last one encountered.
     for (;;) {
-            opcode = input[i++];
+            opcode = input();
             if (opcode == 0xDD)
                     idxmode = IX;
             else if (opcode == 0xFD)
@@ -178,14 +177,14 @@ uint8_t disasm(uint16_t addr, uint8_t *input, char *output)
     // and fetch displacement if required
     if (opcode == 0xED) {
             prefix = 0xED;
-            opcode = input[i++];
+            opcode = input();
     } else if (opcode == 0xCB) {
             if (idxmode != HL)
-                    displ = input[i++];
+                    displ = input();
             prefix = 0xCB;
-            opcode = input[i++];
+            opcode = input();
     } else if (idxmode != HL && (opcode & 0x40 == 4 || opcode & 0xc0 == 0x40))
-            displ = input[i++];
+            displ = input();
 
     // bit slice the opcode
     uint8_t x = (opcode & 0xc0) >> 6;       // x = opcode[7:6]
@@ -227,7 +226,7 @@ uint8_t disasm(uint16_t addr, uint8_t *input, char *output)
                             sprintf(output, (q == 0) ? "SBC HL,%s" : "ADC HL,%s", rp[p]);
                             break;
                         case 3:
-                            addr = input[i++] | (input[i++] << 8);
+                            addr = input() | (input() << 8);
                             if (q == 0) 
                                 sprintf(output, "LD (%04XH),%s", addr, rp[p]);
                             else
@@ -272,22 +271,22 @@ uint8_t disasm(uint16_t addr, uint8_t *input, char *output)
                                     sprintf(output, "EX AF,AF'");
                                     break;
                                 case 2:
-                                    addr += (int8_t)input[i++] + 2;
+                                    addr += (int8_t)input() + 2;
                                     sprintf(output, "DJNZ %04XH", addr);
                                     break;
                                 case 3:
-                                    addr += (int8_t)input[i++] + 2;
+                                    addr += (int8_t)input() + 2;
                                     sprintf(output, "JR %04XH", addr);
                                     break;
                                 default:
-                                    addr += (int8_t)input[i++] + 2;
+                                    addr += (int8_t)input() + 2;
                                     sprintf(output, "JR %s,%04XH", cc[y-4], addr);
                                     break;
                             }
                             break;
                         case 1:
                             if (q == 0) {
-                                addr = input[i++] | (input[i++] << 8);
+                                addr = input() | (input() << 8);
                                 sprintf(output, "LD %s,%04XH", rp[p], addr);
                             } else
                                 sprintf(output, "ADD HL,%s", rp[p]);
@@ -296,7 +295,7 @@ uint8_t disasm(uint16_t addr, uint8_t *input, char *output)
                             if (y < 4)
                                 sprintf(output, ldops[y]);
                             else {
-                                addr = input[i++] | (input[i++] << 8);
+                                addr = input() | (input() << 8);
                                 sprintf(output, ldops[y], addr); 
                             }
                             break;
@@ -310,7 +309,7 @@ uint8_t disasm(uint16_t addr, uint8_t *input, char *output)
                             sprintf(output, "DEC %s", r[y]);
                             break;
                         case 6:
-                            imm = input[i++];
+                            imm = input();
                             sprintf(output, "LD %s,%02XH", r[y], imm);
                             break;
                         case 7:
@@ -339,23 +338,23 @@ uint8_t disasm(uint16_t addr, uint8_t *input, char *output)
                                 sprintf(output, x3z1q1ops[p]);
                             break;
                         case 2:
-                            addr = input[i++] | (input[i++] << 8);
+                            addr = input() | (input() << 8);
                             sprintf(output, "JP %s,%04XH", cc[y], addr);
                             break;
                         case 3:
                             switch(y) {
                                 case 0:
-                                    addr = input[i++] | (input[i++] << 8);                                    
+                                    addr = input() | (input() << 8);                                    
                                     sprintf(output, "JP %04XH", addr);
                                     break;
                                 case 1:
                                     break;
                                 case 2:
-                                    imm = input[i++];
+                                    imm = input();
                                     sprintf(output, "OUT (%02XH),A", imm);
                                     break;
                                 case 3:
-                                    imm = input[i++];
+                                    imm = input();
                                     sprintf(output, "IN A,(%02XH)", imm);
                                     break;
                                 default:
@@ -364,19 +363,19 @@ uint8_t disasm(uint16_t addr, uint8_t *input, char *output)
                             }
                             break;
                         case 4:
-                            addr = input[i++] | (input[i++] << 8);
+                            addr = input() | (input() << 8);
                             sprintf(output, "CALL %s,%04XH", cc[y], addr);
                             break;
                         case 5:
                             if (q == 0)
                                 sprintf(output, "PUSH %s", p < 3 ? rp[p] : rp[4]);
                             else if (p == 0) {
-                                addr = input[i++] | (input[i++] << 8);
+                                addr = input() | (input() << 8);
                                 sprintf(output, "CALL %04XH", addr);
                             } 
                             break;
                         case 6:
-                            imm = input[i++];
+                            imm = input();
                             sprintf(output, "%s %02XH", alu[y], imm);
                             break;
                         case 7:
