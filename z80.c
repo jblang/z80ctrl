@@ -145,42 +145,7 @@ void z80_run(void)
     CLK_LO;
 }
 
-#define HL(signal) ((signal) ? 'H' : 'L')
-
 void z80_buslog(bus_stat status)
-{
-    printf_P(
-        PSTR("clk=%c m1=%c mreq=%c iorq=%c ioack=%c rd=%c wr=%c rfsh=%c halt=%c "
-        "int=%c nmi=%c reset=%c busrq=%c busack=%c "
-#ifdef BANKMASK
-        "bank=%X "
-#endif
-        "addr=%04X "
-        "data=%02X %c\n"),
-        HL(status.flags.bits.clk),
-        HL(status.flags.bits.m1),
-        HL(status.flags.bits.mreq),
-        HL(status.flags.bits.iorq),
-        HL(status.flags.bits.ioack),
-        HL(status.flags.bits.rd),
-        HL(status.flags.bits.wr),
-        HL(status.flags.bits.rfsh),
-        HL(status.flags.bits.halt), 
-        HL(status.flags.bits.interrupt),
-        HL(status.flags.bits.nmi),
-        HL(status.flags.bits.reset),
-        HL(status.flags.bits.busrq),
-        HL(status.flags.bits.busack),
-        status.addr,
-        status.data,
-        0x20 <= status.data && status.data <= 0x7e ? status.data : ' ');
-
-        // wait until output is fully transmitted to avoid
-        // interfering with UART status for running program
-        loop_until_bit_is_set(UCSR0A, UDRE0);    
-}
-
-void z80_busshort(bus_stat status)
 {
     printf_P(
         PSTR("\t%04x %02x %c    %s %s    %s %s %s %s %s %s %s %s\n"),
@@ -206,60 +171,7 @@ void z80_busshort(bus_stat status)
         loop_until_bit_is_set(UCSR0A, UDRE0);    
 }
 
-#define MAXREAD 64
-
 #define INRANGE(start, end, test) ((start) <= (test) && (test) <= (end))
-
-#define PREFIX(b) (b == 0xCB || b == 0xDD || b == 0xED || b == 0xFD)
-
-// Determine if we are at the start of a new instruction
-// Thanks to Alan Kamrowski II for working this logic out
-uint8_t newinstr(uint8_t current)
-{
-  static uint8_t previous, previous2;
-  uint8_t result;
- 
-    switch (previous) {
-        case 0xcb:
-            if (previous2 == 0xcb || previous2 == 0xdd || previous2 == 0xfd)
-                // if previous2 is 0xcb, then previous must be an opcode
-                // if previous2 is 0xdd or 0xfd, then previous must be a 2nd prefix
-                // either way, current must be start of a new instruction
-                result = 1;
-            else 
-                result = 0;
-            break;
-        case 0xed:
-            if (previous2 == 0xcb)
-                // previous must be an opcode, so current must be start of a new instruction
-                result = 1;
-            else 
-                result = 0;
-            break;
-        case 0xdd:
-        case 0xfd:
-            if (previous2 == 0xcb)
-                // previous must be an opcode, so current must be start of a new instruction
-                result = 1;
-            else
-                if (current == 0xdd || current == 0xed || current == 0xfd)
-                    // previous is essentially a nop, so current must be start of a new instruction
-                    result = 1;
-                else 
-                    result = 0;
-            break;
-        default:
-            // otherwise, previous must be an opcode, so current must be start of a new instruction
-            result = 1;
-            break;
-    }
-
-    // roll opcodes
-    previous2 = previous;
-    previous = current;
-
-    return result;
-}
 
 uint8_t z80_tick()
 {
@@ -274,27 +186,27 @@ uint8_t z80_tick()
     if (!status.flags.bits.mreq) {
         if (lastrd && !status.flags.bits.rd) {
             if (logged = INRANGE(memrd_watch_start, memrd_watch_end, status.addr))
-                z80_busshort(status);
+                z80_buslog(status);
             brk = INRANGE(memrd_break_start, memrd_break_end, status.addr);
         } else if (lastwr && !status.flags.bits.wr) {
             if (logged = INRANGE(memwr_watch_start, memwr_watch_end, status.addr))
-                z80_busshort(status);
+                z80_buslog(status);
             brk = INRANGE(memwr_break_start, memwr_break_end, status.addr);
         }
     } else if (!status.flags.bits.iorq) {
         if (lastrd && !status.flags.bits.rd) {
             if (logged = INRANGE(iord_watch_start, iord_watch_end, status.addr & 0xff))
-                z80_busshort(status);
+                z80_buslog(status);
             brk = INRANGE(iord_break_start, iord_break_end, status.addr & 0xff);
         } else if (lastwr && !status.flags.bits.wr) {
             if (logged = INRANGE(iowr_watch_start, iowr_watch_end, status.addr & 0xff))
-                z80_busshort(status);
+                z80_buslog(status);
             brk = INRANGE(iowr_break_start, iowr_break_end, status.addr & 0xff);
         }
         z80_iorq();
     }        
     if (!logged && INRANGE(bus_watch_start, bus_watch_end, status.addr))
-        z80_busshort(status);
+        z80_buslog(status);
     
     return brk;
 }
@@ -319,12 +231,17 @@ void z80_debug(uint32_t cycles)
 
     while (GET_HALT && (cycles == 0 || c < cycles) && !brk) {
         brk = z80_tick();
-        if (!GET_M1 && !GET_MREQ && !GET_RD) {
+        if (!GET_M1) {
             uint16_t addr = GET_ADDR;
-            c++;
-            disasm(addr, z80_read, mnemonic);
-            if (INRANGE(opfetch_watch_start, opfetch_watch_end, addr))
-                printf("\t%04x\t%s\n", addr, mnemonic);
+            brk |= (INRANGE(opfetch_break_start, opfetch_break_end, addr));
+            if (!GET_MREQ && !GET_RD) {
+                c++;
+                disasm(addr, z80_read, mnemonic);
+                if (INRANGE(opfetch_watch_start, opfetch_watch_end, addr)) {
+                    printf("\t%04x\t%s\n", addr, mnemonic);
+                    loop_until_bit_is_set(UCSR0A, UDRE0);    
+                }
+            }
         }
     }
 }

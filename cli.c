@@ -263,11 +263,6 @@ void cli_step(int argc, char *argv[])
     z80_debug(cycles);
 }
 
-void cli_status(int argc, char *argv[])
-{
-    z80_busshort(bus_status());
-}
-
 void breakwatch_status(char *name, uint16_t start, uint16_t end)
 {
     if (start < end)
@@ -541,7 +536,6 @@ cli_entry cli_cmds[] = {
     {"reset", "reset the processor, with optional vector", &cli_reset},
     {"savehex", "save intel hex file from memory", &cli_savehex},
     {"sboot", "boot disk using SIMH bootloader", &cli_sboot},
-    {"status", "display current status", &cli_status},
     {"s", "shorthand for step", &cli_step},
     {"step", "step processor N cycles", &cli_step},
     {"unmount", "unmount a disk image", &cli_unmount},

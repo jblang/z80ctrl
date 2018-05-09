@@ -194,7 +194,6 @@ uint8_t disasm(uint16_t addr, uint8_t (*input)(), char *output)
     uint8_t q = (opcode & 0x08) >> 3;       // q = opcode[3]
     uint8_t yz = ((y & 3) << 2) | (z & 3);  // yz = {opcode[1:0], opcode[4:3]}
 
-    printf("%x %02x %02x [%X %X %X <%X:%X> %X] ", idxmode, prefix, opcode, x, z, y, p, q, yz);
     switch (prefix) {
         case 0xCB:
             switch (x) {
@@ -386,4 +385,5 @@ uint8_t disasm(uint16_t addr, uint8_t (*input)(), char *output)
             }
             break;
     }
+    //printf("%x %02x %02x [%X %X %X <%X:%X> %X] ", idxmode, prefix, opcode, x, z, y, p, q, yz);
 }
