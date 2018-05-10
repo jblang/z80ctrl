@@ -49,8 +49,7 @@
 #define ADDRHI_GPPU GPPUA0
 #define ADDRHI_GPIO GPIOA0
 
-// CPU control lines on local port
-
+// CPU control lines on local ports
 #define IOACK_DDR DDRB
 #define IOACK_PORT PORTB
 #define IOACK_PIN PINB

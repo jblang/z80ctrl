@@ -259,7 +259,7 @@ void cli_step(int argc, char *argv[])
 {
     uint32_t cycles = 1;
     if (argc >= 2)
-        cycles = strtol(argv[1], NULL, 16);            
+        cycles = strtol(argv[1], NULL, 10);            
     z80_debug(cycles);
 }
 
@@ -523,8 +523,8 @@ cli_entry cli_cmds[] = {
 #endif
     {"bus", "display low-level bus status", &cli_bus},
     {"break", "set breakpoints", &cli_breakwatch},
+    {"c", "shorthand to continue debugging", &cli_debug},
     {"dboot", "boot disk using Altair disk bootloader", &cli_dboot},
-    {"d", "shorthand to continue debugging", &cli_debug},
     {"debug", "debug code at address", &cli_debug},
     {"dir", "shows directory listing", &cli_dir},
     {"dump", "dump memory in hex and ascii", &cli_dump},

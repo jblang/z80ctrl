@@ -145,6 +145,8 @@ void z80_run(void)
     CLK_LO;
 }
 
+
+// Log the bus status
 void z80_buslog(bus_stat status)
 {
     printf_P(
@@ -171,58 +173,81 @@ void z80_buslog(bus_stat status)
         loop_until_bit_is_set(UCSR0A, UDRE0);    
 }
 
+// Make memory range tests more readable
 #define INRANGE(start, end, test) ((start) <= (test) && (test) <= (end))
 
+// Do a single T cycle, optionally logging and breaking on the bus status
 uint8_t z80_tick()
 {
+    // Save previous RD and WR values to detect falling edge
     uint8_t lastrd = GET_RD;
     uint8_t lastwr = GET_WR;
+
     uint8_t logged = 0;
     uint8_t brk = 0;
 
     CLK_LO;
     CLK_HI;
-    bus_stat status = bus_status();
-    if (!status.flags.bits.mreq) {
-        if (lastrd && !status.flags.bits.rd) {
-            if (logged = INRANGE(memrd_watch_start, memrd_watch_end, status.addr))
+
+    // Only do expensive IO-expander read if memory logging or breakpoint is enabled
+    if (memrd_watch_start < memrd_watch_end || memrd_break_start < memrd_break_end) {
+        bus_stat status = bus_status();
+        if (!status.flags.bits.mreq)
+            // Only log memory access once, on the falling edge of RD or WR
+            if (lastrd && !GET_RD) {
+                if (logged = INRANGE(memrd_watch_start, memrd_watch_end, status.addr))
+                    z80_buslog(status);
+                brk = INRANGE(memrd_break_start, memrd_break_end, status.addr);
+            } else if (lastwr && !GET_WR) {
+                if (logged = INRANGE(memwr_watch_start, memwr_watch_end, status.addr))
+                    z80_buslog(status);
+                brk = INRANGE(memwr_break_start, memwr_break_end, status.addr);
+            }
+    } 
+    
+    // Handle IO requests, and optionally log or break on them
+    if (!GET_IORQ) {
+        if (lastrd && !GET_RD) {
+            if (logged = INRANGE(iord_watch_start, iord_watch_end, GET_ADDRLO)) {
+                bus_stat status = bus_status();
                 z80_buslog(status);
-            brk = INRANGE(memrd_break_start, memrd_break_end, status.addr);
-        } else if (lastwr && !status.flags.bits.wr) {
-            if (logged = INRANGE(memwr_watch_start, memwr_watch_end, status.addr))
+            }
+            brk = INRANGE(iord_break_start, iord_break_end, GET_ADDRLO);
+        } else if (lastwr && !GET_WR) {
+            if (logged = INRANGE(iowr_watch_start, iowr_watch_end, GET_ADDRLO)) {
+                bus_stat status = bus_status();
                 z80_buslog(status);
-            brk = INRANGE(memwr_break_start, memwr_break_end, status.addr);
-        }
-    } else if (!status.flags.bits.iorq) {
-        if (lastrd && !status.flags.bits.rd) {
-            if (logged = INRANGE(iord_watch_start, iord_watch_end, status.addr & 0xff))
-                z80_buslog(status);
-            brk = INRANGE(iord_break_start, iord_break_end, status.addr & 0xff);
-        } else if (lastwr && !status.flags.bits.wr) {
-            if (logged = INRANGE(iowr_watch_start, iowr_watch_end, status.addr & 0xff))
-                z80_buslog(status);
-            brk = INRANGE(iowr_break_start, iowr_break_end, status.addr & 0xff);
+            }
+            brk = INRANGE(iowr_break_start, iowr_break_end, GET_ADDRLO);
         }
         z80_iorq();
-    }        
-    if (!logged && INRANGE(bus_watch_start, bus_watch_end, status.addr))
-        z80_buslog(status);
-    
+    }
+
+    // Log if bus logging is enabled and this cycle wasn't already logged for another reason
+    if (bus_watch_start < bus_watch_end && !logged) {
+        bus_stat status = bus_status();
+        if (INRANGE(bus_watch_start, bus_watch_end, status.addr))
+            z80_buslog(status);
+    }
     return brk;
 }
 
+// Clock the Z80 until it completes a memory read cycle and return the value read
 uint8_t z80_read()
 {
     uint8_t data;
+    // Wait for read cycle to start
     while (GET_MREQ || GET_RD)
         z80_tick();
+    // Capture value read
     data = GET_DATA;
+    // Wait for read cycle to end
     while (!GET_MREQ || !GET_RD)
         z80_tick();
     return data;
 }
 
-// Trace reads and writes for the specified number of instructions
+// Run the Z80 with watches and breakpoints for a specified number of instructions
 void z80_debug(uint32_t cycles)
 {
     char mnemonic[255];
@@ -231,17 +256,23 @@ void z80_debug(uint32_t cycles)
 
     while (GET_HALT && (cycles == 0 || c < cycles) && !brk) {
         brk = z80_tick();
-        if (!GET_M1) {
-            uint16_t addr = GET_ADDR;
-            brk |= (INRANGE(opfetch_break_start, opfetch_break_end, addr));
-            if (!GET_MREQ && !GET_RD) {
-                c++;
-                disasm(addr, z80_read, mnemonic);
-                if (INRANGE(opfetch_watch_start, opfetch_watch_end, addr)) {
-                    printf("\t%04x\t%s\n", addr, mnemonic);
-                    loop_until_bit_is_set(UCSR0A, UDRE0);    
+        // Only do expensive stuff if opcode break or watch is enabled
+        if (opfetch_watch_start < opfetch_watch_end || opfetch_break_start < opfetch_break_end || cycles)
+            if (!GET_M1) {
+                // Check if we are at a breakpoint
+                uint16_t addr = GET_ADDR;
+                // If opcode is being fetched, disassemble it to fetch the rest of the instruction
+                if (!GET_MREQ && !GET_RD) {
+                    c++;
+                    disasm(addr, z80_read, mnemonic);
+                    // If opcode was within watch range, log the instruction
+                    if (INRANGE(opfetch_watch_start, opfetch_watch_end, addr)) {
+                        printf("\t%04x\t%s\n", addr, mnemonic);
+                        // Flush UART to avoid interfering with running program
+                        loop_until_bit_is_set(UCSR0A, UDRE0);    
+                    }
                 }
+                brk |= (!GET_M1 && INRANGE(opfetch_break_start, opfetch_break_end, addr));
             }
-        }
     }
 }
