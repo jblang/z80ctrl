@@ -145,7 +145,7 @@ void clk_cycle(uint8_t cycles);
 void clk_trace(uint8_t cycles);
 void clk_run(void);
 void clk_stop(void);
-void bus_master(void);
+uint8_t bus_master(void);
 void bus_slave(void);
 bus_stat bus_status(void);
 void bus_init(void);

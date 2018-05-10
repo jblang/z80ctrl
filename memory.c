@@ -5,13 +5,15 @@
 
 #include "memory.h"
 #include "bus.h"
+#include "disasm.h"
 
 // Read specified number of bytes from external memory to a buffer
 void read_mem(uint16_t addr, uint8_t *buf, uint16_t len)
 {
     uint16_t i;
 
-    bus_master();
+    if(!bus_master())
+        return;
     DATA_INPUT;
     MREQ_LO;
     RD_LO;
@@ -33,7 +35,8 @@ void read_mem(uint16_t addr, uint8_t *buf, uint16_t len)
 // Write specified number of bytes to external memory from a buffer
 void write_mem(uint16_t addr, uint8_t *buf, uint16_t len)
 {
-    bus_master();
+    if(!bus_master())
+        return;
     DATA_OUTPUT;
     MREQ_LO;
     SET_ADDR(addr);
@@ -57,7 +60,8 @@ void write_mem(uint16_t addr, uint8_t *buf, uint16_t len)
 // Write specified number of bytes to external memory from a buffer
 void write_mem_P(uint16_t addr, uint8_t *buf, uint16_t len)
 {
-    bus_master();
+    if (!bus_master())
+        return;
     DATA_OUTPUT;
     MREQ_LO;
     SET_ADDR(addr);
@@ -123,6 +127,52 @@ void dump_mem(uint16_t start, uint16_t end)
                 printf(".");
         }
         printf("\n");
+    }
+}
+
+uint8_t disasm_index = 0;
+uint8_t disasm_buf[256];
+
+uint8_t disasm_next_byte()
+{
+    return disasm_buf[disasm_index++];    
+}
+
+// Disassemble memory to console
+void disasm_mem(uint16_t start, uint16_t end)
+{
+    char mnemonic[64];
+    char bytes[64];
+    uint16_t addr = start;
+    uint8_t i, start_index = 0;
+
+    while (start <= end) {
+        disasm_index = 0;
+        read_mem(start, disasm_buf, 256);
+        while (addr < end && disasm_index < 240) {
+            addr = start + disasm_index;
+            start_index = disasm_index;
+            printf("%04x  ", addr);
+            disasm(addr, disasm_next_byte, mnemonic);
+            for (i = start_index; i < disasm_index; i++) {
+                printf("%02x ", disasm_buf[i]);
+            }
+            i = 5 - (disasm_index - start_index);
+            while (i--)
+                printf("   ");
+            printf("  ");
+            for (i = start_index; i < disasm_index; i++) {
+                if (0x20 <= disasm_buf[i] && disasm_buf[i] <= 0x7e)
+                    printf("%c", disasm_buf[i]);
+                else
+                    printf(".");
+            }
+            i = 5 - (disasm_index - start_index);
+            while (i--)
+                printf(" ");
+            printf("  %s\n", mnemonic);            
+        }
+        start += disasm_index;
     }
 }
 

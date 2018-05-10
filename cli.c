@@ -212,6 +212,21 @@ void cli_savehex(int argc, char *argv[])
     }
 }
 
+void cli_disasm(int argc, char *argv[])
+{
+    uint16_t start, end;
+    if (argc < 2) {
+        printf_P(PSTR("usage: disasm <start> [end]\n"));
+        return;
+    }
+    start = strtol(argv[1], NULL, 16) & 0xffff;
+    if (argc < 3)
+        end = start + 0xf;
+    else
+        end = strtol(argv[2], NULL, 16) & 0xffff;
+    disasm_mem(start, end);
+}
+
 void cli_dump(int argc, char *argv[])
 {
     uint16_t start, end;
@@ -508,6 +523,11 @@ void cli_unmount(int argc, char *argv[])
     drive_unmount(drv);
 }
 
+void cli_cls(int argc, char *argv[])
+{
+    printf("\e[2J");
+}
+
 void cli_help(int argc, char *argv[]);
 
 typedef struct _cli_entry {
@@ -524,9 +544,11 @@ cli_entry cli_cmds[] = {
     {"bus", "display low-level bus status", &cli_bus},
     {"break", "set breakpoints", &cli_breakwatch},
     {"c", "shorthand to continue debugging", &cli_debug},
+    {"cls", "clear screen", &cli_cls},
     {"dboot", "boot disk using Altair disk bootloader", &cli_dboot},
     {"debug", "debug code at address", &cli_debug},
     {"dir", "shows directory listing", &cli_dir},
+    {"disasm", "disassembles memory location", &cli_disasm},
     {"dump", "dump memory in hex and ascii", &cli_dump},
     {"fill", "fill memory with byte", &cli_fill},
     {"help", "list available commands", &cli_help},

@@ -48,13 +48,20 @@ void clk_stop()
 }
 
 // Request control of the bus from the Z80
-void bus_master(void)
+uint8_t bus_master(void)
 {
+    uint8_t i = 255;
+
     BUSRQ_LO;           // request bus
     IOACK_LO;           // make sure not in WAIT state
     IOACK_HI;
-    while (GET_BUSACK)  // wait for BUSACK to go low
+    while (GET_BUSACK && i--)  // wait for BUSACK to go low
         CLK_TOGGLE;
+    if (i == 0) {
+        printf("bus request timed out\n");
+        BUSRQ_HI;
+        return 0;
+    }
     MREQ_HI;
     RD_HI;
     WR_HI;
@@ -63,6 +70,7 @@ void bus_master(void)
     WR_OUTPUT;
     ADDR_OUTPUT;
     DATA_INPUT;
+    return 1;
 }
 
 // Return control of the bus to the Z80
