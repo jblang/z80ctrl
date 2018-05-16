@@ -50,14 +50,24 @@ Watch the [second](https://www.youtube.com/watch?v=5hJ0k5ZuQRE) YouTube video li
 
 ### AVR
 
-The AVR contains a built-in monitor program to allow control of the Z80.  When the AVR starts up, it presents a `z80ctrl>` prompt. Typing `help` at the prompt will list all available commands. Commands are provided to dump memory, fill memory, load and save Intel HEX files, mount and unmount disk images, and start the Z80 running from any address.
+The AVR contains a built-in monitor program to allow control of the Z80.  When the AVR starts up, it presents a `z80ctrl>` prompt. The following commands are provided:
+
+- Dump, disassemble, or fill memory (`dump`, `disasm`, `fill`)
+- List files on the SD card (`dir`)
+- Load and save Intel HEX files (`loadhex`, `savehex`)
+- Mount, unmount, and boot from disk images (`mount`, `unmount`, `sboot`, `dboot`)
+- Set breakpoints and watchpoints, and debug a program (`break`, `watch`, `debug`, `step`)
+- Start the Z80 running from any address (`run`)
+- Clear the screen (`cls`)
+- List available commands (`help`)
 
 The layout of the source code is as follows:
 
 - `defines.h` contains the specific ports and pins used for the Z80 bus interface and SPI chip selects.
 - `bus.h` provides macros to set the address and data bus and read or toggle the various control lines. This abstracts control of these signals away from the specific hardware implementation. It should be possible, for example, to port this code to an ATmega2560 without needing an IO expander, simply by modifying `bus.h` and `defines.h`.
+- `disasm.c` contains a function that disassembles a single Z80 instruction. This is called by the real-time debugger and the from-memory diassembler.
 - `bus.c` provides functions to intialize the bus, control the clock, and enter and exit bus-master mode.
-- `memory.c` contains functions to do DMA transfers, and various convenience functions to dump, fill, and verify blocks of memory.
+- `memory.c` contains functions to do DMA transfers, and various convenience functions to dump, fill, and disassemble blocks of memory.
 - `spi.c` and `iox.c` provide functions for the low-level control of the SPI bus in general and the IO Expander specifically.
 - `ff.c`, `ffsystem.c`, `ffunicode.c`, and `mmc_avr_spi.c` are from the FatFS project and provide access via SPI to the FAT32 filesystem contained on the microSD card.
 - `z80.c` has functions run and debug the Z80 and handle I/O requests from it. 
@@ -83,11 +93,8 @@ The current version of this software is able to run many unmodified 8080 and Z80
 
 Here are some items on my TODO list, just in the order they occurred to me, not necessarily the order I'll work on them:
 
-- Improve Z80 debugger to decode assembly operands and output them in opfetch watch mode (initial version checked in, but may have some bugs).
-- Improve Z80 debugger to allow single stepping of individual instructions rather requiring multiple and varying steps per instruction due to the differing number of clock cycles for different instructions.
 - Monitor command to control Z80 clock rate.
 - Monitor command to load and save binary files to and from memory.
-- Monitor command to disassemble data in memory.
 - autoexec.bat file to be run by monitor at startup.
 - Disk convenience commands for the monitor (erase files, create blank disk images, change directory, etc.)
 - Implement DMA for disk emulation so that the AVR will copy an entire sector of data to memory at a time instead of one byte at a time. This should speed up the disk performance dramatically.  It will also require a custom CP/M BIOS so it will be a considerable effort.  
