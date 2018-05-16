@@ -272,7 +272,7 @@ void z80_debug(uint32_t cycles)
                         loop_until_bit_is_set(UCSR0A, UDRE0);    
                     }
                 }
-                brk |= (!GET_M1 && INRANGE(opfetch_break_start, opfetch_break_end, addr));
+                brk |= !GET_M1 && INRANGE(opfetch_break_start, opfetch_break_end, addr) && !cycles;
             }
     }
 }
