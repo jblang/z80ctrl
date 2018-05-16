@@ -9,7 +9,7 @@ uartd:  equ 11h
         ld sp, ramtop
         ld hl, msg
         call strout
-        ret
+        halt
 
 strout: ld a, (hl)
         and a
