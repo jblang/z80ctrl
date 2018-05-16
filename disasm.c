@@ -292,5 +292,5 @@ uint8_t disasm(uint16_t addr, uint8_t (*input)(), char *output)
         }
     }
 
-    printf("%s %02X %03o %04X\t", register_pairs[im], prefix, opcode, operand);
+    //printf("%s %02X %03o %04X\t", register_pairs[im], prefix, opcode, operand);
 }
