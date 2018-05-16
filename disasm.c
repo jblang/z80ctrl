@@ -7,383 +7,290 @@
 // reference: http://www.z80.info/decoding.htm
 
 // 8-bit registers
-char *r[] = {
-    "B",
-    "C",
-    "D",
-    "E",
-    "H",
-    "L",
-    "(HL)",
-    "A",
-    "IXH",
-    "IXL",
-    "(IX+%02XH)",
-    "IYH",
-    "IYL",
-    "(IY+%02XH)"
-};
+char *registers[] = {"B", "C", "D", "E", "H", "L", "(HL)", "A", "IXH", "IXL", "IYH", "IYL"};
+enum {B, C, D, E, H, L, HLI, A, IXH, IXL, IYH, IYL};
 
 // 16-bit register pairs
-char *rp[] = {
-    "BC",
-    "DE",
-    "HL",
-    "SP",
-    "AF"
-};
+char *register_pairs[] = {"BC", "DE", "HL", "SP", "AF", "IX", "IY"};
+enum {BC, DE, HL, SP, AF, IX, IY};
 
 // condition codes
-char *cc[] = {
-    "NZ",
-    "Z",
-    "NC",
-    "C",
-    "PO",
-    "PE",
-    "P",
-    "M"
-};
+char *conditions[] = {"NZ", "Z", "NC", "C", "PO", "PE", "P", "M"};
 
 // arithmetic/logic operations
-char *alu[] = {
-    "ADD A,%s",
-    "ADC A,%s",
-    "SUB A,%s",
-    "SBC A,%s",
-    "AND %s",
-    "XOR %s",
-    "OR %s",
-    "CP %s"
-};
+char *alu_ops[] = {"ADD A,", "ADC A,", "SUB ", "SBC A,", "AND ", "XOR ", "OR ", "CP "};
 
 // rotation/shift operations
-char *rot[] = {
-    "RLC",
-    "RRC",
-    "RL",
-    "RR",
-    "SLA",
-    "SRA",
-    "SLL",
-    "SRL"
-};
+char *rot_ops[] = {"RLC", "RRC", "RL", "RR", "SLA", "SRA", "SLL", "SRL"};
 
 // interrupt modes
-char *im[] = {
-    "0",
-    "0",
-    "1",
-    "2"
-};
+char *int_modes[] = {"0", "0", "1", "2"};
 
 // block instructions
-char *bli[] = {
-    "LDI",
-    "LDD",
-    "LDIR",
-    "LDDR",
-    "CPI",
-    "CPD",
-    "CPIR",
-    "CPDR",
-    "INI",
-    "IND"
-    "INIR",
-    "INDR",
-    "OUTI",
-    "OUTD",
-    "OTIR",
-    "OTDR"
+char *block_ops[] = {
+    "LDI", "LDD", "LDIR", "LDDR", 
+    "CPI", "CPD", "CPIR", "CPDR", 
+    "INI", "IND", "INIR", "INDR", 
+    "OUTI", "OUTD", "OTIR", "OTDR"
 };
 
-// load ops for x = 0, z = 2
-char *ldops[] = {
-    "LD (BC),A",
-    "LD A,(BC)",
-    "LD (DE),A",
-    "LD A,(DE)",
-    "LD (%04XH),HL",
-    "LD HL,(%04XH)",
-    "LD (%04XH),A",
-    "LD A,(%04XH)"        
-};
+// indirect load ops
+char *ld_ops[] = {"LD (BC),A", "LD A,(BC)", "LD (DE),A", "LD A,(DE)"};
 
 // accumulator and flag ops for x = 0, z = 7
-char *afops[] = {
-    "RLCA",
-    "RRCA",
-    "RLA",
-    "RRA",
-    "DAA",
-    "CPL",
-    "SCF",
-    "CCF"
-};
+char *af_ops[] = {"RLCA", "RRCA", "RLA", "RRA", "DAA", "CPL", "SCF", "CCF"};
 
-// misc ops for x = 3, z = 1, q = 1
-char *x3z1q1ops[] = {
-    "RET",
-    "EXX",
-    "JP HL",
-    "LD SP,HL"
-};
+// miscellaneous 0xED operations
+char *misc_ops[] = {"LD I,A", "LD R,A", "LD A,I", "LD A,R", "RRD", "RLD", "NOP", "NOP"};
 
-// misc operations for x = 3, z = 3
-char *exintops[] = {
-    "EX (SP),HL",
-    "EX DE,HL",
-    "DI",
-    "EI"
-};
-
-char *edx1z7ops[] = {
-    "LD I,A",
-    "LD R,A",
-    "LD A,I",
-    "LD A,R",
-    "RRD",
-    "RLD",
-    "NOP",
-    "NOP"
-};
+char *bit_ops[] = {"BIT", "RES", "SET"};
 
 uint8_t disasm(uint16_t addr, uint8_t (*input)(), char *output)
 {
     uint8_t opcode = 0;
     uint16_t prefix = 0;
     uint8_t displ = 0;
-    uint8_t imm = 0;
-    enum {HL, IX, IY} idxmode = HL;
+    uint16_t operand = 0;
+    uint8_t im = HL;
 
-    // Consume any number of leading 0xDD and 0xFD bytes
+    // Consume any number of 0xDD and 0xFD prefix bytes
     // and set index mode according to last one encountered.
     for (;;) {
             opcode = input();
             if (opcode == 0xDD)
-                    idxmode = IX;
+                im = IX;
             else if (opcode == 0xFD)
-                    idxmode = IY;
-            else {
-                    // Encountering 0xED changes index mode back to default
-                    if (opcode == 0xED)
-                            idxmode = HL;
-                    // Any byte other than 0xDD or 0xFD terminates the loop
-                    break;
-            }
+                im = IY;
+            else
+                break;
     }
 
-    // Select lookup table based on prefix byte
-    // and fetch displacement if required
     if (opcode == 0xED) {
             prefix = 0xED;
+            im = HL;            // Index mode for 0xED prefix is always HL
             opcode = input();
-    } else if (opcode == 0xCB) {
-            if (idxmode != HL)
-                    displ = input();
-            prefix = 0xCB;
-            opcode = input();
-    } else if (idxmode != HL && (opcode & 0x40 == 4 || opcode & 0xc0 == 0x40))
-            displ = input();
+    } if (opcode == 0xCB) {
+        prefix = 0xCB;
+        if (im != HL)
+                displ = input();
+        opcode = input();
+    } 
 
-    // bit slice the opcode
-    uint8_t x = (opcode & 0xc0) >> 6;       // x = opcode[7:6]
-    uint8_t y = (opcode & 0x3a) >> 3;       // y = opcode[5:3]
-    uint8_t z = (opcode & 0x07);            // z = opcode[2:0]
-    uint8_t p = (opcode & 0x30) >> 4;       // p = opcode[5:4]
-    uint8_t q = (opcode & 0x08) >> 3;       // q = opcode[3]
-    uint8_t yz = ((y & 3) << 2) | (z & 3);  // yz = {opcode[1:0], opcode[4:3]}
+    // bit slice the opcode: xxyyyzzz / xxppqzzz
+    uint8_t x = (opcode & 0300) >> 6;       // x = opcode[7:6]
+    uint8_t y = (opcode & 0070) >> 3;       // y = opcode[5:3]
+    uint8_t z = (opcode & 0007);            // z = opcode[2:0]
+    uint8_t p = (opcode & 0060) >> 4;       // p = opcode[5:4]
+    uint8_t q = (opcode & 0010) >> 3;       // q = opcode[3]
+    uint8_t zy = ((z & 3) << 2) | (y & 3);  // zy = {opcode[1:0], opcode[4:3]}
 
-    switch (prefix) {
-        case 0xCB:
-            switch (x) {
-                case 0:
-                    sprintf(output, "%s %s", rot[y], r[z]);
-                    break;
-                case 1:
-                    sprintf(output, "BIT %X,%s", y, r[z]);
-                    break;
-                case 2:
-                    sprintf(output, "RES %X,%s", y, r[z]);
-                    break;
-                case 3:
-                    sprintf(output, "SET %X,%s", y, r[z]);
-                    break;                
-            }
-            break;
-        case 0xED:
-            switch (x) {
-                case 1:
-                    switch (z) {
-                        case 0:
-                            sprintf(output, (y == 6) ? "IN (C)" : "IN %s,(C)", r[y]);
-                            break;
-                        case 1:
-                            sprintf(output, (y == 6) ? "OUT (C)" : "OUT %s,(C)", r[y]);
-                            break;
-                        case 2:
-                            sprintf(output, (q == 0) ? "SBC HL,%s" : "ADC HL,%s", rp[p]);
-                            break;
-                        case 3:
-                            addr = input() | (input() << 8);
-                            if (q == 0) 
-                                sprintf(output, "LD (%04XH),%s", addr, rp[p]);
-                            else
-                                sprintf(output, "LD %s,(%04XH)", addr, rp[p]);
-                            break;
-                        case 4:
-                            sprintf(output, "NEG");
-                            break;
-                        case 5:
-                            sprintf(output, (y == 1) ? "RETI" : "RETN");
-                            break;
-                        case 6:
-                            sprintf(output, "IM %s", im[y&0x3]);
-                            break;
-                        case 7:
-                            sprintf(output, edx1z7ops[y]);
-                            break;
-                    }
-                    break;
-                case 2:
-                    if (z <= 3 && y >= 4)
-                        sprintf(output, bli[yz]);
-                    else
-                        sprintf(output, "illegal opcode");
-                    break;
-                default:
-                    sprintf(output, "illegal opcode");
-                    break;
-            }
-            break;
-        default:
-            // un-prefixed opcodes
-            switch (x) {
-                case 0:
-                    switch (z) {
-                        case 0:
-                            switch (y) {
-                                case 0:
-                                    sprintf(output, "NOP");
-                                    break;
-                                case 1:
-                                    sprintf(output, "EX AF,AF'");
-                                    break;
-                                case 2:
-                                    addr += (int8_t)input() + 2;
-                                    sprintf(output, "DJNZ %04XH", addr);
-                                    break;
-                                case 3:
-                                    addr += (int8_t)input() + 2;
-                                    sprintf(output, "JR %04XH", addr);
-                                    break;
-                                default:
-                                    addr += (int8_t)input() + 2;
-                                    sprintf(output, "JR %s,%04XH", cc[y-4], addr);
-                                    break;
-                            }
-                            break;
-                        case 1:
-                            if (q == 0) {
-                                addr = input() | (input() << 8);
-                                sprintf(output, "LD %s,%04XH", rp[p], addr);
-                            } else
-                                sprintf(output, "ADD HL,%s", rp[p]);
-                            break;
-                        case 2:
-                            if (y < 4)
-                                sprintf(output, ldops[y]);
-                            else {
-                                addr = input() | (input() << 8);
-                                sprintf(output, ldops[y], addr); 
-                            }
-                            break;
-                        case 3:
-                            sprintf(output, (q == 0) ? "INC %s" : "DEC %s", rp[p]);
-                            break;
-                        case 4:
-                            sprintf(output, "INC %s", r[y]);
-                            break;
-                        case 5:
-                            sprintf(output, "DEC %s", r[y]);
-                            break;
-                        case 6:
-                            imm = input();
-                            sprintf(output, "LD %s,%02XH", r[y], imm);
-                            break;
-                        case 7:
-                            sprintf(output, afops[y]);
-                            break;
-                    }
-                    break;
-                case 1:
-                    if (z == 6 && y == 6)
-                        sprintf(output, "HALT");
-                    else
-                        sprintf(output, "LD %s,%s", r[y], r[z]);
-                    break;
-                case 2:
-                    sprintf(output, alu[y], r[z]);
-                    break;
-                case 3:
-                    switch (z) {
-                        case 0:
-                            sprintf(output, "RET %s", cc[y]);
-                            break;
-                        case 1: 
-                            if (q == 0)
-                                sprintf(output, "POP %s", p < 3 ? rp[p] : rp[4]);
-                            else
-                                sprintf(output, x3z1q1ops[p]);
-                            break;
-                        case 2:
-                            addr = input() | (input() << 8);
-                            sprintf(output, "JP %s,%04XH", cc[y], addr);
-                            break;
-                        case 3:
-                            switch(y) {
-                                case 0:
-                                    addr = input() | (input() << 8);                                    
-                                    sprintf(output, "JP %04XH", addr);
-                                    break;
-                                case 1:
-                                    break;
-                                case 2:
-                                    imm = input();
-                                    sprintf(output, "OUT (%02XH),A", imm);
-                                    break;
-                                case 3:
-                                    imm = input();
-                                    sprintf(output, "IN A,(%02XH)", imm);
-                                    break;
-                                default:
-                                    sprintf(output, exintops[y-4]);
-                                    break;
-                            }
-                            break;
-                        case 4:
-                            addr = input() | (input() << 8);
-                            sprintf(output, "CALL %s,%04XH", cc[y], addr);
-                            break;
-                        case 5:
-                            if (q == 0)
-                                sprintf(output, "PUSH %s", p < 3 ? rp[p] : rp[4]);
-                            else if (p == 0) {
-                                addr = input() | (input() << 8);
-                                sprintf(output, "CALL %04XH", addr);
-                            } 
-                            break;
-                        case 6:
-                            imm = input();
-                            sprintf(output, "%s %02XH", alu[y], imm);
-                            break;
-                        case 7:
-                            sprintf(output, "RST %02XH", y*8);
-                            break;
-                    }
-                    break;
-            }
-            break;
+    char *rp, *hli, *ry, *ryi, *rz, *rzi;
+
+    // choose registers based on index mode and y/z/p opcode fields
+    rp = register_pairs[p == HL ? im : p];
+    ry = registers[y];
+    rz = registers[z];
+    if (im == IX) {
+        hli = register_pairs[IX];
+        ryi = registers[y == H ? IXH : y == L ? IXL : y];
+        rzi = registers[z == H ? IXH : z == L ? IXL : z];
+    } else if (im == IY) {
+        hli = register_pairs[IY];
+        ryi = registers[y == H ? IYH : y == L ? IYL : y];
+        rzi = registers[z == H ? IYH : z == L ? IYL : z];
+    } else {
+        hli = register_pairs[HL];
+        ryi = ry;
+        rzi = rz;
     }
-    //printf("%x %02x %02x [%X %X %X <%X:%X> %X] ", idxmode, prefix, opcode, x, z, y, p, q, yz);
+
+    if (prefix == 0xCB) {
+        if (x == 0) {
+            if (im == HL) {
+                sprintf(output, "%s %s", rot_ops[y], rz);
+            } else {
+                sprintf(output, "%s (%s+%02XH)", rot_ops[y], hli, displ);
+            }
+        } else {
+            if (im == HL) {
+                sprintf(output, "%s %X,%s", bit_ops[x-1], y, rz);
+            } else {
+                sprintf(output, "%s %X,(%s+%02XH)", bit_ops[x-1], y, hli, displ);
+            }
+        }
+    } else if (prefix == 0xED) {
+        if (x == 1) {
+            if (z == 0) {
+                sprintf(output, (y == 6) ? "IN (C)" : "IN %s,(C)", ry);
+            } else if (z == 1) {
+                sprintf(output, (y == 6) ? "OUT (C)" : "OUT (C),%s", ry);
+            } else if (z == 2) {
+                sprintf(output, (q == 0) ? "SBC HL,%s" : "ADC HL,%s", rp);
+            } else if (z == 3) {
+                operand = input() | (input() << 8);
+                if (q == 0) {
+                    sprintf(output, "LD (%04XH),%s", operand, rp);
+                } else {
+                    sprintf(output, "LD %s,(%04XH)", rp, operand);
+                }
+            } else if (z == 4) {
+                strcpy(output, "NEG");
+            } else if (z == 5) {
+                strcpy(output, (y == 1) ? "RETI" : "RETN");
+            } else if (z == 6) {
+                sprintf(output, "IM %s", int_modes[y&0x3]);
+            } else if (z == 7) {
+                strcpy(output, misc_ops[y]);
+            }
+        } else if (x == 2 && z <= 3 && y >= 4) {
+                strcpy(output, block_ops[zy]);
+        } else {
+            sprintf(output, "?");
+        }
+    } else {
+        // un-prefixed opcodes
+        if (x == 0) {
+            if (z == 0) {
+                if (y == 0) {
+                    strcpy(output, "NOP");
+                } else if (y == 1) {
+                    strcpy(output, "EX AF,AF'");
+                } else {
+                    operand = input();
+                    if (y == 2) {
+                        sprintf(output, "DJNZ %d", (int8_t)operand);
+                    } else if (y == 3) {
+                        sprintf(output, "JR %d", (int8_t)operand);
+                    } else {
+                        sprintf(output, "JR %s,%d", conditions[y-4], (int8_t)operand);
+                    }
+                }
+            } else if (z == 1) {
+                if (q == 0) {
+                    operand = input() | (input() << 8);
+                    sprintf(output, "LD %s,%04XH", rp, operand);
+                } else {
+                    sprintf(output, "ADD %s,%s", hli, rp);
+                }
+            } else if (z == 2) {
+                if (y < 4) {
+                    strcpy(output, ld_ops[y]);
+                } else {
+                    operand = input() | (input() << 8);
+                    if (p == 3) {
+                        hli = "A";
+                    }
+                    if (q == 0) {
+                        sprintf(output, "LD (0%04XH),%s", operand, hli); 
+                    } else {
+                        sprintf(output, "LD %s,(0%04XH)", hli, operand);
+                    }
+                }
+            } else if (z == 3) {
+                sprintf(output, (q == 0) ? "INC %s" : "DEC %s", rp);
+            } else if (z == 4) {
+                if (y == HLI && im != HL) {
+                    displ = input();
+                    sprintf(output, "INC (%s+%02XH)", hli, displ);
+                } else {
+                    sprintf(output, "INC %s", ry);
+                }
+            } else if (z == 5) {
+                if (y == HLI && im != HL) {
+                    displ = input();
+                    sprintf(output, "DEC (%s+%02XH)", hli, displ);
+                } else {
+                    sprintf(output, "DEC %s", ry);
+                }
+            } else if (z == 6) {
+                if (y == HLI && im != HL) {
+                    displ = input();
+                    operand = input();
+                    sprintf(output, "LD (%s+%02XH),%02XH", hli, displ, operand);
+                } else {
+                    operand = input();
+                    sprintf(output, "LD %s,%02XH", ry, operand);
+                }
+            } else if (z == 7) {
+                strcpy(output, af_ops[y]);
+            }
+        } else if (x == 1) {
+            if (z == HLI && y == HLI) {
+                strcpy(output, "HALT");
+            } else if ((y == HLI || z == HLI) && im != HL) {
+                displ = input();
+                if (y == HLI) {
+                    sprintf(output, "LD (%s+%02XH),%s", hli, displ, rz);
+                } else {
+                    sprintf(output, "LD %s,(%s+%02XH)", ry, hli, displ);
+                }
+            } else {
+                sprintf(output, "LD %s,%s", ry, rz);
+            }
+        } else if (x == 2) {
+            if (z == 6 && im != HL) {
+                displ = input();
+                sprintf(output, "%s(%s+%02XH)", alu_ops[y], hli, displ);
+            } else {
+                sprintf(output, "%s%s", alu_ops[y], rz);
+            }
+        } else if (x == 3) {
+            if (z == 0) {
+                sprintf(output, "RET %s", conditions[y]);
+            } else if (z == 1) {
+                if (q == 0) {
+                    sprintf(output, "POP %s", p < SP ? rp : register_pairs[AF]);
+                } else if (p == 0) {
+                    strcpy(output, "RET");
+                } else if (p == 1) {
+                    strcpy(output, "EXX");
+                } else if (p == 2) {
+                    sprintf(output, "JP (%s)", hli);
+                } else if (p == 3) {
+                    sprintf(output, "LD SP,%s", hli);
+                }
+            } else if (z == 2) {
+                operand = input() | (input() << 8);
+                sprintf(output, "JP %s,%04XH", conditions[y], operand);
+            } else if (z == 3) {
+                if (y == 0) {
+                    operand = input() | (input() << 8);                                    
+                    sprintf(output, "JP %04XH", operand);
+                } else if (y == 1) {
+                    strcpy(output, "?"); // CB prefix
+                } else if (y == 2) {
+                    operand = input();
+                    sprintf(output, "OUT (%02XH),A", operand);
+                } else if (y == 3) {
+                    operand = input();
+                    sprintf(output, "IN A,(%02XH)", operand);
+                } else if (y == 4) {
+                    sprintf(output, "EX (SP),%s", hli);
+                } else if (y == 5) {
+                    strcpy(output, "EX DE,HL");
+                } else if (y == 6) {
+                    strcpy(output, "DI");
+                } else if (y == 7) {
+                    strcpy(output, "EI");
+                }
+            } else if (z == 4) {
+                operand = input() | (input() << 8);
+                sprintf(output, "CALL %s,%04XH", conditions[y], operand);
+            } else if (z == 5) {
+                if (q == 0)
+                    sprintf(output, "PUSH %s", p < SP ? rp : register_pairs[AF]);
+                else if (p == 0) {
+                    operand = input() | (input() << 8);
+                    sprintf(output, "CALL %04XH", operand);
+                } 
+            } else if (z == 6) {
+                operand = input();
+                sprintf(output, "%s%02XH", alu_ops[y], operand);
+            } else if (z == 7) {
+                sprintf(output, "RST %02XH", y*8);
+            }
+        }
+    }
+
+    printf("%s %02X %03o %04X\t", register_pairs[im], prefix, opcode, operand);
 }
