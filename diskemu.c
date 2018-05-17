@@ -1,4 +1,6 @@
-/* diskemu.c: MITS Altair 88-DISK Simulator
+/* 
+   z80ctrl (https://github.com/jblang/z80ctrl)
+   diskemu.c: MITS Altair 88-DISK Simulator
 
    Copyright (c) 2018 J.B. Langston
    Copyright (c) 1997-2010, Charles E. Owen
