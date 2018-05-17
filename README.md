@@ -2,9 +2,19 @@
 
 ![z80ctrl photo](board.jpg)
 
-This is an AVR-based bootloader, disk emulator, serial I/O device, and debugger for a Z80-based computer.  The MIT-licensed firmware is flexible and can be the basis of your own custom SBC or breadboard computer, but I also designed a plugin module for the [RC2014](https://rc2014.co.uk/) retrocomputer kit. 
- 
- I have made a [series of videos](https://www.youtube.com/watch?v=M8EIAxMpA-o&list=PLwP_dSEH4Oi_jAljWQ1H-TBiBL34LqYYm) demonstrating the design and features of the system.
+z80ctrl is an AVR-based bootloader, debugger, and I/O device for a Z80 retrocomputer with the following features:
+
+- Runs CP/M software including WordStar, Zork, Ladder, Turbo Pascal and more!
+- Plug-in module for [RC2014](https://rc2014.co.uk/) retrocomputer replaces the clock, serial, ROM, and CF boards
+- Reads HEX files and disk images from a FAT32-formatted SD Card
+- Provides Altair and RC2014-compatible serial port
+- Compatible with unmodified Altair disk images from the SIMH emulator project
+- Monitor with memory inspector and built-in Z80 disassembler
+- Single-step debugging, breakpoints, and watchpoints to trace Z80 bus activity in real-time
+- Flexible MIT-licensed firmware can be the basis of your own SBC or breadboard computer
+- Expandable SPI bus allows bridging other SPI peripherals to the Z80
+
+I have made a [series of videos](https://www.youtube.com/watch?v=M8EIAxMpA-o&list=PLwP_dSEH4Oi_jAljWQ1H-TBiBL34LqYYm) demonstrating the design and features of the system.
 
 ## Software
 
@@ -27,12 +37,6 @@ I have created a [schematic](hardware/z80ctrl.pdf) and PCB design for the RC2014
 
 My board will replace the clock, serial, rom, and CF boards, so that all you need for a fully functional computer is my module plus the Backplane Pro, Z80 CPU board, and 64K RAM board.
 
-Besides the reduced part count, z80ctrl has other advantages over the stock RC2014:
-- Read CP/M disk images off a FAT32-formatted SD Card 
-- Full compatiblity with unmodified Altair disk images from the SIMH emulator project 
-- Single-step debugging, breakpoints, and watchpoints to trace Z80 execution in real-time. 
-- Easy testing of software by loading Intel HEX files from SD Card. No need to burn ROMs!
-
 Watch this [YouTube video](https://www.youtube.com/watch?v=_iZxZO_yfaE) for a tour of the PCB.
 
 ## Documentation
@@ -40,17 +44,17 @@ Watch this [YouTube video](https://www.youtube.com/watch?v=_iZxZO_yfaE) for a to
 Much of the information that was previously here has been moved to separate wiki pages:
 
 - [Compatible Z80 Software](https://github.com/jblang/z80ctrl/wiki/Compatible-Z80-Software)
-- [Hardware Design Notes](https://github.com/jblang/z80ctrl/wiki/Hardware-Design-Notes)
-- [Software Design Notes](https://github.com/jblang/z80ctrl/wiki/Software-Design-Notes)
 - [Known Hardware Issues](https://github.com/jblang/z80ctrl/wiki/Known-Hardware-Issues)
 - [Planned Features](https://github.com/jblang/z80ctrl/wiki/Planned-Features)
+- [Hardware Design Notes](https://github.com/jblang/z80ctrl/wiki/Hardware-Design-Notes)
+- [Software Design Notes](https://github.com/jblang/z80ctrl/wiki/Software-Design-Notes)
 - [Breadboard Instructions](https://github.com/jblang/z80ctrl/wiki/Breadboard-Configuration)
 - Check the [Wiki Index](https://github.com/jblang/z80ctrl/wiki) for other topics.
 
 
 ## Other Sites
 
-Some additional information is available on other sites.
+Additional information available elsewhere:
 
 - [Hackaday Project Page](https://hackaday.io/project/158338-z80ctrl)
 - [YouTube Playlist](https://www.youtube.com/watch?v=M8EIAxMpA-o&list=PLwP_dSEH4Oi_jAljWQ1H-TBiBL34LqYYm)
