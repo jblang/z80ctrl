@@ -45,6 +45,7 @@ char *misc_ops[] = {"LD I,A", "LD R,A", "LD A,I", "LD A,R", "RRD", "RLD", "NOP",
 
 char *bit_ops[] = {"BIT", "RES", "SET"};
 
+// disassemble a single instruction
 uint8_t disasm(uint16_t addr, uint8_t (*input)(), char *output)
 {
     uint8_t opcode = 0;
@@ -293,4 +294,53 @@ uint8_t disasm(uint16_t addr, uint8_t (*input)(), char *output)
     }
 
     //printf("%s %02X %03o %04X\t", register_pairs[im], prefix, opcode, operand);
+}
+
+uint8_t disasm_index = 0;   // index of next byte within 256 byte buffer
+uint16_t disasm_addr = 0;   // address of next chunk
+uint8_t instr_bytes[8];     // bytes contained in the current instruction
+uint8_t instr_length = 0;   // length of the current construction
+
+// Return next byte for instruction from memory
+uint8_t disasm_next_byte()
+{
+    static uint8_t disasm_buf[256];
+    if (disasm_index == 0)
+        read_mem(disasm_addr, disasm_buf, 256);
+    disasm_addr++;
+    instr_bytes[instr_length] = disasm_buf[disasm_index++];
+    return instr_bytes[instr_length++];
+}
+
+// Disassemble memory to console
+void disasm_mem(uint16_t start, uint16_t end)
+{
+    char mnemonic[64];
+    uint8_t i;
+
+    disasm_addr = start;
+    disasm_index = 0;
+
+    while (start <= disasm_addr && disasm_addr <= end) {
+        instr_length = 0;
+        printf("%04x  ", disasm_addr);
+        disasm(disasm_addr, disasm_next_byte, mnemonic);
+        for (i = 0; i < instr_length; i++) {
+            printf("%02x ", instr_bytes[i]);
+        }
+        i = 5 - instr_length;
+        while (i--)
+            printf("   ");
+        printf("  ");
+        for (i = 0; i < instr_length; i++) {
+            if (0x20 <= instr_bytes[i] && instr_bytes[i] <= 0x7e)
+                printf("%c", instr_bytes[i]);
+            else
+                printf(".");
+        }
+        i = 5 - instr_length;
+        while (i--)
+            printf(" ");
+        printf("  %s\n", mnemonic);            
+    }
 }
