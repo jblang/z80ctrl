@@ -33,9 +33,11 @@ Besides the reduced part count, z80ctrl has other advantages over the stock RC20
 - Single-step debugging, breakpoints, and watchpoints to trace Z80 execution in real-time. 
 - Easy testing of software by loading Intel HEX files from SD Card. No need to burn ROMs!
 
-## More Information
+Watch this [YouTube video](https://www.youtube.com/watch?v=_iZxZO_yfaE) for a tour of the PCB.
 
-This README was getting too long so much of the information that was previously here has been moved to separate wiki pages:
+## Documentation
+
+Much of the information that was previously here has been moved to separate wiki pages:
 
 - [Compatible Z80 Software](https://github.com/jblang/z80ctrl/wiki/Compatible-Z80-Software)
 - [Hardware Design Notes](https://github.com/jblang/z80ctrl/wiki/Hardware-Design-Notes)
@@ -45,15 +47,19 @@ This README was getting too long so much of the information that was previously 
 - [Breadboard Instructions](https://github.com/jblang/z80ctrl/wiki/Breadboard-Configuration)
 - Check the [Wiki Index](https://github.com/jblang/z80ctrl/wiki) for other topics.
 
-More information on other sites:
+
+## Other Sites
+
+Some additional information is available on other sites.
 
 - [Hackaday Project Page](https://hackaday.io/project/158338-z80ctrl)
 - [YouTube Playlist](https://www.youtube.com/watch?v=M8EIAxMpA-o&list=PLwP_dSEH4Oi_jAljWQ1H-TBiBL34LqYYm)
-- [Google Groups Thread](https://groups.google.com/forum/#!topic/rc2014-z80/yc8g_ugiseo). Please use this thread or the Hackaday Project Page to ask for help.
-- [Older Google Groups Thread](https://groups.google.com/forum/#!searchin/rc2014-z80/z80ctrl%7Csort:date/rc2014-z80/wi8MCKlJdlo/xWQDF-IaAgAJ)
-- [Even Older Google Groups Thread](https://groups.google.com/forum/#!searchin/rc2014-z80/z80ctrl%7Csort:date/rc2014-z80/EukbCJAxxIY/uYzqrVTcAgAJ)
 - [OSH Park Shared Project (REV2)](https://oshpark.com/shared_projects/Bn3c0pEt)
 - [Bill of Materials](https://docs.google.com/viewer?a=v&pid=forums&srcid=MDg4ODQwMTE2ODM0ODg2OTc5MTYBMDYxMjQ0OTAwNDMxMzE1MTEyNTYBd3dvUkxweVlBd0FKATAuMQEBdjI&authuser=0)
+- [Current Google Groups Thread](https://groups.google.com/forum/#!topic/rc2014-z80/yc8g_ugiseo) (use this thread or the Hackaday Project Page to ask for help)
+- [Older Google Groups Thread](https://groups.google.com/forum/#!searchin/rc2014-z80/z80ctrl%7Csort:date/rc2014-z80/wi8MCKlJdlo/xWQDF-IaAgAJ) (please reply to the current thread instead)
+- [Even Older Google Groups Thread](https://groups.google.com/forum/#!searchin/rc2014-z80/z80ctrl%7Csort:date/rc2014-z80/EukbCJAxxIY/uYzqrVTcAgAJ)
+
 
 ## License
 
