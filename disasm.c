@@ -21,7 +21,9 @@
  */
 
 #include "disasm.h"
+#include "memory.h"
 
+#include <avr/pgmspace.h>
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
@@ -29,27 +31,27 @@
 // reference: http://www.z80.info/decoding.htm
 
 // 8-bit registers
-char *registers[] = {"B", "C", "D", "E", "H", "L", "(HL)", "A", "IXH", "IXL", "IYH", "IYL"};
+const char *registers[] = {"B", "C", "D", "E", "H", "L", "(HL)", "A", "IXH", "IXL", "IYH", "IYL"};
 enum {B, C, D, E, H, L, HLI, A, IXH, IXL, IYH, IYL};
 
 // 16-bit register pairs
-char *register_pairs[] = {"BC", "DE", "HL", "SP", "AF", "IX", "IY"};
-enum {BC, DE, HL, SP, AF, IX, IY};
+const char *register_pairs[] = {"BC", "DE", "HL", "SP", "AF", "IX", "IY"};
+enum {BC, DE, HL, _SP, AF, IX, IY};
 
 // condition codes
-char *conditions[] = {"NZ", "Z", "NC", "C", "PO", "PE", "P", "M"};
+const char *conditions[] = {"NZ", "Z", "NC", "C", "PO", "PE", "P", "M"};
 
 // arithmetic/logic operations
-char *alu_ops[] = {"ADD A,", "ADC A,", "SUB ", "SBC A,", "AND ", "XOR ", "OR ", "CP "};
+const char *alu_ops[] = {"ADD A,", "ADC A,", "SUB ", "SBC A,", "AND ", "XOR ", "OR ", "CP "};
 
 // rotation/shift operations
-char *rot_ops[] = {"RLC", "RRC", "RL", "RR", "SLA", "SRA", "SLL", "SRL"};
+const char *rot_ops[] = {"RLC", "RRC", "RL", "RR", "SLA", "SRA", "SLL", "SRL"};
 
 // interrupt modes
-char *int_modes[] = {"0", "0", "1", "2"};
+const char *int_modes[] = {"0", "0", "1", "2"};
 
 // block instructions
-char *block_ops[] = {
+const char *block_ops[] = {
     "LDI", "LDD", "LDIR", "LDDR", 
     "CPI", "CPD", "CPIR", "CPDR", 
     "INI", "IND", "INIR", "INDR", 
@@ -57,15 +59,15 @@ char *block_ops[] = {
 };
 
 // indirect load ops
-char *ld_ops[] = {"LD (BC),A", "LD A,(BC)", "LD (DE),A", "LD A,(DE)"};
+const char *ld_ops[] = {"LD (BC),A", "LD A,(BC)", "LD (DE),A", "LD A,(DE)"};
 
 // accumulator and flag ops for x = 0, z = 7
-char *af_ops[] = {"RLCA", "RRCA", "RLA", "RRA", "DAA", "CPL", "SCF", "CCF"};
+const char *af_ops[] = {"RLCA", "RRCA", "RLA", "RRA", "DAA", "CPL", "SCF", "CCF"};
 
 // miscellaneous 0xED operations
-char *misc_ops[] = {"LD I,A", "LD R,A", "LD A,I", "LD A,R", "RRD", "RLD", "NOP", "NOP"};
+const char *misc_ops[] = {"LD I,A", "LD R,A", "LD A,I", "LD A,R", "RRD", "RLD", "NOP", "NOP"};
 
-char *bit_ops[] = {"BIT", "RES", "SET"};
+const char *bit_ops[] = {"BIT", "RES", "SET"};
 
 // disassemble a single instruction
 uint8_t disasm(uint16_t addr, uint8_t (*input)(), char *output)
@@ -107,9 +109,8 @@ uint8_t disasm(uint16_t addr, uint8_t (*input)(), char *output)
     uint8_t q = (opcode & 0010) >> 3;       // q = opcode[3]
     uint8_t zy = ((z & 3) << 2) | (y & 3);  // zy = {opcode[1:0], opcode[4:3]}
 
-    char *rp, *hli, *ry, *ryi, *rz, *rzi;
-
     // choose registers based on index mode and y/z/p opcode fields
+    const char *rp, *hli, *ry, *ryi, *rz, *rzi;
     rp = register_pairs[p == HL ? im : p];
     ry = registers[y];
     rz = registers[z];
@@ -127,75 +128,89 @@ uint8_t disasm(uint16_t addr, uint8_t (*input)(), char *output)
         rzi = rz;
     }
 
+    // Big ugly nested if tree to decode opcode
     if (prefix == 0xCB) {
         if (x == 0) {
+            // Roll/shift register or memory location
             if (im == HL) {
-                sprintf(output, "%s %s", rot_ops[y], rz);
+                sprintf_P(output, PSTR("%s %s"), rot_ops[y], rz);
             } else {
-                sprintf(output, "%s (%s+%02XH)", rot_ops[y], hli, displ);
+                sprintf_P(output, PSTR("%s (%s+%02XH)"), rot_ops[y], hli, displ);
             }
         } else {
+            // Bit operations (test reset, set)
             if (im == HL) {
-                sprintf(output, "%s %X,%s", bit_ops[x-1], y, rz);
+                sprintf_P(output, PSTR("%s %X,%s"), bit_ops[x-1], y, rz);
             } else {
-                sprintf(output, "%s %X,(%s+%02XH)", bit_ops[x-1], y, hli, displ);
+                sprintf_P(output, PSTR("%s %X,(%s+%02XH)"), bit_ops[x-1], y, hli, displ);
             }
         }
     } else if (prefix == 0xED) {
         if (x == 1) {
             if (z == 0) {
-                sprintf(output, (y == 6) ? "IN (C)" : "IN %s,(C)", ry);
+                // Input from port
+                sprintf_P(output, (y == 6) ? PSTR("IN (C)") : PSTR("IN %s,(C)"), ry);
             } else if (z == 1) {
-                sprintf(output, (y == 6) ? "OUT (C)" : "OUT (C),%s", ry);
+                // Output to port
+                sprintf_P(output, (y == 6) ? PSTR("OUT (C)") : PSTR("OUT (C),%s"), ry);
             } else if (z == 2) {
-                sprintf(output, (q == 0) ? "SBC HL,%s" : "ADC HL,%s", rp);
+                // 16-bit add/subtract with carry
+                sprintf_P(output, (q == 0) ? PSTR("SBC HL,%s") : PSTR("ADC HL,%s"), rp);
             } else if (z == 3) {
+                // Retrieve/store register pair from/to immediate address
                 operand = input() | (input() << 8);
                 if (q == 0) {
-                    sprintf(output, "LD (%04XH),%s", operand, rp);
+                    sprintf_P(output, PSTR("LD (%04XH),%s"), operand, rp);
                 } else {
-                    sprintf(output, "LD %s,(%04XH)", rp, operand);
+                    sprintf_P(output, PSTR("LD %s,(%04XH)"), rp, operand);
                 }
             } else if (z == 4) {
-                strcpy(output, "NEG");
+                // Negate accumulator
+                strcpy_P(output, PSTR("NEG"));
             } else if (z == 5) {
-                strcpy(output, (y == 1) ? "RETI" : "RETN");
+                // Return from interrupt
+                strcpy_P(output, (y == 1) ? PSTR("RETI") : PSTR("RETN"));
             } else if (z == 6) {
-                sprintf(output, "IM %s", int_modes[y&0x3]);
+                // Set interrupt mode
+                sprintf_P(output, PSTR("IM %s"), int_modes[y&0x3]);
             } else if (z == 7) {
+                // Assorted ops
                 strcpy(output, misc_ops[y]);
             }
         } else if (x == 2 && z <= 3 && y >= 4) {
                 strcpy(output, block_ops[zy]);
         } else {
-            sprintf(output, "?");
+            sprintf_P(output, PSTR("?"));
         }
     } else {
         // un-prefixed opcodes
         if (x == 0) {
             if (z == 0) {
+                // Relative jumps and assorted ops
                 if (y == 0) {
-                    strcpy(output, "NOP");
+                    strcpy_P(output, PSTR("NOP"));
                 } else if (y == 1) {
-                    strcpy(output, "EX AF,AF'");
+                    strcpy_P(output, PSTR("EX AF,AF'"));
                 } else {
                     operand = input();
                     if (y == 2) {
-                        sprintf(output, "DJNZ %d", (int8_t)operand);
+                        sprintf_P(output, PSTR("DJNZ %d"), (int8_t)operand);
                     } else if (y == 3) {
-                        sprintf(output, "JR %d", (int8_t)operand);
+                        sprintf_P(output, PSTR("JR %d"), (int8_t)operand);
                     } else {
-                        sprintf(output, "JR %s,%d", conditions[y-4], (int8_t)operand);
+                        sprintf_P(output, PSTR("JR %s,%d"), conditions[y-4], (int8_t)operand);
                     }
                 }
             } else if (z == 1) {
+                // 16-bit load immediate/add
                 if (q == 0) {
                     operand = input() | (input() << 8);
-                    sprintf(output, "LD %s,%04XH", rp, operand);
+                    sprintf_P(output, PSTR("LD %s,%04XH"), rp, operand);
                 } else {
-                    sprintf(output, "ADD %s,%s", hli, rp);
+                    sprintf_P(output, PSTR("ADD %s,%s"), hli, rp);
                 }
             } else if (z == 2) {
+                // Indirect loading
                 if (y < 4) {
                     strcpy(output, ld_ops[y]);
                 } else {
@@ -204,113 +219,129 @@ uint8_t disasm(uint16_t addr, uint8_t (*input)(), char *output)
                         hli = "A";
                     }
                     if (q == 0) {
-                        sprintf(output, "LD (0%04XH),%s", operand, hli); 
+                        sprintf_P(output, PSTR("LD (0%04XH),%s"), operand, hli); 
                     } else {
-                        sprintf(output, "LD %s,(0%04XH)", hli, operand);
+                        sprintf_P(output, PSTR("LD %s,(0%04XH)"), hli, operand);
                     }
                 }
             } else if (z == 3) {
-                sprintf(output, (q == 0) ? "INC %s" : "DEC %s", rp);
+                // 16-bit increment or decrement
+                sprintf_P(output, (q == 0) ? PSTR("INC %s") : PSTR("DEC %s"), rp);
             } else if (z == 4) {
+                // 8-bit increment
                 if (y == HLI && im != HL) {
                     displ = input();
-                    sprintf(output, "INC (%s+%02XH)", hli, displ);
+                    sprintf_P(output, PSTR("INC (%s+%02XH)"), hli, displ);
                 } else {
-                    sprintf(output, "INC %s", ry);
+                    sprintf_P(output, PSTR("INC %s"), ry);
                 }
             } else if (z == 5) {
+                // 8-bit decrement
                 if (y == HLI && im != HL) {
                     displ = input();
-                    sprintf(output, "DEC (%s+%02XH)", hli, displ);
+                    sprintf_P(output, PSTR("DEC (%s+%02XH)"), hli, displ);
                 } else {
-                    sprintf(output, "DEC %s", ry);
+                    sprintf_P(output, PSTR("DEC %s"), ry);
                 }
             } else if (z == 6) {
+                // 8-bit load immediate
                 if (y == HLI && im != HL) {
                     displ = input();
                     operand = input();
-                    sprintf(output, "LD (%s+%02XH),%02XH", hli, displ, operand);
+                    sprintf_P(output, PSTR("LD (%s+%02XH),%02XH"), hli, displ, operand);
                 } else {
                     operand = input();
-                    sprintf(output, "LD %s,%02XH", ry, operand);
+                    sprintf_P(output, PSTR("LD %s,%02XH"), ry, operand);
                 }
             } else if (z == 7) {
+                // Assorted operations on accumulator/flags
                 strcpy(output, af_ops[y]);
             }
         } else if (x == 1) {
             if (z == HLI && y == HLI) {
-                strcpy(output, "HALT");
+                // Exception: HALT replaces LD (HL),(HL)
+                strcpy_P(output, PSTR("HALT"));
             } else if ((y == HLI || z == HLI) && im != HL) {
+                // 8-bit loading
                 displ = input();
                 if (y == HLI) {
-                    sprintf(output, "LD (%s+%02XH),%s", hli, displ, rz);
+                    sprintf_P(output, PSTR("LD (%s+%02XH),%s"), hli, displ, rz);
                 } else {
-                    sprintf(output, "LD %s,(%s+%02XH)", ry, hli, displ);
+                    sprintf_P(output, PSTR("LD %s,(%s+%02XH)"), ry, hli, displ);
                 }
             } else {
-                sprintf(output, "LD %s,%s", ry, rz);
+                sprintf_P(output, PSTR("LD %s,%s"), ry, rz);
             }
         } else if (x == 2) {
+            // ALU operation on accumulator and register/memory location
             if (z == 6 && im != HL) {
                 displ = input();
-                sprintf(output, "%s(%s+%02XH)", alu_ops[y], hli, displ);
+                sprintf_P(output, PSTR("%s(%s+%02XH)"), alu_ops[y], hli, displ);
             } else {
-                sprintf(output, "%s%s", alu_ops[y], rz);
+                sprintf_P(output, PSTR("%s%s"), alu_ops[y], rz);
             }
         } else if (x == 3) {
             if (z == 0) {
-                sprintf(output, "RET %s", conditions[y]);
+                // Conditional return
+                sprintf_P(output, PSTR("RET %s"), conditions[y]);
             } else if (z == 1) {
+                // POP & various ops
                 if (q == 0) {
-                    sprintf(output, "POP %s", p < SP ? rp : register_pairs[AF]);
+                    sprintf_P(output, PSTR("POP %s"), p < _SP ? rp : register_pairs[AF]);
                 } else if (p == 0) {
-                    strcpy(output, "RET");
+                    strcpy_P(output, PSTR("RET"));
                 } else if (p == 1) {
-                    strcpy(output, "EXX");
+                    strcpy_P(output, PSTR("EXX"));
                 } else if (p == 2) {
-                    sprintf(output, "JP (%s)", hli);
+                    sprintf_P(output, PSTR("JP (%s)"), hli);
                 } else if (p == 3) {
-                    sprintf(output, "LD SP,%s", hli);
+                    sprintf_P(output, PSTR("LD _SP,%s"), hli);
                 }
             } else if (z == 2) {
+                // Conditional jump
                 operand = input() | (input() << 8);
-                sprintf(output, "JP %s,%04XH", conditions[y], operand);
+                sprintf_P(output, PSTR("JP %s,%04XH"), conditions[y], operand);
             } else if (z == 3) {
+                // Assorted operations
                 if (y == 0) {
                     operand = input() | (input() << 8);                                    
-                    sprintf(output, "JP %04XH", operand);
+                    sprintf_P(output, PSTR("JP %04XH"), operand);
                 } else if (y == 1) {
-                    strcpy(output, "?"); // CB prefix
+                    strcpy_P(output, PSTR("?")); // CB prefix
                 } else if (y == 2) {
                     operand = input();
-                    sprintf(output, "OUT (%02XH),A", operand);
+                    sprintf_P(output, PSTR("OUT (%02XH),A"), operand);
                 } else if (y == 3) {
                     operand = input();
-                    sprintf(output, "IN A,(%02XH)", operand);
+                    sprintf_P(output, PSTR("IN A,(%02XH)"), operand);
                 } else if (y == 4) {
-                    sprintf(output, "EX (SP),%s", hli);
+                    sprintf_P(output, PSTR("EX (_SP),%s"), hli);
                 } else if (y == 5) {
-                    strcpy(output, "EX DE,HL");
+                    strcpy_P(output, PSTR("EX DE,HL"));
                 } else if (y == 6) {
-                    strcpy(output, "DI");
+                    strcpy_P(output, PSTR("DI"));
                 } else if (y == 7) {
-                    strcpy(output, "EI");
+                    strcpy_P(output, PSTR("EI"));
                 }
             } else if (z == 4) {
+                // Conditional call
                 operand = input() | (input() << 8);
-                sprintf(output, "CALL %s,%04XH", conditions[y], operand);
+                sprintf_P(output, PSTR("CALL %s,%04XH"), conditions[y], operand);
             } else if (z == 5) {
+                // PUSH & various ops
                 if (q == 0)
-                    sprintf(output, "PUSH %s", p < SP ? rp : register_pairs[AF]);
+                    sprintf_P(output, PSTR("PUSH %s"), p < _SP ? rp : register_pairs[AF]);
                 else if (p == 0) {
                     operand = input() | (input() << 8);
-                    sprintf(output, "CALL %04XH", operand);
+                    sprintf_P(output, PSTR("CALL %04XH"), operand);
                 } 
             } else if (z == 6) {
+                // ALU operation on accumulator and immediate operand
                 operand = input();
-                sprintf(output, "%s%02XH", alu_ops[y], operand);
+                sprintf_P(output, PSTR("%s%02XH"), alu_ops[y], operand);
             } else if (z == 7) {
-                sprintf(output, "RST %02XH", y*8);
+                // Restart
+                sprintf_P(output, PSTR("RST %02XH"), y*8);
             }
         }
     }
