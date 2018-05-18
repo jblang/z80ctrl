@@ -20,18 +20,3 @@ Component,Description,Part,References,Value,Footprint,Quantity Per PCB,Datasheet
 19,"PDIP40, 128k Flash, 16k SRAM, 4k EEPROM, JTAG",ATMEGA1284P-PU,U2,ATMEGA1284P-PU,DIP-40_W15.24mm_Socket,1,http://www.atmel.com/Images/Atmel-8272-8-bit-AVR-microcontroller-ATmega164A_PA-324A_PA-644A_PA-1284_P_datasheet.pdf,556-ATMEGA1284P-PU,ATMEGA1284P-PU-ND,,
 20,16-Bit I/O Expander with SPI Interface (PDIP/SOIC/SSOP),MCP23S17,U4,MCP23S17,DIP-28_W7.62mm_Socket,1,http://ww1.microchip.com/downloads/en/DeviceDoc/20001952C.pdf,579-MCP23S17-E/SP,MCP23S17-E/SP-ND,,
 21,Two pin crystal,Crystal,Y1,20MHz,Crystal_HC49-4H_Vertical,1,,815-ABL-20-B2,535-9046-ND,A-236,
-
-
-
-
-
-Component Groups:,21
-Component Count:,28
-Fitted Components:,28
-Number of PCBs:,1
-Total components:,28
-Schematic Version:,REV2
-Schematic Date:,2018-05-10
-BoM Date:,5/17/2018 9:51:19 PM
-Schematic Source:,C:\Users\jblang\Electronics\Z80\z80ctrl\hardware\z80ctrl.sch
-KiCad Version:,Eeschema 4.0.7
