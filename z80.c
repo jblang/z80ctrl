@@ -144,12 +144,14 @@ void z80_iorq(void)
                 SET_DATA(0xFF);
             }
     }
+    BUSRQ_LO;
     IOACK_LO;
     while (!GET_IORQ) {
         CLK_TOGGLE;
     }
     DATA_INPUT;
     IOACK_HI;
+    BUSRQ_HI;
 }
 
 // Run the Z80 at full speed
@@ -158,9 +160,7 @@ void z80_run(void)
     clk_run();
     while (GET_HALT) {
         if (!GET_IORQ) {
-            clk_stop();
             z80_iorq();
-            clk_run();
         }
     }
     clk_stop();
