@@ -16,45 +16,22 @@ z80ctrl is an AVR-based bootloader, debugger, and I/O device for a Z80 retrocomp
 
 I have made a [series of videos](https://www.youtube.com/watch?v=M8EIAxMpA-o&list=PLwP_dSEH4Oi_jAljWQ1H-TBiBL34LqYYm) demonstrating the design and features of the system.
 
-## Software
-
-The AVR firmware contains a built-in monitor program to allow control of the Z80.  When the AVR starts up, it presents a `z80ctrl>` prompt. The following commands are provided:
-
-- Dump, disassemble, or fill memory (`dump`, `disasm`, `fill`)
-- List files on the SD card (`dir`)
-- Load and save Intel HEX files (`loadhex`, `savehex`)
-- Mount, unmount, and boot from disk images (`mount`, `unmount`, `sboot`, `dboot`)
-- Set breakpoints and watchpoints, and debug a program (`break`, `watch`, `debug`, `step`)
-- Start the Z80 running from any address (`run`)
-- Clear the screen (`cls`)
-- List available commands (`help`)
-
-Watch this [YouTube video](https://www.youtube.com/watch?v=5hJ0k5ZuQRE) for a demo of the monitor software.
-
-## Hardware
-
-I have created a [schematic](hardware/z80ctrl.pdf) and PCB design for the RC2014 plug-in module in KiCad. All the design files are located in the `hardware` subdirectory. You can order PCBs directly on [OSH Park](https://oshpark.com/shared_projects/Bn3c0pEt). If you want to manufacture them elsewhere, you will need to generate Gerber files from the KiCad project.
-
-My board will replace the clock, serial, rom, and CF boards, so that all you need for a fully functional computer is my module plus the Backplane Pro, Z80 CPU board, and 64K RAM board.
-
-Watch this [YouTube video](https://www.youtube.com/watch?v=_iZxZO_yfaE) for a tour of the PCB.
-
 ## Documentation
 
 Much of the information that was previously here has been moved to separate wiki pages:
 
+- [Board Assembly Instructions](https://github.com/jblang/z80ctrl/wiki/Board-Assembly-Instructions)
+- [Monitor User Guide](https://github.com/jblang/z80ctrl/wiki/Monitor-User-Guide)
 - [Compatible Z80 Software](https://github.com/jblang/z80ctrl/wiki/Compatible-Z80-Software)
-- [Known Hardware Issues](https://github.com/jblang/z80ctrl/wiki/Known-Hardware-Issues)
+- [Known Issues](https://github.com/jblang/z80ctrl/wiki/Known-Issues)
 - [Planned Features](https://github.com/jblang/z80ctrl/wiki/Planned-Features)
 - [Hardware Design Notes](https://github.com/jblang/z80ctrl/wiki/Hardware-Design-Notes)
 - [Software Design Notes](https://github.com/jblang/z80ctrl/wiki/Software-Design-Notes)
-- [Breadboard Instructions](https://github.com/jblang/z80ctrl/wiki/Breadboard-Configuration)
+- [Breadboard Instructions](https://github.com/jblang/z80ctrl/wiki/Breadboard-Instructions)
 - Check the [Wiki Index](https://github.com/jblang/z80ctrl/wiki) for other topics.
 
 
-## Other Sites
-
-Additional information available elsewhere:
+## Off-Site Resources
 
 - [Hackaday Project Page](https://hackaday.io/project/158338-z80ctrl)
 - [YouTube Playlist](https://www.youtube.com/watch?v=M8EIAxMpA-o&list=PLwP_dSEH4Oi_jAljWQ1H-TBiBL34LqYYm)
