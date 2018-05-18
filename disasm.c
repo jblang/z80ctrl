@@ -351,13 +351,14 @@ uint8_t disasm(uint16_t addr, uint8_t (*input)(), char *output)
 
 uint8_t disasm_index = 0;   // index of next byte within 256 byte buffer
 uint16_t disasm_addr = 0;   // address of next chunk
+uint8_t *disasm_buf;
+
 uint8_t instr_bytes[8];     // bytes contained in the current instruction
 uint8_t instr_length = 0;   // length of the current construction
 
 // Return next byte for instruction from memory
 uint8_t disasm_next_byte()
 {
-    static uint8_t disasm_buf[256];
     if (disasm_index == 0)
         read_mem(disasm_addr, disasm_buf, 256);
     disasm_addr++;
@@ -369,10 +370,12 @@ uint8_t disasm_next_byte()
 void disasm_mem(uint16_t start, uint16_t end)
 {
     char mnemonic[64];
+    uint8_t buf[256];
     uint8_t i;
 
     disasm_addr = start;
     disasm_index = 0;
+    disasm_buf = buf;
 
     while (start <= disasm_addr && disasm_addr <= end) {
         instr_length = 0;
