@@ -1,0 +1,37 @@
+Component,Description,Part,References,Value,Footprint,Quantity Per PCB,Datasheet,MouserPN,DigikeyPN,TaydaPN,PololuPN
+1,Unpolarized capacitor,C,C1 C4 C5 C6 C7,.1uf,C_Disc_D3.0mm_W1.6mm_P2.50mm,5,,594-K104K10X7RF5UL2,BC5228TB-ND,A-4008,
+2,Unpolarized capacitor,C,C2 C3,18pf,C_Disc_D3.0mm_W1.6mm_P2.50mm,2,,594-K180J15C0GF5TL2,BC1004CT-ND,A-522,
+3,Diode,D,D1 D3,1N4148,D_DO-35_SOD27_P7.62mm_Horizontal,2,,512-1N4148,1N4148FS-ND,A-157,
+4,LED generic,LED,D2,LED,LED_D3.0mm,1,,,,A-1554,
+5,,CONN_01X39,J1,BUS,Pin_Header_Straight_1x39_Pitch2.54mm,1,,,s1012ec-39-nd,A-638,
+6,"Generic connector, single row, 01x23",Conn_01x23,J2,BUSEXT,Pin_Header_Straight_1x23_Pitch2.54mm,1,,,s1012ec-39-nd,A-638,
+7,"Generic connector, double row, 02x06, odd/even pin numbering scheme (row 1 odd numbers, row 2 even numbers)",Conn_02x06_Odd_Even,J4,IOADDR,Pin_Header_Straight_2x06_Pitch2.54mm,1,,,952-2121-ND,A-197,
+8,"Generic connector, double row, 02x03, odd/even pin numbering scheme (row 1 odd numbers, row 2 even numbers)",Conn_02x03_Odd_Even,J3,ISP,Pin_Header_Straight_2x03_Pitch2.54mm,1,,,,A-197,
+9,"Generic connector, single row, 01x09",Conn_01x09,J7,SD,microSD_Breakout_VR_LS,1,https://www.pololu.com/product/2587,,,,2587
+10,"Generic connector, single row, 01x06",Conn_01x06,J5,SERIAL1,Pin_Header_Angled_1x06_Pitch2.54mm,1,,,952-2372-ND,A-199,
+11,"Generic connector, single row, 01x06",Conn_01x06,J6,SERIAL2,Pin_Header_Angled_1x06_Pitch2.54mm,1,,,952-2372-ND,A-199,
+12,"Jumper, generic, normally closed",Jumper,JP1 JP2,Jumper,Pin_Header_Straight_1x02_Pitch2.54mm,2,,,952-2262-nd,A-197,
+13,Resistor,R,R1,10K,R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal,1,,CFR-25JB-52-10K,10KQBK-ND,A-2115,
+14,Resistor,R,R2,1K,R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal,1,,603-CFR-25JB-1K0,1.0KQBK-ND,A-2123,
+15,"Push button switch, generic, two pins",SW_Push,SW2,HALT,SW_Tactile_Straight_KSA0Axx1LFTR,1,,,,A-197,
+16,"Push button switch, generic, two pins",SW_Push,SW1,RESET,SW_Tactile_Straight_KSA0Axx1LFTR,1,,611-KSA0M412LFT,401-1814-ND,A-5127,
+17,"Dual Decoder 1 of 4, Active low outputs",74LS139,U1,74HCT139,DIP-16_W7.62mm_Socket,1,,595-SN74HCT139N,296-8390-5-ND,,
+18,"Dual D FlipFlop, Set & Reset",74HC74,U3,74HCT74,DIP-14_W7.62mm_Socket,1,74xx/74hc_hct74.pdf,595-SN74HCT74N,296-1625-5-ND,,
+19,"PDIP40, 128k Flash, 16k SRAM, 4k EEPROM, JTAG",ATMEGA1284P-PU,U2,ATMEGA1284P-PU,DIP-40_W15.24mm_Socket,1,http://www.atmel.com/Images/Atmel-8272-8-bit-AVR-microcontroller-ATmega164A_PA-324A_PA-644A_PA-1284_P_datasheet.pdf,556-ATMEGA1284P-PU,ATMEGA1284P-PU-ND,,
+20,16-Bit I/O Expander with SPI Interface (PDIP/SOIC/SSOP),MCP23S17,U4,MCP23S17,DIP-28_W7.62mm_Socket,1,http://ww1.microchip.com/downloads/en/DeviceDoc/20001952C.pdf,579-MCP23S17-E/SP,MCP23S17-E/SP-ND,,
+21,Two pin crystal,Crystal,Y1,20MHz,Crystal_HC49-4H_Vertical,1,,815-ABL-20-B2,535-9046-ND,A-236,
+
+
+
+
+
+Component Groups:,21
+Component Count:,28
+Fitted Components:,28
+Number of PCBs:,1
+Total components:,28
+Schematic Version:,REV2
+Schematic Date:,2018-05-10
+BoM Date:,5/17/2018 9:51:19 PM
+Schematic Source:,C:\Users\jblang\Electronics\Z80\z80ctrl\hardware\z80ctrl.sch
+KiCad Version:,Eeschema 4.0.7
