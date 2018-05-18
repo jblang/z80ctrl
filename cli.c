@@ -38,73 +38,6 @@
 
 FATFS fs;
 
-void f_print_error(FRESULT fr) {
-    switch(fr) {
-        case FR_OK:
-            break;
-        case FR_DISK_ERR:
-            printf_P(PSTR("drive error"));
-            break;
-        case FR_INT_ERR:
-            printf_P(PSTR("internal error"));
-            break;
-        case FR_NOT_READY:
-            printf_P(PSTR("drive not ready"));
-            break;
-        case FR_NO_FILE:
-            printf_P(PSTR("file not found"));
-            break;
-        case FR_NO_PATH:
-            printf_P(PSTR("path not found"));
-            break;
-        case FR_INVALID_NAME:
-            printf_P(PSTR("invalid path name"));
-            break;
-        case FR_DENIED:
-            printf_P(PSTR("access denied"));
-            break;
-        case FR_EXIST:
-            printf_P(PSTR("file already exists"));
-            break;
-        case FR_INVALID_OBJECT:
-            printf_P(PSTR("invalid object"));
-            break;
-        case FR_WRITE_PROTECTED:
-            printf_P(PSTR("write protected"));
-            break;
-        case FR_INVALID_DRIVE:
-            printf_P(PSTR("invalid drive number"));
-            break;
-        case FR_NOT_ENABLED:
-            printf_P(PSTR("drive not mounted"));
-            break;
-        case FR_NO_FILESYSTEM:
-            printf_P(PSTR("invalid filesystem"));
-            break;
-        case FR_MKFS_ABORTED:
-            printf_P(PSTR("mkfs aborted"));
-            break;
-        case FR_TIMEOUT:
-            printf_P(PSTR("timeout"));
-            break;
-        case FR_LOCKED:
-            printf_P(PSTR("locked"));
-            break;
-        case FR_NOT_ENOUGH_CORE:
-            printf_P(PSTR("out of memory"));
-            break;
-        case FR_TOO_MANY_OPEN_FILES:
-            printf_P(PSTR("too many open files"));
-            break;
-        case FR_INVALID_PARAMETER:
-            printf_P(PSTR("invalid parameter"));
-            break;
-        default:
-            printf_P(PSTR("unknown error"));
-            break;
-    }
-}
-
 void cli_loadhex(int argc, char *argv[])
 {
     FIL fp;
@@ -445,15 +378,19 @@ void cli_altmon(int argc, char *argv[])
 void cli_dboot(int argc, char *argv[])
 {
     write_mem_P(0xff00, dbl_bin, dbl_bin_len);
-    z80_reset(0xff00);
-    z80_run();
+    if (argc <= 1 || strcmp(argv[1], "-l")) {
+        z80_reset(0xff00);
+        z80_run();
+    }
 }
 
 void cli_sboot(int argc, char *argv[])
 {
     write_mem_P(0xff00, simhboot_bin, simhboot_bin_len);
-    z80_reset(0xff00);
-    z80_run();
+    if (argc <= 1 || strcmp(argv[1], "-l")) {
+        z80_reset(0xff00);
+        z80_run();
+    }
 }
 
 void cli_dir(int argc, char *argv[])
@@ -497,10 +434,10 @@ void cli_dir(int argc, char *argv[])
                     Finfo.fname);
     }
     if (fr == FR_OK) {
-        printf_P(PSTR("%4u File(s),%10lu bytes total\n%4u Dir(s)"), s1, p1, s2);
-        if (f_getfree(argv[1], (DWORD*)&p1, &fs) == FR_OK) {
-            printf_P(PSTR(", %10luKiB free\n"), p1 * fs->csize / 2);
-        }
+        printf_P(PSTR("%4u File(s),%10lu bytes total\n%4u Dir(s)\n"), s1, p1, s2);
+        //if (f_getfree(argv[1], (DWORD*)&p1, &fs) == FR_OK) {
+        //    printf_P(PSTR(", %10luKiB free\n"), p1 * fs->csize / 2);
+        //}
     }
     if (fr) {
         printf_P(PSTR("error reading directory: "));
