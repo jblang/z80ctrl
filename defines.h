@@ -102,4 +102,7 @@
 
 #define DRV_MMC 0
 
+// Number of emulated disk drives
+#define NUMDRIVES 26
+
 #endif

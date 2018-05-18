@@ -113,19 +113,18 @@
 #include <stdio.h>
 #include <avr/pgmspace.h>
 
+#include "defines.h"
 #include "diskemu.h"
 #include "ff.h"
 
 typedef struct _drive {
     FIL fp;
-    uint8_t mounted;
     uint8_t status;
     uint8_t track;
     uint8_t sector;
     uint8_t byte;
 } drive;
 
-#define NUMDRIVES 16
 #define NUMTRACKS 254ul // Altair disk has 77 but SIMH allows disk images with more
 #define NUMSECTORS 32ul
 #define SECTORSIZE 137ul
@@ -137,6 +136,7 @@ typedef struct _drive {
 #define S_READRDY 7
 #define S_TRACK0 6
 #define S_INTENABLE 5
+#define S_MOUNTED 4
 #define S_ENABLED 3
 #define S_HEADLOAD 2
 #define S_HEADMOVE 1
@@ -160,23 +160,31 @@ uint8_t dirtysector = 0;
 
 void drive_unmount(uint8_t drv) 
 {
+    if (drv >= NUMDRIVES) {
+        printf_P(PSTR("error: valid drive numbers are 0-%d\n"), NUMDRIVES-1);
+        return;
+    }
     FRESULT fr;
     if ((fr = f_close(&drives[drv].fp)) != FR_OK) {
         printf_P(PSTR("error unmounting disk: %d"), fr);
     }
-    drives[drv].mounted = 0;
+    drives[drv].status &= ~(1 << S_MOUNTED);
 }
 
 void drive_mount(uint8_t drv, char *filename) 
 {
+    if (drv >= NUMDRIVES) {
+        printf_P(PSTR("error: valid drive numbers are 0-%d\n"), NUMDRIVES-1);
+        return;
+    }
     FRESULT fr;
-    if (drives[drv].mounted)
+    if (drives[drv].status & (1 << S_MOUNTED))
         drive_unmount(drv);
     if ((fr = f_open(&drives[drv].fp, filename, FA_READ | FA_WRITE | FA_OPEN_ALWAYS)) != FR_OK) {
         printf_P(PSTR("error mounting disk: %d"), fr);
         return;
     }
-    drives[drv].mounted = 1;
+    drives[drv].status |= 1 << S_MOUNTED;
 }
 
 void write_sector(void) 
@@ -216,21 +224,21 @@ void drive_select(uint8_t newdrv)
     if (dirtysector)
         write_sector();
     if (selected) {
-        selected->status = 0;
+        selected->status &= (1 << S_MOUNTED);   // clear all but mounted bit
         selected->sector = 0xff;
         selected->byte = 0xff;
     }
-    if (newdrv & (1 << DESELECT)) {
+    if (newdrv >= NUMDRIVES) {
         selected = NULL;
     } else {
-        selected = &drives[newdrv & 0xf];
-        if (selected->mounted) {
-            selected->status = (1 << S_HEADMOVE) | (1 << S_ENABLED);
+        selected = &drives[newdrv];
+        if ((selected->status) & (1 << S_MOUNTED)) {
+            selected->status |= (1 << S_HEADMOVE) | (1 << S_ENABLED);
             if (selected->track == 0) {
                 selected->status |= (1 << S_TRACK0);
             }
         } else {
-            selected->status = 0;
+            selected->status &= (1 << S_MOUNTED); // clear all but mounted bit
         }
         selected->sector = 0xff;
         selected->byte = 0xff;
