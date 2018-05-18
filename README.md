@@ -36,9 +36,9 @@ Much of the information that was previously here has been moved to separate wiki
 - [Hackaday Project Page](https://hackaday.io/project/158338-z80ctrl)
 - [YouTube Playlist](https://www.youtube.com/watch?v=M8EIAxMpA-o&list=PLwP_dSEH4Oi_jAljWQ1H-TBiBL34LqYYm)
 - [OSH Park Shared Project (REV2)](https://oshpark.com/shared_projects/Bn3c0pEt)
-- [Current Google Groups Thread](https://groups.google.com/forum/#!topic/rc2014-z80/yc8g_ugiseo) (use this thread or the Hackaday Project Page to ask for help)
-- [Older Google Groups Thread](https://groups.google.com/forum/#!searchin/rc2014-z80/z80ctrl%7Csort:date/rc2014-z80/wi8MCKlJdlo/xWQDF-IaAgAJ) (please reply to the current thread instead)
-- [Even Older Google Groups Thread](https://groups.google.com/forum/#!searchin/rc2014-z80/z80ctrl%7Csort:date/rc2014-z80/EukbCJAxxIY/uYzqrVTcAgAJ)
+- [Current Google Groups Thread](https://groups.google.com/d/topic/rc2014-z80/yc8g_ugiseo/discussion) (use this thread or the Hackaday Project Page to ask for help)
+- [Older Google Groups Thread](https://groups.google.com/d/topic/rc2014-z80/wi8MCKlJdlo/discussion) (please reply to the current thread instead)
+- [Even Older Google Groups Thread](https://groups.google.com/d/topic/rc2014-z80/EukbCJAxxIY/discussion)
 
 
 ## License
