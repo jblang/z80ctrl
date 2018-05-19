@@ -192,7 +192,8 @@ void z80_buslog(bus_stat status)
 
         // wait until output is fully transmitted to avoid
         // interfering with UART status for running program
-        loop_until_bit_is_set(UCSR0A, UDRE0);    
+        while (uart_testtx())
+            ;
 }
 
 // Make memory range tests more readable
@@ -291,7 +292,8 @@ void z80_debug(uint32_t cycles)
                     if (INRANGE(opfetch_watch_start, opfetch_watch_end, addr)) {
                         printf("\t%04x\t%s\n", addr, mnemonic);
                         // Flush UART to avoid interfering with running program
-                        loop_until_bit_is_set(UCSR0A, UDRE0);    
+                        while (uart_testtx())
+                            ;
                     }
                 }
                 brk |= !GET_M1 && INRANGE(opfetch_break_start, opfetch_break_end, addr) && !cycles;
