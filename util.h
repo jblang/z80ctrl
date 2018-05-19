@@ -25,6 +25,6 @@
 
 #include <stdint.h>
 
-PGM_P strlookup(PGM_P str, uint32_t index);
+const char *strlookup(const char *str, uint32_t index);
 
 #endif

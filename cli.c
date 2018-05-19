@@ -462,48 +462,96 @@ void cli_cls(int argc, char *argv[])
 
 void cli_help(int argc, char *argv[]);
 
-typedef struct _cli_entry {
-    char *name;
-    char *desc;
-    void (*func)(int, char*[]);
-} cli_entry;
-
-cli_entry cli_cmds[] = {
-    {"altmon", "run altmon 8080 monitor", &cli_altmon},
+const char cli_cmd_names[] PROGMEM = 
+    "altmon\0"
 #ifdef SET_BANK
-    {"bank", "select active 64K bank", &cli_bank},
+    "bank\0"
 #endif
-    {"bus", "display low-level bus status", &cli_bus},
-    {"break", "set breakpoints", &cli_breakwatch},
-    {"c", "shorthand to continue debugging", &cli_debug},
-    {"cls", "clear screen", &cli_cls},
-    {"dboot", "boot disk using Altair disk bootloader", &cli_dboot},
-    {"debug", "debug code at address", &cli_debug},
-    {"dir", "shows directory listing", &cli_dir},
-    {"disasm", "disassembles memory location", &cli_disasm},
-    {"dump", "dump memory in hex and ascii", &cli_dump},
-    {"fill", "fill memory with byte", &cli_fill},
-    {"help", "list available commands", &cli_help},
-    {"loadhex", "load intel hex file to memory", &cli_loadhex},
-    {"mount", "mount a disk image", &cli_mount},
-    {"run", "execute code at address", &cli_run},
-    {"reset", "reset the processor, with optional vector", &cli_reset},
-    {"savehex", "save intel hex file from memory", &cli_savehex},
-    {"sboot", "boot disk using SIMH bootloader", &cli_sboot},
-    {"s", "shorthand for step", &cli_step},
-    {"step", "step processor N cycles", &cli_step},
-    {"unmount", "unmount a disk image", &cli_unmount},
-    {"watch", "set watch points", &cli_breakwatch}
+    "bus\0"
+    "break\0"
+    "c\0"
+    "cls\0"
+    "dboot\0"
+    "debug\0"
+    "dir\0"
+    "disasm\0"
+    "dump\0"
+    "fill\0"
+    "help\0"
+    "loadhex\0"
+    "mount\0"
+    "run\0"
+    "reset\0"
+    "savehex\0"
+    "sboot\0"
+    "s\0"
+    "step\0"
+    "unmount\0"
+    "watch";
+
+const char cli_cmd_help[] PROGMEM =
+    "run altmon 8080 monitor\0" // altmon
+#ifdef SET_BANK
+    "select active 64K bank\0" // bank
+#endif
+    "display low-level bus status\0" // bus
+    "set breakpoints\0" // break
+    "shorthand to continue debugging\0" // c
+    "clear screen\0" // cls
+    "boot disk using Altair disk bootloader\0" // dboot
+    "debug code at address\0" // debug
+    "shows directory listing\0" // dir
+    "disassembles memory location\0" // disasm
+    "dump memory in hex and ascii\0" // dump
+    "fill memory with byte\0" // fill
+    "list available commands\0" // help
+    "load intel hex file to memory\0" // loadhex
+    "mount a disk image\0" // mount
+    "execute code at address\0" // run
+    "reset the processor, with optional vector\0" // reset
+    "save intel hex file from memory\0" // savehex
+    "boot disk using SIMH bootloader\0" // sboot
+    "shorthand for step\0" // s
+    "step processor N cycles\0" // step
+    "unmount a disk image\0" // unmount
+    "set watch points"; // watch
+
+void * const cli_cmd_functions[] PROGMEM = {
+    &cli_altmon,
+#ifdef SET_BANK
+    &cli_bank,
+#endif
+    &cli_bus,
+    &cli_breakwatch,
+    &cli_debug,
+    &cli_cls,
+    &cli_dboot,
+    &cli_debug,
+    &cli_dir,
+    &cli_disasm,
+    &cli_dump,
+    &cli_fill,
+    &cli_help,
+    &cli_loadhex,
+    &cli_mount,
+    &cli_run,
+    &cli_reset,
+    &cli_savehex,
+    &cli_sboot,
+    &cli_step,
+    &cli_step,
+    &cli_unmount,
+    &cli_breakwatch
 };
 
-#define NUM_CMDS (sizeof(cli_cmds)/sizeof(cli_entry))
+#define NUM_CMDS (sizeof(cli_cmd_functions)/sizeof(void *))
 
 void cli_help(int argc, char *argv[])
 {
     int i;
     printf_P(PSTR("available commands:\n"));
     for (i = 0; i < NUM_CMDS; i++) {
-        printf_P(PSTR("%s\t%s\n"), cli_cmds[i].name, cli_cmds[i].desc);
+        printf_P(PSTR("%S\t%S\n"), strlookup(cli_cmd_names, i), strlookup(cli_cmd_help, i));
     }
 }
 
@@ -518,6 +566,7 @@ void cli_loop(void) {
     int argc;
     int i;
     FRESULT fr;
+    void (*cmd_func)(int, char*[]);
 
     disk_initialize(0);
     if ((fr = f_mount(&fs, "", 1)) != FR_OK)
@@ -534,13 +583,15 @@ void cli_loop(void) {
                     break;
             }
             for (i = 0; i < NUM_CMDS; i++) {
-                if (strcmp(argv[0], cli_cmds[i].name) == 0) {
-                    cli_cmds[i].func(argc, argv);
+                if (strcmp_P(argv[0], strlookup(cli_cmd_names, i)) == 0) {
+                    cmd_func = pgm_read_ptr(&cli_cmd_functions[i]);
                     break;
                 }
             }
             if (i == NUM_CMDS)
                 printf_P(PSTR("unknown command: %s. type help for list.\n"), argv[0]);
+            else
+                cmd_func(argc, argv);
         }
     }
 }
