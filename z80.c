@@ -144,7 +144,8 @@ void z80_iorq(void)
                 SET_DATA(0xFF);
             }
     }
-    BUSRQ_LO;
+    if (!GET_RD)
+        BUSRQ_LO;
     IOACK_LO;
     while (!GET_IORQ) {
         CLK_TOGGLE;
