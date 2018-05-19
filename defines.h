@@ -100,6 +100,7 @@
 //#define BANKADDR 5
 //#define BANKMASK ((1<<BANKADDR) | (1<<(BANKADDR+1)) | (1<<(BANKADDR+2)))
 
+// Enable SD card support in fatfs
 #define DRV_MMC 0
 
 // Number of emulated disk drives

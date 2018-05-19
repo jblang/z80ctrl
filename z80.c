@@ -80,39 +80,39 @@ void z80_iorq(void)
     switch (GET_ADDRLO) {
         case SIO0_STATUS:
             if (!GET_RD) {
-                SET_DATA(((UCSR0A >> (UDRE0 - 1)) & 0x2) | ((UCSR0A >> RXC0) & 0x1));
+                SET_DATA(((UCSR0A >> (UDRE0 - 1)) & 0x2) | (uart_test() & 0x1));
                 DATA_OUTPUT;
             }
             break;
         case SIOA_CONTROL:
             if (!GET_RD) {
                 // CTS and DCD always high
-                SET_DATA((1 << 3) | (1  << 5) | ((UCSR0A >> (UDRE0 - 2)) & 0x4) | ((UCSR0A >> RXC0) & 0x1));
+                SET_DATA((1 << 3) | (1  << 5) | ((UCSR0A >> (UDRE0 - 2)) & 0x4) | (uart_test() & 0x1));
                 DATA_OUTPUT;
             }
             break;
         case SIOB_CONTROL:
             if (!GET_RD) {
                 // CTS and DCD always high
-                SET_DATA((1 << 3) | (1  << 5) | ((UCSR1A >> (UDRE1 - 2)) & 0x4) | ((UCSR1A >> RXC1) & 0x1));
+                SET_DATA((1 << 3) | (1  << 5) | ((UCSR1A >> (UDRE1 - 2)) & 0x4) | (uart_test() & 0x1));
                 DATA_OUTPUT;
             }
             break;
         case SIO0_DATA:
         case SIOA_DATA:
             if (!GET_RD) {
-                SET_DATA(UDR0);
+                SET_DATA(uart_getc());
                 DATA_OUTPUT;
             } else if (!GET_WR) {
-                UDR0 = GET_DATA;
+                uart_putc(GET_DATA);
             }
             break;
         case SIOB_DATA:
             if (!GET_RD) {
-                SET_DATA(UDR1);
+                SET_DATA(uart_getc());
                 DATA_OUTPUT;
             } else if (!GET_WR) {
-                UDR1 = GET_DATA;
+                uart_putc(GET_DATA);
             }
             break;
         case DRIVE_STATUS:
