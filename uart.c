@@ -56,11 +56,15 @@ void uart_init(void)
 
 /* Get a received character */
 
-uint16_t uart_test (void)
+uint16_t uart_testrx (void)
 {
-	return RxFifo.ct ? 1 : 0;
+	return RxFifo.ct;
 }
 
+uint16_t uart_testtx (void)
+{
+	return TxFifo.ct;
+}
 
 uint8_t uart_getc (void)
 {

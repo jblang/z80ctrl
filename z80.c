@@ -80,21 +80,21 @@ void z80_iorq(void)
     switch (GET_ADDRLO) {
         case SIO0_STATUS:
             if (!GET_RD) {
-                SET_DATA(((UCSR0A >> (UDRE0 - 1)) & 0x2) | (uart_test() & 0x1));
+                SET_DATA((((uart_testtx() == 0) << 1) & 0x2) | ((uart_testrx() > 0) & 0x1));
                 DATA_OUTPUT;
             }
             break;
         case SIOA_CONTROL:
             if (!GET_RD) {
                 // CTS and DCD always high
-                SET_DATA((1 << 3) | (1  << 5) | ((UCSR0A >> (UDRE0 - 2)) & 0x4) | (uart_test() & 0x1));
+                SET_DATA((1 << 3) | (1  << 5) | (((uart_testtx() == 0) << 2) & 0x4) | ((uart_testrx() > 0)& 0x1));
                 DATA_OUTPUT;
             }
             break;
         case SIOB_CONTROL:
             if (!GET_RD) {
                 // CTS and DCD always high
-                SET_DATA((1 << 3) | (1  << 5) | ((UCSR1A >> (UDRE1 - 2)) & 0x4) | (uart_test() & 0x1));
+                SET_DATA((1 << 3) | (1  << 5) | (((uart_testtx() == 0) << 2) & 0x4) | ((uart_testrx() > 0) & 0x1));
                 DATA_OUTPUT;
             }
             break;

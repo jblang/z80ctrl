@@ -16,7 +16,8 @@
  */
 void uart_init(void);
 
-uint16_t uart_test (void);		/* Check number of data in UART Rx FIFO */
+uint16_t uart_testrx (void);		/* Check number of data in UART Rx FIFO */
+uint16_t uart_testtx (void);		/* Check number of data in UART Rx FIFO */
 uint8_t uart_getc (void);		/* Get a byte from UART Rx FIFO */
 void uart_putc (uint8_t d);		/* Put a byte into UART Tx FIFO */
 
