@@ -36,6 +36,9 @@
 #include "ff.h"
 #include "ihex.h"
 #include "util.h"
+#include "disasm.h"
+#include "diskemu.h"
+#include "diskio.h"
 
 FATFS fs;
 
@@ -181,7 +184,7 @@ void cli_dump(int argc, char *argv[])
         end = start + 0xff;
     else
         end = strtol(argv[2], NULL, 16) & 0xffff;
-    printf("%04x %04x\n", start, end);
+    printf_P(PSTR("%04x %04x\n"), start, end);
     dump_mem(start, end);
 }
 
@@ -220,125 +223,65 @@ void cli_step(int argc, char *argv[])
     z80_debug(cycles);
 }
 
-void breakwatch_status(char *name, uint16_t start, uint16_t end)
-{
-    if (start < end)
-        printf_P(PSTR("\t%s: %04x-%04x\n"), name, start, end);
-    else if (start == end)
-        printf_P(PSTR("\t%s: %04x\n"), name, start);
-    else
-        printf_P(PSTR("\t%s: disabled\n"), name);
-}
-
 void cli_breakwatch(int argc, char *argv[])
 {
-    uint16_t start = 0;
-    uint16_t end = 0xffff;
+    range *ranges;
+    uint8_t type;
+
+    if (strcmp_P(argv[0], PSTR("break")) == 0)
+        ranges = breaks;
+    else
+        ranges = watches;
+    
+    // If no parameters given, show current status
     if (argc == 1) {
-        if (strcmp(argv[0], "break") == 0) {
-            printf_P(PSTR("break status:\n"));
-            breakwatch_status("memrd", memrd_break_start, memrd_break_end);
-            breakwatch_status("memwr", memwr_break_start, memwr_break_end);
-            breakwatch_status("iord", iord_break_start, iord_break_end);
-            breakwatch_status("iowr", iowr_break_start, iowr_break_end);
-            breakwatch_status("opfetch", opfetch_break_start, opfetch_break_end);
-        } else {
-            printf_P(PSTR("watch status:\n"));
-            breakwatch_status("bus", bus_watch_start, bus_watch_end);
-            breakwatch_status("memrd", memrd_watch_start, memrd_watch_end);
-            breakwatch_status("memwr", memwr_watch_start, memwr_watch_end);
-            breakwatch_status("iord", iord_watch_start, iord_watch_end);
-            breakwatch_status("iowr", iowr_watch_start, iowr_watch_end);
-            breakwatch_status("opfetch", opfetch_watch_start, opfetch_watch_end);
+        printf_P(PSTR("%s status:\n"), argv[0]);
+        for (uint8_t i = 0; i < DEBUGCNT; i++) {
+            if (!ENABLED(ranges, i))
+                printf_P(PSTR("\t%S: disabled\n"), strlookup(debug_names, i));
+            else
+                printf_P(PSTR("\t%S: %04x-%04x\n"), strlookup(debug_names, i), ranges[i].start, ranges[i].end);
         }
         printf_P(PSTR("\nusage:\n\t%s <type> [start] [end]\n"), argv[0]);
         printf_P(PSTR("\t%s <type> off to disable type\n"), argv[0]);
         printf_P(PSTR("\t%s off to disable all\n"), argv[0]);
         return;
     }
-    if (argc >= 3) {
-        if (strcmp(argv[2], "off") == 0) {
-            start = 0xffff;
-            end = 0;
-        } else {
-            start = strtol(argv[2], NULL, 16);
-            if (argc >= 4)
-                end = strtol(argv[3], NULL, 16);
-            else
-                end = start;
+    if (strcmp_P(argv[1], PSTR("off")) == 0) {
+        // turn off all ranges
+        for (uint8_t i = 0; i < DEBUGCNT; i++) {
+            ranges[i].start = 0xffff;
+            ranges[i].end = 0;
         }
-    }
-    if (strcmp(argv[1], "bus") == 0) {
-        if (strcmp(argv[0], "watch") == 0) {
-            bus_watch_start = start;
-            bus_watch_end = end;
-        }
-    } else if (strcmp(argv[1], "memrd") == 0) {
-        if (strcmp(argv[0], "break") == 0) {
-            memrd_break_start = start;
-            memrd_break_end = end;
-        } else {
-            memrd_watch_start = start;
-            memrd_watch_end = end;
-        }
-    } else if (strcmp(argv[1], "memwr") == 0) {
-        if (strcmp(argv[0], "break") == 0) {
-            memwr_break_start = start;
-            memwr_break_end = end;
-        } else {
-            memwr_watch_start = start;
-            memwr_watch_end = end;
-        }
-    } else if (strcmp(argv[1], "iord") == 0) {
-        if (strcmp(argv[0], "break") == 0) {
-            iord_break_start = start;
-            iord_break_end = end;
-        } else {
-            iord_watch_start = start;
-            iord_watch_end = end;
-        }
-    } else if (strcmp(argv[1], "iowr") == 0) {
-        if (strcmp(argv[0], "break") == 0) {
-            iowr_break_start = start;
-            iowr_break_end = end;
-        } else {
-            iowr_watch_start = start;
-            iowr_watch_end = end;
-        }
-    } else if (strcmp(argv[1], "opfetch") == 0) {
-        if (strcmp(argv[0], "break") == 0) {
-            opfetch_break_start = start;
-            opfetch_break_end = end;
-        } else {
-            opfetch_watch_start = start;
-            opfetch_watch_end = end;
-        }
-    } else if (strcmp(argv[1], "off") == 0) {
-        if (strcmp(argv[0], "break") == 0) {
-            memrd_break_start = 0xffff;
-            memrd_break_end = 0;
-            memwr_break_start = 0xffff;
-            memwr_break_end = 0;
-            iord_break_start = 0xff;
-            iord_break_end = 0;
-            iowr_break_start = 0xff;
-            iowr_break_end = 0;
-            opfetch_break_start = 0xffff;
-            opfetch_break_end = 0;
-        } else {
-            memrd_watch_start = 0xffff;
-            memrd_watch_end = 0;
-            memwr_watch_start = 0xffff;
-            memwr_watch_end = 0;
-            iord_watch_start = 0xff;
-            iord_watch_end = 0;
-            iowr_watch_start = 0xff;
-            iowr_watch_end = 0;
-            opfetch_watch_start = 0xffff;
-            opfetch_watch_end = 0;
-        }
+        return;
     } else {
-        printf_P(PSTR("error: unknown type\n"));
+        // find the debugging type that the user specified
+        for (type = 0; type < DEBUGCNT; type++)
+            if (strcmp_P(argv[1], strlookup(debug_names, type)) == 0)
+                break;
+        if (type == DEBUGCNT) {
+            printf_P(PSTR("error: unknown type\n"));
+            return;
+        }
+        if (argc == 2) {
+            // no range specified, enable for 0x0000-0xffff
+            ranges[type].start = 0;
+            ranges[type].end = 0xffff;
+        } else if (argc >= 3) {
+            if (strcmp_P(argv[2], PSTR("off")) == 0) {
+                ranges[type].start = 0xffff;
+                ranges[type].end = 0;
+            } else {
+                // get starting address
+                ranges[type].start = strtol(argv[2], NULL, 16);
+                if (argc >= 4)
+                    // get ending address if specified
+                    ranges[type].end = strtol(argv[3], NULL, 16);
+                else
+                    // if no ending address, start and end are the same
+                    ranges[type].end = ranges[type].start;
+            }
+        }
     }
 }
 
@@ -490,31 +433,31 @@ const char cli_cmd_names[] PROGMEM =
     "watch";
 
 const char cli_cmd_help[] PROGMEM =
-    "run altmon 8080 monitor\0" // altmon
+    "run altmon 8080 monitor\0"                     // altmon
 #ifdef SET_BANK
-    "select active 64K bank\0" // bank
+    "select active 64K bank\0"                      // bank
 #endif
-    "display low-level bus status\0" // bus
-    "set breakpoints\0" // break
-    "shorthand to continue debugging\0" // c
-    "clear screen\0" // cls
-    "boot disk using Altair disk bootloader\0" // dboot
-    "debug code at address\0" // debug
-    "shows directory listing\0" // dir
-    "disassembles memory location\0" // disasm
-    "dump memory in hex and ascii\0" // dump
-    "fill memory with byte\0" // fill
-    "list available commands\0" // help
-    "load intel hex file to memory\0" // loadhex
-    "mount a disk image\0" // mount
-    "execute code at address\0" // run
-    "reset the processor, with optional vector\0" // reset
-    "save intel hex file from memory\0" // savehex
-    "boot disk using SIMH bootloader\0" // sboot
-    "shorthand for step\0" // s
-    "step processor N cycles\0" // step
-    "unmount a disk image\0" // unmount
-    "set watch points"; // watch
+    "display low-level bus status\0"                // bus
+    "set breakpoints\0"                             // break
+    "shorthand to continue debugging\0"             // c
+    "clear screen\0"                                // cls
+    "boot disk using Altair disk bootloader\0"      // dboot
+    "debug code at address\0"                       // debug
+    "shows directory listing\0"                     // dir
+    "disassembles memory location\0"                // disasm
+    "dump memory in hex and ascii\0"                // dump
+    "fill memory with byte\0"                       // fill
+    "list available commands\0"                     // help
+    "load intel hex file to memory\0"               // loadhex
+    "mount a disk image\0"                          // mount
+    "execute code at address\0"                     // run
+    "reset the processor, with optional vector\0"   // reset
+    "save intel hex file from memory\0"             // savehex
+    "boot disk using SIMH bootloader\0"             // sboot
+    "shorthand for step\0"                          // s
+    "step processor N cycles\0"                     // step
+    "unmount a disk image\0"                        // unmount
+    "set watch points";                             // watch
 
 void * const cli_cmd_functions[] PROGMEM = {
     &cli_altmon,

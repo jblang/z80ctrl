@@ -24,33 +24,26 @@
 #define Z80_H
 
 #include <stdint.h>
+#include "bus.h"
 
-extern uint16_t bus_watch_start;
-extern uint16_t bus_watch_end;
-extern uint16_t memrd_watch_start;
-extern uint16_t memrd_watch_end;
-extern uint16_t memwr_watch_start;
-extern uint16_t memwr_watch_end;
-extern uint8_t iord_watch_start;
-extern uint8_t iord_watch_end;
-extern uint8_t iowr_watch_start;
-extern uint8_t iowr_watch_end;
-extern uint16_t opfetch_watch_start;
-extern uint16_t opfetch_watch_end;
-extern uint16_t memrd_break_start;
-extern uint16_t memrd_break_end;
-extern uint16_t memwr_break_start;
-extern uint16_t memwr_break_end;
-extern uint8_t iord_break_start;
-extern uint8_t iord_break_end;
-extern uint8_t iowr_break_start;
-extern uint8_t iowr_break_end;
-extern uint16_t opfetch_break_start;
-extern uint16_t opfetch_break_end;
+
+enum {MEMRD, MEMWR, IORD, IOWR, OPFETCH, BUS, DEBUGCNT};
+
+typedef struct {
+        uint16_t start;
+        uint16_t end;
+} range;
+
+extern range breaks[];
+extern range watches[];
+extern const char debug_names[];
+
+#define INRANGE(ranges, type, addr) ((ranges)[(type)].start <= (addr) && (addr) <= (ranges)[type].end)
+#define ENABLED(ranges, type) ((ranges)[(type)].start <= (ranges)[(type)].end)
 
 void z80_reset(uint16_t addr);
-void z80_status(void);
 void z80_run(void);
 void z80_debug(uint32_t cycles);
+void z80_buslog(bus_stat status);
 
 #endif
