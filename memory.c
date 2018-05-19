@@ -119,7 +119,7 @@ int verify_mem(uint16_t start, uint16_t end, uint8_t *src, uint8_t log)
         for (j = 0; j < buflen; i++, j++) {
             if (buf[j] != src[i]) {
                 if (log)
-                    printf("%04x: expected %02x but read %02x\n", start+i, src[i], buf[j]);
+                    printf_P(PSTR("%04x: expected %02x but read %02x\n"), start+i, src[i], buf[j]);
                 errors++;
             }
         }
@@ -136,19 +136,19 @@ void dump_mem(uint16_t start, uint16_t end)
     uint32_t i = start;
 
     while (i <= end) {
-        printf("%04X: ", i);
+        printf_P(PSTR("%04X: "), i);
         read_mem(i, buf, buflen);
         for (j = 0; j < buflen; j++) {
-            printf("%02X ", buf[j]);
+            printf_P(PSTR("%02X "), buf[j]);
         }
-        printf("  ");
+        printf_P(PSTR("  "));
         for (j = 0; j < buflen; j++, i++) {
             if (0x20 <= buf[j] && buf[j] <= 0x7e)
-                printf("%c", buf[j]);
+                printf_P(PSTR("%c"), buf[j]);
             else
-                printf(".");
+                printf_P(PSTR("."));
         }
-        printf("\n");
+        printf_P(PSTR("\n"));
     }
 }
 

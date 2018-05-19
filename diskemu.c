@@ -203,15 +203,12 @@ void write_sector(void)
     ofs = selected->track * NUMSECTORS * SECTORSIZE;
     ofs += selected->sector * SECTORSIZE;
 
-    //printf("seeking track %d sector %d offset %u\n", selected->track, selected->sector, ofs);
     if ((fr = f_lseek(&selected->fp, ofs)) != FR_OK) {
         printf_P(PSTR("seek error: %d\n"), fr);
     } else {
-        //printf("writing... ");
         if ((fr = f_write(&selected->fp, sectorbuf, SECTORSIZE, &bw)) != FR_OK) {
             printf_P(PSTR("write error: %d\n"), fr);
         }
-        //printf("%d bytes\n", bw);
     }
     selected->status &= ~(1 << S_WRITERDY);
     selected->byte = 0xff;
@@ -220,7 +217,6 @@ void write_sector(void)
 
 void drive_select(uint8_t newdrv) 
 {
-    //printf("selecting drive %d\n", newdrv);
     if (dirtysector)
         write_sector();
     if (selected) {
@@ -248,10 +244,9 @@ void drive_select(uint8_t newdrv)
 uint8_t drive_status() 
 {
     if (selected) {
-        //printf("returning status %x\n", selected->status);
         return ~selected->status;
     } else {
-        printf("drive status error: no drive selected\n");
+        printf_P(PSTR("drive status error: no drive selected\n"));
         return 0xFF;
     }
 }
@@ -259,7 +254,7 @@ uint8_t drive_status()
 void drive_control(uint8_t cmd) 
 {
     if (!selected) {
-        printf("drive control error: no drive selected");
+        printf_P(PSTR("drive control error: no drive selected"));
         return;
     }
 
@@ -271,7 +266,6 @@ void drive_control(uint8_t cmd)
             write_sector();
         selected->sector = 0xff;
         selected->byte = 0xff;
-        //printf("stepping in: track %d\n", selected->track);
     }
 
     if (cmd & (1 << C_STEPOUT)) {
@@ -283,30 +277,22 @@ void drive_control(uint8_t cmd)
             write_sector();
         selected->sector = 0xff;
         selected->byte = 0xff;
-        //printf("stepping out: track %d\n", selected->track);
     }
 
     if (dirtysector)
         write_sector();
 
     if (cmd & (1 << C_LOAD)) {
-        //printf("loading head\n");
         selected->status |= (1 << S_HEADLOAD) | (1 << S_READRDY);
     }
 
     if (cmd & (1 << C_UNLOAD)) {
-        //printf("unloading head\n");
         selected->status &= ~((1 << S_HEADLOAD) | (1 << S_READRDY));
         selected->sector = 0xff;
         selected->byte = 0xff;
     }
 
-    //if (cmd & (1 << C_INTENABLE))
-    //if (cmd & (1 << C_INTDISABLE))
-    //if (cmd & (1 << C_LOWER))
-
     if (cmd & (1 << C_WRITE)) {
-        //printf("preparing write\n");
         selected->byte = 0;
         selected->status |= (1 << S_WRITERDY);
     }
@@ -315,7 +301,7 @@ void drive_control(uint8_t cmd)
 uint8_t drive_sector(void) 
 {
     if (!selected) {
-        printf("drive sector error: no drive selected\n");
+        printf_P(PSTR("drive sector error: no drive selected\n"));
         return 0;
     }
     if (dirtysector)
@@ -326,7 +312,6 @@ uint8_t drive_sector(void)
             selected->sector = 0;
         }
         selected->byte = 0xff;
-        //printf("sector %d\n", selected->sector);
         return (selected->sector << 1);
     } else {
         return 0;
@@ -336,11 +321,10 @@ uint8_t drive_sector(void)
 void drive_write(uint8_t data) 
 {
     if (!selected) {
-        printf("drive write error: no drive selected\n");
+        printf_P(PSTR("drive write error: no drive selected\n"));
         return;
     }
 
-    //printf("writing %02x to byte %d of sector %d, track %d\n", data, selected->byte, selected->sector, selected->track);
     sectorbuf[selected->byte] = data;
 
     if (selected->byte < SECTORSIZE) {
@@ -359,28 +343,23 @@ uint8_t drive_read(void)
     uint8_t i;
 
     if (!selected) {
-        printf("drive read error: no drive selected\n");
+        printf_P(PSTR("drive read error: no drive selected\n"));
         return 0;
     }
 
     if ((i = selected->byte) < SECTORSIZE) {
-        //printf("reading %02x from byte %d of sector %d, track %d\n", sectorbuf[i], selected->byte, selected->sector, selected->track);
         selected->byte++;
         return sectorbuf[i];
     } else {
         ofs = selected->track * NUMSECTORS * SECTORSIZE;
         ofs += selected->sector * SECTORSIZE;
-        //printf("seeking track %d sector %d offset %u\n", selected->track, selected->sector, ofs);
         if ((fr = f_lseek(&selected->fp, ofs)) != FR_OK) {
             printf_P(PSTR("seek error: %d\n"), fr);
         } else {
-            //printf("reading... ");
             if ((fr = f_read(&selected->fp, sectorbuf, SECTORSIZE, &br)) != FR_OK) {
                 printf_P(PSTR("read error: %d\n"), fr);
             }
-            //printf("%u bytes read\n", br);
         }
-        //printf("reading %02x from byte %d of sector %d, track %d\n", sectorbuf[0], 0, selected->sector, selected->track);
         selected->byte = 1;
         return sectorbuf[0];
     }

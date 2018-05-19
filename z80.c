@@ -272,7 +272,7 @@ void z80_debug(uint32_t cycles)
                     disasm(addr, z80_read, mnemonic);
                     // If opcode was within watch range, log the instruction
                     if (INRANGE(watches, OPFETCH, addr)) {
-                        printf("\t%04x\t%s\n", addr, mnemonic);
+                        printf_P(PSTR("\t%04x\t%s\n"), addr, mnemonic);
                         // Flush UART to avoid interfering with running program
                         while (uart_testtx())
                             ;

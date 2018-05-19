@@ -80,7 +80,7 @@ uint8_t bus_master(void)
     while (GET_BUSACK && i--)  // wait for BUSACK to go low
         CLK_TOGGLE;
     if (i == 0) {
-        printf("bus request timed out\n");
+        printf_P(PSTR("bus request timed out\n"));
         BUSRQ_HI;
         return 0;
     }
