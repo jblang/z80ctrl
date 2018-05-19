@@ -21,19 +21,19 @@ typedef BYTE	DSTATUS;
 
 /* Results of Disk Functions */
 typedef enum {
-	RES_OK = 0,		/* 0: Successful */
-	RES_ERROR,		/* 1: R/W Error */
-	RES_WRPRT,		/* 2: Write Protected */
-	RES_NOTRDY,		/* 3: Not Ready */
-	RES_PARERR		/* 4: Invalid Parameter */
+    RES_OK = 0,		/* 0: Successful */
+    RES_ERROR,		/* 1: R/W Error */
+    RES_WRPRT,		/* 2: Write Protected */
+    RES_NOTRDY,		/* 3: Not Ready */
+    RES_PARERR		/* 4: Invalid Parameter */
 } DRESULT;
 
 /* Command structure for iSDIO ioctl command */
 typedef struct {
-	BYTE	func;	/* Function number: 0..7 */
-	WORD	ndata;	/* Number of bytes to transfer: 1..512, or mask + data */
-	DWORD	addr;	/* Register address: 0..0x1FFFF */
-	void*	data;	/* Pointer to the data (to be written | read buffer) */
+    BYTE	func;	/* Function number: 0..7 */
+    WORD	ndata;	/* Number of bytes to transfer: 1..512, or mask + data */
+    DWORD	addr;	/* Register address: 0..0x1FFFF */
+    void*	data;	/* Pointer to the data (to be written | read buffer) */
 } SDIO_CTRL;
 
 

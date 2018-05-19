@@ -22,20 +22,20 @@
 /*-----------------------------------------------------------------------*/
 
 DSTATUS disk_status (
-	BYTE pdrv		/* Physical drive nmuber to identify the drive */
+    BYTE pdrv		/* Physical drive nmuber to identify the drive */
 )
 {
-	switch (pdrv) {
+    switch (pdrv) {
 #ifdef DRV_CFC
-	case DRV_CFC :
-		return cf_disk_status();
+    case DRV_CFC :
+        return cf_disk_status();
 #endif
 #ifdef DRV_MMC
-	case DRV_MMC :
-		return mmc_disk_status();
+    case DRV_MMC :
+        return mmc_disk_status();
 #endif
-	}
-	return STA_NOINIT;
+    }
+    return STA_NOINIT;
 }
 
 
@@ -45,20 +45,20 @@ DSTATUS disk_status (
 /*-----------------------------------------------------------------------*/
 
 DSTATUS disk_initialize (
-	BYTE pdrv				/* Physical drive nmuber to identify the drive */
+    BYTE pdrv				/* Physical drive nmuber to identify the drive */
 )
 {
-	switch (pdrv) {
+    switch (pdrv) {
 #ifdef DRV_CFC
-	case DRV_CFC :
-		return cf_disk_initialize();
+    case DRV_CFC :
+        return cf_disk_initialize();
 #endif
 #ifdef DRV_MMC
-	case DRV_MMC :
-		return mmc_disk_initialize();
+    case DRV_MMC :
+        return mmc_disk_initialize();
 #endif
-	}
-	return STA_NOINIT;
+    }
+    return STA_NOINIT;
 }
 
 
@@ -68,23 +68,23 @@ DSTATUS disk_initialize (
 /*-----------------------------------------------------------------------*/
 
 DRESULT disk_read (
-	BYTE pdrv,		/* Physical drive nmuber to identify the drive */
-	BYTE *buff,		/* Data buffer to store read data */
-	DWORD sector,	/* Sector address in LBA */
-	UINT count		/* Number of sectors to read */
+    BYTE pdrv,		/* Physical drive nmuber to identify the drive */
+    BYTE *buff,		/* Data buffer to store read data */
+    DWORD sector,	/* Sector address in LBA */
+    UINT count		/* Number of sectors to read */
 )
 {
-	switch (pdrv) {
+    switch (pdrv) {
 #ifdef DRV_CFC
-	case DRV_CFC :
-		return cf_disk_read(buff, sector, count);
+    case DRV_CFC :
+        return cf_disk_read(buff, sector, count);
 #endif
 #ifdef DRV_MMC
-	case DRV_MMC :
-		return mmc_disk_read(buff, sector, count);
+    case DRV_MMC :
+        return mmc_disk_read(buff, sector, count);
 #endif
-	}
-	return RES_PARERR;
+    }
+    return RES_PARERR;
 }
 
 
@@ -95,23 +95,23 @@ DRESULT disk_read (
 
 #if _USE_WRITE
 DRESULT disk_write (
-	BYTE pdrv,			/* Physical drive nmuber to identify the drive */
-	const BYTE *buff,	/* Data to be written */
-	DWORD sector,		/* Sector address in LBA */
-	UINT count			/* Number of sectors to write */
+    BYTE pdrv,			/* Physical drive nmuber to identify the drive */
+    const BYTE *buff,	/* Data to be written */
+    DWORD sector,		/* Sector address in LBA */
+    UINT count			/* Number of sectors to write */
 )
 {
-	switch (pdrv) {
+    switch (pdrv) {
 #ifdef DRV_CFC
-	case DRV_CFC :
-		return cf_disk_write(buff, sector, count);
+    case DRV_CFC :
+        return cf_disk_write(buff, sector, count);
 #endif
 #ifdef DRV_MMC
-	case DRV_MMC :
-		return mmc_disk_write(buff, sector, count);
+    case DRV_MMC :
+        return mmc_disk_write(buff, sector, count);
 #endif
-	}
-	return RES_PARERR;
+    }
+    return RES_PARERR;
 }
 #endif
 
@@ -122,22 +122,22 @@ DRESULT disk_write (
 
 #if _USE_IOCTL
 DRESULT disk_ioctl (
-	BYTE pdrv,		/* Physical drive nmuber (0..) */
-	BYTE cmd,		/* Control code */
-	void *buff		/* Buffer to send/receive control data */
+    BYTE pdrv,		/* Physical drive nmuber (0..) */
+    BYTE cmd,		/* Control code */
+    void *buff		/* Buffer to send/receive control data */
 )
 {
-	switch (pdrv) {
+    switch (pdrv) {
 #ifdef DRV_CFC
-	case DRV_CFC :
-		return cf_disk_ioctl(cmd, buff);
+    case DRV_CFC :
+        return cf_disk_ioctl(cmd, buff);
 #endif
 #ifdef DRV_MMC
-	case DRV_MMC :
-		return mmc_disk_ioctl(cmd, buff);
+    case DRV_MMC :
+        return mmc_disk_ioctl(cmd, buff);
 #endif
-	}
-	return RES_PARERR;
+    }
+    return RES_PARERR;
 }
 #endif
 
@@ -150,10 +150,10 @@ DRESULT disk_ioctl (
 void disk_timerproc (void)
 {
 #ifdef DRV_CFC
-	cf_disk_timerproc();
+    cf_disk_timerproc();
 #endif
 #ifdef DRV_MMC
-	mmc_disk_timerproc();
+    mmc_disk_timerproc();
 #endif
 }
 

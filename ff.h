@@ -39,8 +39,8 @@ extern "C" {
 
 #if FF_MULTI_PARTITION		/* Multiple partition configuration */
 typedef struct {
-	BYTE pd;	/* Physical drive number */
-	BYTE pt;	/* Partition: 0:Auto detect, 1-4:Forced partition) */
+    BYTE pd;	/* Physical drive number */
+    BYTE pt;	/* Partition: 0:Auto detect, 1-4:Forced partition) */
 } PARTITION;
 extern PARTITION VolToPart[];	/* Volume - Partition resolution table */
 #endif
@@ -85,46 +85,46 @@ typedef DWORD FSIZE_t;
 /* Filesystem object structure (FATFS) */
 
 typedef struct {
-	BYTE	fs_type;		/* Filesystem type (0:N/A) */
-	BYTE	pdrv;			/* Physical drive number */
-	BYTE	n_fats;			/* Number of FATs (1 or 2) */
-	BYTE	wflag;			/* win[] flag (b0:dirty) */
-	BYTE	fsi_flag;		/* FSINFO flags (b7:disabled, b0:dirty) */
-	WORD	id;				/* Volume mount ID */
-	WORD	n_rootdir;		/* Number of root directory entries (FAT12/16) */
-	WORD	csize;			/* Cluster size [sectors] */
+    BYTE	fs_type;		/* Filesystem type (0:N/A) */
+    BYTE	pdrv;			/* Physical drive number */
+    BYTE	n_fats;			/* Number of FATs (1 or 2) */
+    BYTE	wflag;			/* win[] flag (b0:dirty) */
+    BYTE	fsi_flag;		/* FSINFO flags (b7:disabled, b0:dirty) */
+    WORD	id;				/* Volume mount ID */
+    WORD	n_rootdir;		/* Number of root directory entries (FAT12/16) */
+    WORD	csize;			/* Cluster size [sectors] */
 #if FF_MAX_SS != FF_MIN_SS
-	WORD	ssize;			/* Sector size (512, 1024, 2048 or 4096) */
+    WORD	ssize;			/* Sector size (512, 1024, 2048 or 4096) */
 #endif
 #if FF_USE_LFN
-	WCHAR*	lfnbuf;			/* LFN working buffer */
+    WCHAR*	lfnbuf;			/* LFN working buffer */
 #endif
 #if FF_FS_EXFAT
-	BYTE*	dirbuf;			/* Directory entry block scratchpad buffer for exFAT */
+    BYTE*	dirbuf;			/* Directory entry block scratchpad buffer for exFAT */
 #endif
 #if FF_FS_REENTRANT
-	FF_SYNC_t	sobj;		/* Identifier of sync object */
+    FF_SYNC_t	sobj;		/* Identifier of sync object */
 #endif
 #if !FF_FS_READONLY
-	DWORD	last_clst;		/* Last allocated cluster */
-	DWORD	free_clst;		/* Number of free clusters */
+    DWORD	last_clst;		/* Last allocated cluster */
+    DWORD	free_clst;		/* Number of free clusters */
 #endif
 #if FF_FS_RPATH
-	DWORD	cdir;			/* Current directory start cluster (0:root) */
+    DWORD	cdir;			/* Current directory start cluster (0:root) */
 #if FF_FS_EXFAT
-	DWORD	cdc_scl;		/* Containing directory start cluster (invalid when cdir is 0) */
-	DWORD	cdc_size;		/* b31-b8:Size of containing directory, b7-b0: Chain status */
-	DWORD	cdc_ofs;		/* Offset in the containing directory (invalid when cdir is 0) */
+    DWORD	cdc_scl;		/* Containing directory start cluster (invalid when cdir is 0) */
+    DWORD	cdc_size;		/* b31-b8:Size of containing directory, b7-b0: Chain status */
+    DWORD	cdc_ofs;		/* Offset in the containing directory (invalid when cdir is 0) */
 #endif
 #endif
-	DWORD	n_fatent;		/* Number of FAT entries (number of clusters + 2) */
-	DWORD	fsize;			/* Size of an FAT [sectors] */
-	DWORD	volbase;		/* Volume base sector */
-	DWORD	fatbase;		/* FAT base sector */
-	DWORD	dirbase;		/* Root directory base sector/cluster */
-	DWORD	database;		/* Data base sector */
-	DWORD	winsect;		/* Current sector appearing in the win[] */
-	BYTE	win[FF_MAX_SS];	/* Disk access window for Directory, FAT (and file data at tiny cfg) */
+    DWORD	n_fatent;		/* Number of FAT entries (number of clusters + 2) */
+    DWORD	fsize;			/* Size of an FAT [sectors] */
+    DWORD	volbase;		/* Volume base sector */
+    DWORD	fatbase;		/* FAT base sector */
+    DWORD	dirbase;		/* Root directory base sector/cluster */
+    DWORD	database;		/* Data base sector */
+    DWORD	winsect;		/* Current sector appearing in the win[] */
+    BYTE	win[FF_MAX_SS];	/* Disk access window for Directory, FAT (and file data at tiny cfg) */
 } FATFS;
 
 
@@ -132,21 +132,21 @@ typedef struct {
 /* Object ID and allocation information (FFOBJID) */
 
 typedef struct {
-	FATFS*	fs;				/* Pointer to the hosting volume of this object */
-	WORD	id;				/* Hosting volume mount ID */
-	BYTE	attr;			/* Object attribute */
-	BYTE	stat;			/* Object chain status (b1-0: =0:not contiguous, =2:contiguous, =3:flagmented in this session, b2:sub-directory stretched) */
-	DWORD	sclust;			/* Object data start cluster (0:no cluster or root directory) */
-	FSIZE_t	objsize;		/* Object size (valid when sclust != 0) */
+    FATFS*	fs;				/* Pointer to the hosting volume of this object */
+    WORD	id;				/* Hosting volume mount ID */
+    BYTE	attr;			/* Object attribute */
+    BYTE	stat;			/* Object chain status (b1-0: =0:not contiguous, =2:contiguous, =3:flagmented in this session, b2:sub-directory stretched) */
+    DWORD	sclust;			/* Object data start cluster (0:no cluster or root directory) */
+    FSIZE_t	objsize;		/* Object size (valid when sclust != 0) */
 #if FF_FS_EXFAT
-	DWORD	n_cont;			/* Size of first fragment - 1 (valid when stat == 3) */
-	DWORD	n_frag;			/* Size of last fragment needs to be written to FAT (valid when not zero) */
-	DWORD	c_scl;			/* Containing directory start cluster (valid when sclust != 0) */
-	DWORD	c_size;			/* b31-b8:Size of containing directory, b7-b0: Chain status (valid when c_scl != 0) */
-	DWORD	c_ofs;			/* Offset in the containing directory (valid when file object and sclust != 0) */
+    DWORD	n_cont;			/* Size of first fragment - 1 (valid when stat == 3) */
+    DWORD	n_frag;			/* Size of last fragment needs to be written to FAT (valid when not zero) */
+    DWORD	c_scl;			/* Containing directory start cluster (valid when sclust != 0) */
+    DWORD	c_size;			/* b31-b8:Size of containing directory, b7-b0: Chain status (valid when c_scl != 0) */
+    DWORD	c_ofs;			/* Offset in the containing directory (valid when file object and sclust != 0) */
 #endif
 #if FF_FS_LOCK
-	UINT	lockid;			/* File lock ID origin from 1 (index of file semaphore table Files[]) */
+    UINT	lockid;			/* File lock ID origin from 1 (index of file semaphore table Files[]) */
 #endif
 } FFOBJID;
 
@@ -155,21 +155,21 @@ typedef struct {
 /* File object structure (FIL) */
 
 typedef struct {
-	FFOBJID	obj;			/* Object identifier (must be the 1st member to detect invalid object pointer) */
-	BYTE	flag;			/* File status flags */
-	BYTE	err;			/* Abort flag (error code) */
-	FSIZE_t	fptr;			/* File read/write pointer (Zeroed on file open) */
-	DWORD	clust;			/* Current cluster of fpter (invalid when fptr is 0) */
-	DWORD	sect;			/* Sector number appearing in buf[] (0:invalid) */
+    FFOBJID	obj;			/* Object identifier (must be the 1st member to detect invalid object pointer) */
+    BYTE	flag;			/* File status flags */
+    BYTE	err;			/* Abort flag (error code) */
+    FSIZE_t	fptr;			/* File read/write pointer (Zeroed on file open) */
+    DWORD	clust;			/* Current cluster of fpter (invalid when fptr is 0) */
+    DWORD	sect;			/* Sector number appearing in buf[] (0:invalid) */
 #if !FF_FS_READONLY
-	DWORD	dir_sect;		/* Sector number containing the directory entry (not used at exFAT) */
-	BYTE*	dir_ptr;		/* Pointer to the directory entry in the win[] (not used at exFAT) */
+    DWORD	dir_sect;		/* Sector number containing the directory entry (not used at exFAT) */
+    BYTE*	dir_ptr;		/* Pointer to the directory entry in the win[] (not used at exFAT) */
 #endif
 #if FF_USE_FASTSEEK
-	DWORD*	cltbl;			/* Pointer to the cluster link map table (nulled on open, set by application) */
+    DWORD*	cltbl;			/* Pointer to the cluster link map table (nulled on open, set by application) */
 #endif
 #if !FF_FS_TINY
-	BYTE	buf[FF_MAX_SS];	/* File private data read/write window */
+    BYTE	buf[FF_MAX_SS];	/* File private data read/write window */
 #endif
 } FIL;
 
@@ -178,17 +178,17 @@ typedef struct {
 /* Directory object structure (DIR) */
 
 typedef struct {
-	FFOBJID	obj;			/* Object identifier */
-	DWORD	dptr;			/* Current read/write offset */
-	DWORD	clust;			/* Current cluster */
-	DWORD	sect;			/* Current sector (0:Read operation has terminated) */
-	BYTE*	dir;			/* Pointer to the directory item in the win[] */
-	BYTE	fn[12];			/* SFN (in/out) {body[8],ext[3],status[1]} */
+    FFOBJID	obj;			/* Object identifier */
+    DWORD	dptr;			/* Current read/write offset */
+    DWORD	clust;			/* Current cluster */
+    DWORD	sect;			/* Current sector (0:Read operation has terminated) */
+    BYTE*	dir;			/* Pointer to the directory item in the win[] */
+    BYTE	fn[12];			/* SFN (in/out) {body[8],ext[3],status[1]} */
 #if FF_USE_LFN
-	DWORD	blk_ofs;		/* Offset of current entry block being processed (0xFFFFFFFF:Invalid) */
+    DWORD	blk_ofs;		/* Offset of current entry block being processed (0xFFFFFFFF:Invalid) */
 #endif
 #if FF_USE_FIND
-	const TCHAR* pat;		/* Pointer to the name matching pattern */
+    const TCHAR* pat;		/* Pointer to the name matching pattern */
 #endif
 } DIR;
 
@@ -197,15 +197,15 @@ typedef struct {
 /* File information structure (FILINFO) */
 
 typedef struct {
-	FSIZE_t	fsize;			/* File size */
-	WORD	fdate;			/* Modified date */
-	WORD	ftime;			/* Modified time */
-	BYTE	fattrib;		/* File attribute */
+    FSIZE_t	fsize;			/* File size */
+    WORD	fdate;			/* Modified date */
+    WORD	ftime;			/* Modified time */
+    BYTE	fattrib;		/* File attribute */
 #if FF_USE_LFN
-	TCHAR	altname[FF_SFN_BUF + 1];/* Altenative file name */
-	TCHAR	fname[FF_LFN_BUF + 1];	/* Primary file name */
+    TCHAR	altname[FF_SFN_BUF + 1];/* Altenative file name */
+    TCHAR	fname[FF_LFN_BUF + 1];	/* Primary file name */
 #else
-	TCHAR	fname[12 + 1];	/* File name */
+    TCHAR	fname[12 + 1];	/* File name */
 #endif
 } FILINFO;
 
@@ -214,26 +214,26 @@ typedef struct {
 /* File function return code (FRESULT) */
 
 typedef enum {
-	FR_OK = 0,				/* (0) Succeeded */
-	FR_DISK_ERR,			/* (1) A hard error occurred in the low level disk I/O layer */
-	FR_INT_ERR,				/* (2) Assertion failed */
-	FR_NOT_READY,			/* (3) The physical drive cannot work */
-	FR_NO_FILE,				/* (4) Could not find the file */
-	FR_NO_PATH,				/* (5) Could not find the path */
-	FR_INVALID_NAME,		/* (6) The path name format is invalid */
-	FR_DENIED,				/* (7) Access denied due to prohibited access or directory full */
-	FR_EXIST,				/* (8) Access denied due to prohibited access */
-	FR_INVALID_OBJECT,		/* (9) The file/directory object is invalid */
-	FR_WRITE_PROTECTED,		/* (10) The physical drive is write protected */
-	FR_INVALID_DRIVE,		/* (11) The logical drive number is invalid */
-	FR_NOT_ENABLED,			/* (12) The volume has no work area */
-	FR_NO_FILESYSTEM,		/* (13) There is no valid FAT volume */
-	FR_MKFS_ABORTED,		/* (14) The f_mkfs() aborted due to any problem */
-	FR_TIMEOUT,				/* (15) Could not get a grant to access the volume within defined period */
-	FR_LOCKED,				/* (16) The operation is rejected according to the file sharing policy */
-	FR_NOT_ENOUGH_CORE,		/* (17) LFN working buffer could not be allocated */
-	FR_TOO_MANY_OPEN_FILES,	/* (18) Number of open files > FF_FS_LOCK */
-	FR_INVALID_PARAMETER	/* (19) Given parameter is invalid */
+    FR_OK = 0,				/* (0) Succeeded */
+    FR_DISK_ERR,			/* (1) A hard error occurred in the low level disk I/O layer */
+    FR_INT_ERR,				/* (2) Assertion failed */
+    FR_NOT_READY,			/* (3) The physical drive cannot work */
+    FR_NO_FILE,				/* (4) Could not find the file */
+    FR_NO_PATH,				/* (5) Could not find the path */
+    FR_INVALID_NAME,		/* (6) The path name format is invalid */
+    FR_DENIED,				/* (7) Access denied due to prohibited access or directory full */
+    FR_EXIST,				/* (8) Access denied due to prohibited access */
+    FR_INVALID_OBJECT,		/* (9) The file/directory object is invalid */
+    FR_WRITE_PROTECTED,		/* (10) The physical drive is write protected */
+    FR_INVALID_DRIVE,		/* (11) The logical drive number is invalid */
+    FR_NOT_ENABLED,			/* (12) The volume has no work area */
+    FR_NO_FILESYSTEM,		/* (13) There is no valid FAT volume */
+    FR_MKFS_ABORTED,		/* (14) The f_mkfs() aborted due to any problem */
+    FR_TIMEOUT,				/* (15) Could not get a grant to access the volume within defined period */
+    FR_LOCKED,				/* (16) The operation is rejected according to the file sharing policy */
+    FR_NOT_ENOUGH_CORE,		/* (17) LFN working buffer could not be allocated */
+    FR_TOO_MANY_OPEN_FILES,	/* (18) Number of open files > FF_FS_LOCK */
+    FR_INVALID_PARAMETER	/* (19) Given parameter is invalid */
 } FRESULT;
 
 extern const char fr_text[];
