@@ -360,7 +360,7 @@ uint8_t drive_read(void)
 
     if (!selected) {
         printf("drive read error: no drive selected\n");
-        return;
+        return 0;
     }
 
     if ((i = selected->byte) < SECTORSIZE) {

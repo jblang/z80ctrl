@@ -80,7 +80,7 @@ void write_mem(uint16_t addr, uint8_t *buf, uint16_t len)
 }
 
 // Write specified number of bytes to external memory from a buffer
-void write_mem_P(uint16_t addr, uint8_t *buf, uint16_t len)
+void write_mem_P(uint16_t addr, const uint8_t *buf, uint16_t len)
 {
     if (!bus_master())
         return;
