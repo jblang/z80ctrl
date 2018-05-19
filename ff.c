@@ -23,7 +23,6 @@
 #include "diskio.h"		/* Declarations of device I/O functions */
 
 #include <avr/pgmspace.h>
-#include <stdio.h>
 
 /*--------------------------------------------------------------------------
 
@@ -6555,69 +6554,9 @@ FRESULT f_setcp (
 }
 #endif	/* FF_CODE_PAGE == 0 */
 
-void f_print_error(FRESULT fr) {
-    switch(fr) {
-        case FR_OK:
-            break;
-        case FR_DISK_ERR:
-            printf_P(PSTR("drive error"));
-            break;
-        case FR_INT_ERR:
-            printf_P(PSTR("internal error"));
-            break;
-        case FR_NOT_READY:
-            printf_P(PSTR("drive not ready"));
-            break;
-        case FR_NO_FILE:
-            printf_P(PSTR("file not found"));
-            break;
-        case FR_NO_PATH:
-            printf_P(PSTR("path not found"));
-            break;
-        case FR_INVALID_NAME:
-            printf_P(PSTR("invalid path name"));
-            break;
-        case FR_DENIED:
-            printf_P(PSTR("access denied"));
-            break;
-        case FR_EXIST:
-            printf_P(PSTR("file already exists"));
-            break;
-        case FR_INVALID_OBJECT:
-            printf_P(PSTR("invalid object"));
-            break;
-        case FR_WRITE_PROTECTED:
-            printf_P(PSTR("write protected"));
-            break;
-        case FR_INVALID_DRIVE:
-            printf_P(PSTR("invalid drive number"));
-            break;
-        case FR_NOT_ENABLED:
-            printf_P(PSTR("drive not mounted"));
-            break;
-        case FR_NO_FILESYSTEM:
-            printf_P(PSTR("invalid filesystem"));
-            break;
-        case FR_MKFS_ABORTED:
-            printf_P(PSTR("mkfs aborted"));
-            break;
-        case FR_TIMEOUT:
-            printf_P(PSTR("timeout"));
-            break;
-        case FR_LOCKED:
-            printf_P(PSTR("locked"));
-            break;
-        case FR_NOT_ENOUGH_CORE:
-            printf_P(PSTR("out of memory"));
-            break;
-        case FR_TOO_MANY_OPEN_FILES:
-            printf_P(PSTR("too many open files"));
-            break;
-        case FR_INVALID_PARAMETER:
-            printf_P(PSTR("invalid parameter"));
-            break;
-        default:
-            printf_P(PSTR("unknown error"));
-            break;
-    }
-}
+
+const char fr_text[] PROGMEM =
+	"OK\0disk error\0internal error\0drive not ready\0file not found\0path not found\0"
+	"invalid path name\0access denied\0file already exists\0invalid object\0"
+	"write protected\0invalid drive number\0drive not mounted\0invalid filesystem\0"
+	"mkfs aborted\0timeout\0file locked\0out of memory\0too many open files\0";

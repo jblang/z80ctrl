@@ -35,6 +35,7 @@
 #include "cli.h"
 #include "ff.h"
 #include "ihex.h"
+#include "util.h"
 
 FATFS fs;
 
@@ -52,9 +53,7 @@ void cli_loadhex(int argc, char *argv[])
         filename = argv[1];
         printf_P(PSTR("loading from %s\n"), filename);
         if ((fr = f_open(&fp, filename, FA_READ)) != FR_OK) {
-            printf_P(PSTR("error opening file: "));
-            f_print_error(fr);
-            putchar('\n');
+            printf_P(PSTR("error opening file: %S\n"), strlookup(fr_text, fr));
             return;
         }        
     } else {
@@ -84,20 +83,12 @@ void cli_loadhex(int argc, char *argv[])
         else if (res.rc == IHEX_OK && res.count == 0) {
             printf_P(PSTR("loaded 0x%04X bytes total\n"), total);
             break;
-        } else if (res.rc == IHEX_FORMAT)
-            printf_P(PSTR("error: invalid record format on line %d\n"), line);
-        else if (res.rc == IHEX_COUNT)
-            printf_P(PSTR("error: insufficient bytes on line %d\n"), line);
-        else if (res.rc == IHEX_CKSUM)
-            printf_P(PSTR("error: checksum mismatch on line %d\n"), line);
-        else if (res.rc == IHEX_RECTYPE)
-            printf_P(PSTR("error: unsupported record type %02XH on line %d\n"), res.type, line);
+        } else
+            printf_P(PSTR("error: %S on line %d\n"), strlookup(ihex_rc_text, res.rc), line);
     }
     if (filename != NULL)
         if ((fr = f_close(&fp)) != FR_OK) {
-            printf_P(PSTR("error closing file: "));
-            f_print_error(fr);
-            putchar('\n');
+            printf_P(PSTR("error closing file: %S\n"), strlookup(fr_text, fr));
             return;
         }
 }
@@ -125,9 +116,7 @@ void cli_savehex(int argc, char *argv[])
     if (argc == 4) {
         filename = argv[3];
         if ((fr = f_open(&fp, filename, FA_WRITE | FA_CREATE_ALWAYS)) != FR_OK) {
-            printf_P(PSTR("error opening file: "));
-            f_print_error(fr);
-            putchar('\n');
+            printf_P(PSTR("error opening file: %S\n"), strlookup(fr_text, fr));
             return;
         }        
     }
@@ -159,9 +148,7 @@ void cli_savehex(int argc, char *argv[])
     }
     if (filename != NULL) {
         if ((fr = f_close(&fp)) != FR_OK) {
-            printf_P(PSTR("error closing file: "));
-            f_print_error(fr);
-            putchar('\n');
+            printf_P(PSTR("error closing file: %s\n"), strlookup(fr_text, fr));
             return;
         }
     }
@@ -396,54 +383,40 @@ void cli_sboot(int argc, char *argv[])
 void cli_dir(int argc, char *argv[])
 {
  	FRESULT fr;
-    FILINFO Finfo;
-    DIR Dir;
-	long p1;
-	UINT s1, s2, cnt;
+    FILINFO finfo;
+    DIR dir;
+	UINT cnt;
     FATFS *fs;
+    char fname[14];
 
     if (argc == 1)
         argv[1] = "/";
 
-    fr = f_opendir(&Dir, argv[1]);
+    fr = f_opendir(&dir, argv[1]);
     if (fr) {
-        printf_P(PSTR("error reading directory: "));
-        f_print_error(fr);
-        putchar('\n');
+        printf_P(PSTR("error reading directory: %S\n"), strlookup(fr_text, fr));
         return;
     }
-    p1 = s1 = s2 = 0;
+    cnt = 0;
     for(;;) {
-        fr = f_readdir(&Dir, &Finfo);
-        if ((fr != FR_OK) || !Finfo.fname[0]) 
-            break;
-        if (Finfo.fattrib & AM_DIR) {
-            s2++;
-        } else {
-            s1++; p1 += Finfo.fsize;
+        fr = f_readdir(&dir, &finfo);
+        if (fr != FR_OK) { 
+            printf_P(PSTR("error reading directory: %S\n"), strlookup(fr_text, fr)); 
+            break; 
         }
-        printf_P(PSTR("%c%c%c%c%c %u/%02u/%02u %02u:%02u %9lu  %s\n"), 
-                    (Finfo.fattrib & AM_DIR) ? 'D' : '-',
-                    (Finfo.fattrib & AM_RDO) ? 'R' : '-',
-                    (Finfo.fattrib & AM_HID) ? 'H' : '-',
-                    (Finfo.fattrib & AM_SYS) ? 'S' : '-',
-                    (Finfo.fattrib & AM_ARC) ? 'A' : '-',
-                    (Finfo.fdate >> 9) + 1980, (Finfo.fdate >> 5) & 15, Finfo.fdate & 31,
-                    (Finfo.ftime >> 11), (Finfo.ftime >> 5) & 63,
-                    (DWORD)Finfo.fsize, 
-                    Finfo.fname);
+        if ((cnt % 5 == 0 && cnt != 0) || !finfo.fname[0])
+            printf_P(PSTR("\n"));
+        if (!finfo.fname[0]) break;
+        strcpy(fname, finfo.fname);
+        if (finfo.fattrib & AM_DIR)
+            strcat(fname, "/");
+        printf_P(PSTR("%-14s"), fname);
+        cnt++;
     }
-    if (fr == FR_OK) {
-        printf_P(PSTR("%4u File(s),%10lu bytes total\n%4u Dir(s)\n"), s1, p1, s2);
-        //if (f_getfree(argv[1], (DWORD*)&p1, &fs) == FR_OK) {
-        //    printf_P(PSTR(", %10luKiB free\n"), p1 * fs->csize / 2);
-        //}
-    }
-    if (fr) {
-        printf_P(PSTR("error reading directory: "));
-        f_print_error(fr);
-        putchar('\n');
-    };
+    if (fr)
+        printf_P(PSTR("error reading directory: %S\n"), strlookup(fr_text, fr));
+    else
+        printf_P(PSTR("%u item(s)\n"), cnt);
 }
 
 void cli_fill(int argc, char*argv[]) {
@@ -484,7 +457,7 @@ void cli_unmount(int argc, char *argv[])
 
 void cli_cls(int argc, char *argv[])
 {
-    printf("\e[2J");
+    printf_P(PSTR("\e[2J"));
 }
 
 void cli_help(int argc, char *argv[]);
@@ -547,11 +520,8 @@ void cli_loop(void) {
     FRESULT fr;
 
     disk_initialize(0);
-    if ((fr = f_mount(&fs, "", 1)) != FR_OK) {
-        printf_P(PSTR("error mounting drive: "));
-        f_print_error(fr);
-        putchar('\n');
-    }
+    if ((fr = f_mount(&fs, "", 1)) != FR_OK)
+        printf_P(PSTR("error mounting drive: %S\n"), strlookup(fr_text, fr));
 
     printf_P(PSTR("type help to list available commands\n"));
     for (;;) {
@@ -569,9 +539,8 @@ void cli_loop(void) {
                     break;
                 }
             }
-            if (i == NUM_CMDS) {
+            if (i == NUM_CMDS)
                 printf_P(PSTR("unknown command: %s. type help for list.\n"), argv[0]);
-            }
         }
     }
 }

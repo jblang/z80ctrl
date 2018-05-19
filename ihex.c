@@ -22,7 +22,17 @@
 
 #include <stdint.h>
 #include <string.h>
+#include <avr/pgmspace.h>
+
 #include "ihex.h"
+
+const char ihex_rc_text[] PROGMEM = {
+    "ok\0"
+    "invalid record format\0"
+    "insufficient bytes\0"
+    "checksum mismatch\0"
+    "unsupported_record type"
+};
 
 uint8_t fromhex(char hex)
 {
