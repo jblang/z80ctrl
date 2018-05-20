@@ -34,20 +34,23 @@
 #define MISO 6
 #define MOSI 5
 
+#define IOX_ADDR 0
+#if (BOARD_REV == 1)
+#define SD_ADDR 2
+#define AUX1_ADDR 1
+#else
+#define SD_ADDR 1
+#define AUX1_ADDR 2
+#endif
+#define AUX2_ADDR 3
+
 #define CSADDR 3
 #define CSADDRMASK ((1 << CSADDR) | (1 << CSADDR+1))
 
-#ifdef CORRECT_SPIADDR
-#define IOX_SEL SPI_PORT = SPI_PORT & ~CSADDRMASK | (0x0 << CSADDR)
-#define SD_SEL SPI_PORT = SPI_PORT & ~CSADDRMASK | (0x1 << CSADDR)
-#define AUX1_SEL SPI_PORT = SPI_PORT & ~CSADDRMASK | (0x2 << CSADDR)
-#define AUX2_SEL SPI_PORT = SPI_PORT & ~CSADDRMASK | (0x3 << CSADDR)
-#else
-#define IOX_SEL SPI_PORT = SPI_PORT & ~CSADDRMASK | (0x0 << CSADDR)
-#define SD_SEL SPI_PORT = SPI_PORT & ~CSADDRMASK | (0x2 << CSADDR)
-#define AUX1_SEL SPI_PORT = SPI_PORT & ~CSADDRMASK | (0x1 << CSADDR)
-#define AUX2_SEL SPI_PORT = SPI_PORT & ~CSADDRMASK | (0x3 << CSADDR)
-#endif
+#define IOX_SEL SPI_PORT = SPI_PORT & ~CSADDRMASK | (IOX_ADDR << CSADDR)
+#define SD_SEL SPI_PORT = SPI_PORT & ~CSADDRMASK | (SD_ADDR << CSADDR)
+#define AUX1_SEL SPI_PORT = SPI_PORT & ~CSADDRMASK | (AUX1_ADDR << CSADDR)
+#define AUX2_SEL SPI_PORT = SPI_PORT & ~CSADDRMASK | (AUX2_ADDR << CSADDR)
 
 void spi_init();
 void spi_slow();
