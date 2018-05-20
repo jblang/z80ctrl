@@ -23,21 +23,110 @@
 #ifndef BUS_H
 #define BUS_H
 
-#include "defines.h"
 #include <avr/io.h>
+#include "iox.h"
 
-// Flags ///////////////////////////////////////////////////////////////////////
+// Address bus ////////////////////////////////////////////////////////////////
+
+// Address bus LSB on local port
+#define ADDRLO_DDR DDRA
+#define ADDRLO_PORT PORTA
+#define ADDRLO_PIN PINA
+
+// Address bus MSB on i/o expander
+#define ADDRHI_IODIR IODIRA0
+#define ADDRHI_GPPU GPPUA0
+#define ADDRHI_GPIO GPIOA0
+
+#define ADDR_INPUT (ADDRLO_DDR = 0x00, iox_write(ADDRHI_IODIR, 0xFF))
+#define ADDR_OUTPUT (ADDRLO_DDR = 0xFF, iox_write(ADDRHI_IODIR, 0x00))
+
+#define GET_ADDRLO ADDRLO_PIN
+#define SET_ADDRLO(addr) ADDRLO_PORT = (addr)
+
+#define GET_ADDRHI iox_read(ADDRHI_GPIO)
+#define SET_ADDRHI(addr) iox_write(ADDRHI_GPIO, (addr))
+
+#define GET_ADDR (GET_ADDRLO | (GET_ADDRHI << 8))
+#define SET_ADDR(addr) (SET_ADDRLO((addr) & 0xFF), SET_ADDRHI((addr) >> 8))
+
+// Data bus ///////////////////////////////////////////////////////////////////
+
+#define DATA_DDR DDRC
+#define DATA_PORT PORTC
+#define DATA_PIN PINC
+
+#define DATA_INPUT DATA_DDR = 0x00
+#define DATA_OUTPUT DATA_DDR = 0xFF
+#define GET_DATA DATA_PIN
+#define SET_DATA(data) DATA_PORT = (data)
+
+// PORTB flags ////////////////////////////////////////////////////////////////
+
+#define IOACK 0
+#define IORQ 1
+#define M1 2
 
 #define GET_BFLAGS (PINB & ((1<<IOACK) | (1<<IORQ) | (1<<M1)))
+
+#define IOACK_OUTPUT DDRB |= (1 << IOACK)
+#define GET_IOACK (PINB & (1 << IOACK))
+#define IOACK_HI PORTB |= (1 << IOACK)
+#define IOACK_LO PORTB &= ~(1 << IOACK)
+
+#define IORQ_INPUT DDRB &= ~(1 << IORQ)
+#define GET_IORQ (PINB & (1 << IORQ))
+
+#define M1_INPUT DDRB &= ~(1 << M1)
+#define GET_M1 (PINB & (1 << M1))
+
+// PORTD Flags ////////////////////////////////////////////////////////////////
+
+#define RD 4
+#define WR 5
+#define CLK 6
+#define HALT 7
+
 #define GET_DFLAGS (PIND & ((1<<RD) | (1<<WR) | (1<<CLK) | (1<<HALT)))
+
+#define RD_INPUT DDRD &= ~(1 << RD)
+#define RD_OUTPUT DDRD |= (1 << RD)
+#define GET_RD (PIND & (1 << RD))
+#define RD_HI PORTD |= (1 << RD)
+#define RD_LO PORTD &= ~(1 << RD)
+
+#define WR_INPUT DDRD &= ~(1 << WR)
+#define WR_OUTPUT DDRD |= (1 << WR)
+#define GET_WR (PIND & (1 << WR))
+#define WR_HI PORTD |= (1 << WR)
+#define WR_LO PORTD &= ~(1 << WR)
+
+#define CLK_OUTPUT DDRD |= (1 << CLK)
+#define GET_CLK (PIND & (1 << CLK))
+#define CLK_HI PORTD |= (1 << CLK)
+#define CLK_LO PORTD &= ~(1 << CLK)
+#define CLK_TOGGLE PIND |= (1 << CLK)
+
+#define HALT_INPUT DDRD &= ~(1 << HALT)
+#define HALT_PULLUP PORTD |= (1 << HALT)
+#define GET_HALT (PIND & (1 << HALT))
+
+// IOX GPIOB flags ////////////////////////////////////////////////////////////
+
+#define CTRLX_IODIR IODIRB0
+#define CTRLX_GPPU GPPUB0
+#define CTRLX_GPIO GPIOB0
+
+#define RFSH 1
+#define RESET 2
+#define INTERRUPT 3
+#define BUSACK 4
+#define MREQ 5
+#define BUSRQ 6
+#define NMI 7
+
 #define GET_XFLAGS (iox_read(CTRLX_GPIO) & ((1<<RFSH) | (1<<RESET) | (1<<INTERRUPT) | \
                                         (1<<BUSACK) | (1<<MREQ) | (1<<BUSRQ) | (1<<NMI)))
-
-// CPU control /////////////////////////////////////////////////////////////////
-
-#define HALT_INPUT HALT_DDR &= ~(1 << HALT)
-#define HALT_PULLUP HALT_PORT |= (1 << HALT)
-#define GET_HALT (HALT_PIN & (1 << HALT))
 
 #define INT_OUTPUT iox_write(CTRLX_IODIR, iox_read(CTRLX_IODIR) & ~(1 << INTERRUPT))
 #define GET_INT (iox_read(CTRLX_GPIO) & (1 << INTERRUPT))
@@ -54,8 +143,6 @@
 #define RESET_LO iox_write(CTRLX_GPIO, iox_read(CTRLX_GPIO) & ~(1 << RESET))
 #define RESET_HI iox_write(CTRLX_GPIO, iox_read(CTRLX_GPIO) | (1 << RESET))
 
-// CPU bus control /////////////////////////////////////////////////////////////
-
 #define BUSRQ_OUTPUT iox_write(CTRLX_IODIR, iox_read(CTRLX_IODIR) & ~(1 << BUSRQ))
 #define GET_BUSRQ (iox_read(CTRLX_GPIO) & (1 << BUSRQ))
 #define BUSRQ_LO iox_write(CTRLX_GPIO, iox_read(CTRLX_GPIO) & ~(1 << BUSRQ))
@@ -64,68 +151,13 @@
 #define BUSACK_INPUT iox_write(CTRLX_IODIR, iox_read(CTRLX_IODIR) | (1 << BUSACK))
 #define GET_BUSACK (iox_read(CTRLX_GPIO) & (1 << BUSACK))
 
-// System control //////////////////////////////////////////////////////////////
-
-#define RD_INPUT RD_DDR &= ~(1 << RD)
-#define RD_OUTPUT RD_DDR |= (1 << RD)
-#define GET_RD (RD_PIN & (1 << RD))
-#define RD_HI RD_PORT |= (1 << RD)
-#define RD_LO RD_PORT &= ~(1 << RD)
-
-#define WR_INPUT WR_DDR &= ~(1 << WR)
-#define WR_OUTPUT WR_DDR |= (1 << WR)
-#define GET_WR (WR_PIN & (1 << WR))
-#define WR_HI WR_PORT |= (1 << WR)
-#define WR_LO WR_PORT &= ~(1 << WR)
-
-#define M1_INPUT M1_DDR &= ~(1 << M1)
-#define GET_M1 (M1_PIN & (1 << M1))
-
 #define MREQ_INPUT iox_write(CTRLX_IODIR, iox_read(CTRLX_IODIR) | (1 << MREQ))
 #define MREQ_OUTPUT iox_write(CTRLX_IODIR, iox_read(CTRLX_IODIR) & ~(1 << MREQ))
 #define GET_MREQ (iox_read(CTRLX_GPIO) & (1 << MREQ))
 #define MREQ_LO iox_write(CTRLX_GPIO, iox_read(CTRLX_GPIO) & ~(1 << MREQ))
 #define MREQ_HI iox_write(CTRLX_GPIO, iox_read(CTRLX_GPIO) | (1 << MREQ))
 
-#define IORQ_INPUT IORQ_DDR &= ~(1 << IORQ)
-#define GET_IORQ (IORQ_PIN & (1 << IORQ))
-
-#define IOACK_OUTPUT IOACK_DDR |= (1 << IOACK)
-#define GET_IOACK (IOACK_PIN & (1 << IOACK))
-#define IOACK_HI IOACK_PORT |= (1 << IOACK)
-#define IOACK_LO IOACK_PORT &= ~(1 << IOACK)
-
-// Address bus /////////////////////////////////////////////////////////////////
-
-#define ADDR_INPUT (ADDRLO_DDR = 0x00, iox_write(ADDRHI_IODIR, 0xFF))
-#define ADDR_OUTPUT (ADDRLO_DDR = 0xFF, iox_write(ADDRHI_IODIR, 0x00))
-#define GET_ADDRLO ADDRLO_PIN
-#define SET_ADDRLO(addr) ADDRLO_PORT = (addr)
-#define GET_ADDRHI iox_read(ADDRHI_GPIO)
-#define SET_ADDRHI(addr) iox_write(ADDRHI_GPIO, (addr))
-#define GET_ADDR (GET_ADDRLO | (GET_ADDRHI << 8))
-#define SET_ADDR(addr) (SET_ADDRLO((addr) & 0xFF), SET_ADDRHI((addr) >> 8))
-
-#ifdef BANKMASK
-#define BANK_OUTPUT iox_write(CTRLX_IODIR, iox_read(CTRLX_IODIR) & ~BANKMASK)
-#define GET_BANK ((iox_read(CTRLX_GPIO) & BANKMASK) >> BANKADDR)
-#define SET_BANK(bank) iox_write(CTRLX_GPIO, (iox_read(CTRLX_GPIO) & ~BANKMASK) | (((bank) << BANKADDR) & BANKMASK))
-#endif
-
-// Data bus ///////////////////////////////////////////////////////////////////
-
-#define DATA_INPUT DATA_DDR = 0x00
-#define DATA_OUTPUT DATA_DDR = 0xFF
-#define GET_DATA DATA_PIN
-#define SET_DATA(data) DATA_PORT = (data)
-
-// Clock ///////////////////////////////////////////////////////////////////////
-
-#define CLK_OUTPUT CLK_DDR |= (1 << CLK)
-#define GET_CLK (CLK_PIN & (1 << CLK))
-#define CLK_HI CLK_PORT |= (1 << CLK)
-#define CLK_LO CLK_PORT &= ~(1 << CLK)
-#define CLK_TOGGLE CLK_PIN |= (1 << CLK)
+// Functions //////////////////////////////////////////////////////////////////
 
 typedef struct _flag_bits {
         uint8_t : 1;
