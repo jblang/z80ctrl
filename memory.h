@@ -26,8 +26,10 @@
 #include <stdint.h>
 
 void read_mem(uint16_t addr, uint8_t * buf, uint16_t len);
-void write_mem(uint16_t addr, uint8_t * buf, uint16_t len);
-void write_mem_P(uint16_t addr, const uint8_t *buf, uint16_t len);
+void _write_mem(uint16_t addr, const uint8_t *buf, uint16_t len, uint8_t pgmspace);
+
+#define write_mem(addr, buf, len) _write_mem((addr), (buf), (len), 0);
+#define write_mem_P(addr, buf, len) _write_mem((addr), (buf), (len), 1);
 
 void fill_mem(uint16_t start, uint16_t end, uint8_t value);
 void dump_mem(uint16_t start, uint16_t end);

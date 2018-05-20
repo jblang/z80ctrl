@@ -55,7 +55,7 @@ void read_mem(uint16_t addr, uint8_t *buf, uint16_t len)
 }
 
 // Write specified number of bytes to external memory from a buffer
-void write_mem(uint16_t addr, uint8_t *buf, uint16_t len)
+void _write_mem(uint16_t addr, const uint8_t *buf, uint16_t len, uint8_t pgmspace)
 {
     if(!bus_master())
         return;
@@ -64,7 +64,10 @@ void write_mem(uint16_t addr, uint8_t *buf, uint16_t len)
     SET_ADDR(addr);
     uint16_t i;
     for (i = 0; i < len; i++) {
-        SET_DATA(buf[i]);
+        if (pgmspace)
+            SET_DATA(pgm_read_byte(&buf[i]));
+        else
+            SET_DATA(buf[i]);
         WR_LO;
         WR_HI;
         addr++;
@@ -79,30 +82,8 @@ void write_mem(uint16_t addr, uint8_t *buf, uint16_t len)
     bus_slave();
 }
 
-// Write specified number of bytes to external memory from a buffer
-void write_mem_P(uint16_t addr, const uint8_t *buf, uint16_t len)
-{
-    if (!bus_master())
-        return;
-    DATA_OUTPUT;
-    MREQ_LO;
-    SET_ADDR(addr);
-    uint16_t i;
-    for (i = 0; i < len; i++) {
-        SET_DATA(pgm_read_byte(&buf[i]));
-        WR_LO;
-        WR_HI;
-        addr++;
-        if ((addr & 0xFF) == 0) {
-            SET_ADDR(addr);
-        } else {
-            SET_ADDRLO(addr & 0xFF);
-        }
-    }
-    MREQ_HI;
-    DATA_INPUT;
-    bus_slave();
-}
+#define write_mem(addr, buf, len) _write_mem((addr), (buf), (len), 0);
+#define write_mem_P(addr, buf, len) _write_mem((addr), (buf), (len), 1);
 
 // Verify specified number of bytes from external memory against a buffer
 int verify_mem(uint16_t start, uint16_t end, uint8_t *src, uint8_t log)
