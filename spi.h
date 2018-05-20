@@ -24,6 +24,30 @@
 #define SPI_H
 
 #include <stdint.h>
+#include <avr/io.h>
+
+// SPI pins
+#define SPI_DDR DDRB
+#define SPI_PORT PORTB
+
+#define SCK 7
+#define MISO 6
+#define MOSI 5
+
+#define CSADDR 3
+#define CSADDRMASK ((1 << CSADDR) | (1 << CSADDR+1))
+
+#ifdef CORRECT_SPIADDR
+#define IOX_SEL SPI_PORT = SPI_PORT & ~CSADDRMASK | (0x0 << CSADDR)
+#define SD_SEL SPI_PORT = SPI_PORT & ~CSADDRMASK | (0x1 << CSADDR)
+#define AUX1_SEL SPI_PORT = SPI_PORT & ~CSADDRMASK | (0x2 << CSADDR)
+#define AUX2_SEL SPI_PORT = SPI_PORT & ~CSADDRMASK | (0x3 << CSADDR)
+#else
+#define IOX_SEL SPI_PORT = SPI_PORT & ~CSADDRMASK | (0x0 << CSADDR)
+#define SD_SEL SPI_PORT = SPI_PORT & ~CSADDRMASK | (0x2 << CSADDR)
+#define AUX1_SEL SPI_PORT = SPI_PORT & ~CSADDRMASK | (0x1 << CSADDR)
+#define AUX2_SEL SPI_PORT = SPI_PORT & ~CSADDRMASK | (0x3 << CSADDR)
+#endif
 
 void spi_init();
 void spi_slow();
