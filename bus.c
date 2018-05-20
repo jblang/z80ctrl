@@ -20,8 +20,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "defines.h"
-
 #include "bus.h"
 #include "iox.h"
 

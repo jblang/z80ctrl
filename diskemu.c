@@ -113,7 +113,6 @@
 #include <stdio.h>
 #include <avr/pgmspace.h>
 
-#include "defines.h"
 #include "diskemu.h"
 #include "ff.h"
 
@@ -151,6 +150,9 @@ typedef struct _drive {
 #define C_LOAD 2
 #define C_STEPOUT 1
 #define C_STEPIN 0
+
+// Number of emulated disk drives
+#define NUMDRIVES 26
 
 drive drives[NUMDRIVES];
 drive *selected;

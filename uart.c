@@ -15,19 +15,25 @@
  * 
  */
 
-#include "defines.h"
-
 #include <stdint.h>
 #include <stdio.h>
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#include <util/setbaud.h>
 
 #include "uart.h"
 
-#define	UART_BUFF		64
+#ifndef F_CPU
+#define F_CPU 20000000UL
+#endif
 
+#ifndef BAUD
+#define BAUD  115200
+#endif
+
+#include <util/setbaud.h>
+
+#define	UART_BUFF		64
 
 typedef struct {
 	uint16_t	wi, ri, ct;

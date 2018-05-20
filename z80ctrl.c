@@ -25,7 +25,6 @@
 #include <avr/pgmspace.h>
 #include <stdio.h>
 
-#include "defines.h"
 #include "uart.h"
 #include "bus.h"
 #include "ff.h"

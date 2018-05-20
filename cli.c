@@ -511,7 +511,7 @@ void cli_loop(void) {
     FRESULT fr;
     void (*cmd_func)(int, char*[]);
 
-    disk_initialize(0);
+    disk_initialize(DRV_MMC);
     if ((fr = f_mount(&fs, "", 1)) != FR_OK)
         printf_P(PSTR("error mounting drive: %S\n"), strlookup(fr_text, fr));
 

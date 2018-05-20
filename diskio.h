@@ -9,6 +9,8 @@
 extern "C" {
 #endif
 
+#define DRV_MMC 0       /* SD card is drive 0 */
+
 #define _USE_WRITE	1	/* 1: Enable disk_write function */
 #define _USE_IOCTL	1	/* 1: Enable disk_ioctl fucntion */
 #define _USE_ISDIO	1	/* 1: Enable iSDIO controls via disk_ioctl */

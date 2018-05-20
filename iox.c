@@ -20,8 +20,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "defines.h"
-
 #include "iox.h"
 #include "spi.h"
 

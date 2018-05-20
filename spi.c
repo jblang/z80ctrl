@@ -20,8 +20,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "defines.h"
-
 #include "spi.h"
 
 #include <avr/io.h>
