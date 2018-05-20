@@ -53,10 +53,17 @@ void z80_reset(uint16_t addr)
 
 #define SIO0_STATUS 0x10
 #define SIO0_DATA 0x11
+#define SIO1_STATUS 0x12
+#define SIO1_DATA 0x13
 #define SIOA_CONTROL 0x80
 #define SIOA_DATA 0x81
 #define SIOB_CONTROL 0x82
 #define SIOB_DATA 0x83
+
+uint8_t z80_uart[] = {0 , 1};
+
+#define ALTAIR_SIO_STATUS(u) ((((uart_testtx(z80_uart[(u)]) == 0) << 1) & 0x2) | ((uart_testrx(z80_uart[(u)]) > 0) & 0x1))
+#define ZILOG_SIO_STATUS(u) ((1 << 3) | (1  << 5) | (((uart_testtx(z80_uart[(u)]) == 0) << 2) & 0x4) | ((uart_testrx(z80_uart[(u)]) > 0) & 0x1))
 
 // Handle Z80 IO request
 void z80_iorq(void)
@@ -64,39 +71,44 @@ void z80_iorq(void)
     switch (GET_ADDRLO) {
         case SIO0_STATUS:
             if (!GET_RD) {
-                SET_DATA((((uart_testtx() == 0) << 1) & 0x2) | ((uart_testrx() > 0) & 0x1));
+                SET_DATA(ALTAIR_SIO_STATUS(0));
+                DATA_OUTPUT;
+            }
+            break;
+        case SIO1_STATUS:
+            if (!GET_RD) {
+                SET_DATA(ALTAIR_SIO_STATUS(1));
                 DATA_OUTPUT;
             }
             break;
         case SIOA_CONTROL:
             if (!GET_RD) {
-                // CTS and DCD always high
-                SET_DATA((1 << 3) | (1  << 5) | (((uart_testtx() == 0) << 2) & 0x4) | ((uart_testrx() > 0)& 0x1));
+                SET_DATA(ZILOG_SIO_STATUS(0));
                 DATA_OUTPUT;
             }
             break;
         case SIOB_CONTROL:
             if (!GET_RD) {
-                // CTS and DCD always high
-                SET_DATA((1 << 3) | (1  << 5) | (((uart_testtx() == 0) << 2) & 0x4) | ((uart_testrx() > 0) & 0x1));
+                SET_DATA(ZILOG_SIO_STATUS(1));
                 DATA_OUTPUT;
             }
             break;
         case SIO0_DATA:
         case SIOA_DATA:
             if (!GET_RD) {
-                SET_DATA(uart_getc());
+                SET_DATA(uart_getc(z80_uart[0]));
                 DATA_OUTPUT;
             } else if (!GET_WR) {
-                uart_putc(GET_DATA);
+                uart_putc(z80_uart[0], GET_DATA);
             }
             break;
+        case SIO1_DATA:
         case SIOB_DATA:
             if (!GET_RD) {
-                SET_DATA(uart_getc());
+                SET_DATA(uart_getc(z80_uart[1]));
                 DATA_OUTPUT;
             } else if (!GET_WR) {
-                uart_putc(GET_DATA);
+                uart_putc(z80_uart[1], GET_DATA);
             }
             break;
         case DRIVE_STATUS:
@@ -176,9 +188,8 @@ void z80_buslog(bus_stat status)
         !status.flags.bits.ioack ? "ioack" : "     ");
 
         // wait until output is fully transmitted to avoid
-        // interfering with UART status for running program
-        while (uart_testtx())
-            ;
+        // interfering with z80_uart status for running program
+        uart_flush();
 }
 
 // Do a single T cycle, optionally logging and breaking on the bus status
@@ -274,8 +285,7 @@ void z80_debug(uint32_t cycles)
                     if (INRANGE(watches, OPFETCH, addr)) {
                         printf_P(PSTR("\t%04x\t%s\n"), addr, mnemonic);
                         // Flush UART to avoid interfering with running program
-                        while (uart_testtx())
-                            ;
+                        uart_flush();
                     }
                 }
                 brk |= !GET_M1 && INRANGE(breaks, OPFETCH, addr) && !cycles;

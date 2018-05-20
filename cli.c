@@ -388,6 +388,17 @@ void cli_mount(int argc, char *argv[])
     drive_mount(drv, filename);
 }
 
+void cli_attach(int argc, char *argv[])
+{
+    if (argc != 3) {
+        printf_P(PSTR("usage: attach <virtual uart #> <physical uart #>\n"));
+        return;
+    }
+    uint8_t virtual = strtol(argv[1], NULL, 10) & 1;
+    uint8_t physical = strtol(argv[2], NULL, 10) & 1;
+    z80_uart[virtual] = physical;
+}
+
 void cli_unmount(int argc, char *argv[])
 {
     if (argc != 2) {
@@ -407,6 +418,7 @@ void cli_help(int argc, char *argv[]);
 
 const char cli_cmd_names[] PROGMEM = 
     "altmon\0"
+    "attach\0"
 #ifdef SET_BANK
     "bank\0"
 #endif
@@ -434,6 +446,7 @@ const char cli_cmd_names[] PROGMEM =
 
 const char cli_cmd_help[] PROGMEM =
     "run altmon 8080 monitor\0"                     // altmon
+    "attach virtual uart to physical uart\0"            // attach
 #ifdef SET_BANK
     "select active 64K bank\0"                      // bank
 #endif
@@ -461,6 +474,7 @@ const char cli_cmd_help[] PROGMEM =
 
 void * const cli_cmd_functions[] PROGMEM = {
     &cli_altmon,
+    &cli_attach,
 #ifdef SET_BANK
     &cli_bank,
 #endif

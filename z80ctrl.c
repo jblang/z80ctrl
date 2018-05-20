@@ -36,7 +36,8 @@ FATFS fs;
 
 int main(void)
 {
-    uart_init(115200);
+    uart_init(0, BAUD);
+    uart_init(1, BAUD);
     stdout = stdin = &uart_str;
 
     puts_P(PSTR("z80ctrl 0.9 by J.B. Langston\n\n"));

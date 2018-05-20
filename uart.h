@@ -20,10 +20,11 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-void uart_init (uint32_t bps);          /* * Perform UART startup initialization. */
-uint16_t uart_testrx (void);		/* Check number of data in UART Rx FIFO */
-uint16_t uart_testtx (void);		/* Check number of data in UART Rx FIFO */
-uint8_t uart_getc (void);		/* Get a byte from UART Rx FIFO */
-void uart_putc (uint8_t d);		/* Put a byte into UART Tx FIFO */
-int uart_putchar(char c, FILE * stream); /* Send one character to the UART. */
-int uart_getchar(FILE * stream);        /* line buffered getchar */
+void uart_init(uint8_t uart, uint32_t bps);     /* Perform UART startup initialization. */
+uint16_t uart_testrx(uint8_t uart);		/* Check number of bytes in UART Rx FIFO */
+uint16_t uart_testtx(uint8_t uart);		/* Check number of bytes in UART Rx FIFO */
+uint8_t uart_getc(uint8_t uart);		/* Get a byte from UART Rx FIFO */
+void uart_putc(uint8_t uart, uint8_t d);	/* Put a byte into UART Tx FIFO */
+void uart_flush(void);                          /* flush uart transmit buffers */
+int uart_putchar(char c, FILE * stream);        /* output with cr/lf conversion */
+int uart_getchar(FILE * stream);                /* line buffered input */

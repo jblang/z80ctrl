@@ -45,112 +45,146 @@ typedef struct {
 	uint16_t	wi, ri, ct;
 	uint8_t buff[UART_BUFF];
 } FIFO;
-static
-volatile FIFO TxFifo, RxFifo;
+
+static volatile FIFO TxFifo[2], RxFifo[2];
+
+volatile uint8_t * const UCSRB[] = {&UCSR0B, &UCSR1B};
+volatile uint8_t * const UBRRL[] = {&UBRR0L, &UBRR1L};
+volatile uint8_t * const UDR[] = {&UDR0, &UDR1};
 
 /* Initialize UART */
 
-void uart_init (uint32_t bps)
+
+void uart_init (uint8_t uart, uint32_t bps)
 {
 	uint16_t n;
+    uart &= 1;
 
+	*UCSRB[uart] = 0;
 
-	UCSR0B = 0;
-
-	RxFifo.ct = 0; RxFifo.ri = 0; RxFifo.wi = 0;
-	TxFifo.ct = 0; TxFifo.ri = 0; TxFifo.wi = 0;
+	RxFifo[uart].ct = 0; RxFifo[uart].ri = 0; RxFifo[uart].wi = 0;
+	TxFifo[uart].ct = 0; TxFifo[uart].ri = 0; TxFifo[uart].wi = 0;
 
 	n = F_CPU / bps / 8;
-	UBRR0L = (n >> 1) + (n & 1) - 1;
-	UCSR0B = _BV(RXEN0)|_BV(RXCIE0)|_BV(TXEN0);
+	*UBRRL[uart] = (n >> 1) + (n & 1) - 1;
+	*UCSRB[uart] = _BV(RXEN0)|_BV(RXCIE0)|_BV(TXEN0);
 }
 
 /* Get a received character */
 
-uint16_t uart_testrx (void)
+uint16_t uart_testrx (uint8_t uart)
 {
-	return RxFifo.ct;
+    uart &= 1;
+	return RxFifo[uart].ct;
 }
 
-uint8_t uart_getc (void)
+uint8_t uart_getc (uint8_t uart)
 {
 	uint8_t d, i;
+    uart &= 1;
 
     // Non-blocking
-    if (RxFifo.ct == 0)
+    if (RxFifo[uart].ct == 0)
         return 0;
 
-	i = RxFifo.ri;
-	d = RxFifo.buff[i];
+	i = RxFifo[uart].ri;
+	d = RxFifo[uart].buff[i];
 	cli();
-	RxFifo.ct--;
+	RxFifo[uart].ct--;
 	sei();
-	RxFifo.ri = (i + 1) % sizeof RxFifo.buff;
+	RxFifo[uart].ri = (i + 1) % sizeof RxFifo[uart].buff;
 
 	return d;
 }
 
 /* Put a character to transmit */
 
-uint16_t uart_testtx (void)
+uint16_t uart_testtx (uint8_t uart)
 {
-	return TxFifo.ct;
+    uart &= 1;
+	return TxFifo[uart].ct;
 }
 
-void uart_putc (uint8_t d)
+/* Flush the transmit buffers */
+void uart_flush(void)
+{
+    while (uart_testtx(0) || uart_testtx(1))
+        ;
+}
+
+void uart_putc (uint8_t uart, uint8_t d)
 {
 	uint8_t i;
+    uart &= 1;
 
+	while (TxFifo[uart].ct >= sizeof TxFifo[uart].buff) ;
 
-	while (TxFifo.ct >= sizeof TxFifo.buff) ;
-
-	i = TxFifo.wi;
-	TxFifo.buff[i] = d;
+	i = TxFifo[uart].wi;
+	TxFifo[uart].buff[i] = d;
 	cli();
-	TxFifo.ct++;
-	UCSR0B = _BV(RXEN0)|_BV(RXCIE0)|_BV(TXEN0)|_BV(UDRIE0);
+	TxFifo[uart].ct++;
+	*UCSRB[uart] = _BV(RXEN0)|_BV(RXCIE0)|_BV(TXEN0)|_BV(UDRIE0);
 	sei();
-	TxFifo.wi = (i + 1) % sizeof TxFifo.buff;
+	TxFifo[uart].wi = (i + 1) % sizeof TxFifo[uart].buff;
 }
-
 
 /* UART RXC interrupt */
 
+void uart_rx_vect(uint8_t uart)
+{
+    uint8_t d, n, i;
+    uart &= 1;
+
+	d = *UDR[uart];
+	n = RxFifo[uart].ct;
+	if (n < sizeof RxFifo[uart].buff) {
+		RxFifo[uart].ct = ++n;
+		i = RxFifo[uart].wi;
+		RxFifo[uart].buff[i] = d;
+		RxFifo[uart].wi = (i + 1) % sizeof RxFifo[uart].buff;
+	}
+}
+
 ISR(USART0_RX_vect)
 {
-	uint8_t d, n, i;
+    uart_rx_vect(0);
+}
 
-
-	d = UDR0;
-	n = RxFifo.ct;
-	if (n < sizeof RxFifo.buff) {
-		RxFifo.ct = ++n;
-		i = RxFifo.wi;
-		RxFifo.buff[i] = d;
-		RxFifo.wi = (i + 1) % sizeof RxFifo.buff;
-	}
+ISR(USART1_RX_vect)
+{
+    uart_rx_vect(1);
 }
 
 
 /* UART UDRE interrupt */
 
-ISR(USART0_UDRE_vect)
+void uart_udre_vect(uint8_t uart)
 {
 	uint8_t n, i;
+    uart &= 1;
 
-
-	n = TxFifo.ct;
+	n = TxFifo[uart].ct;
 	if (n) {
-		TxFifo.ct = --n;
-		i = TxFifo.ri;
-		UDR0 = TxFifo.buff[i];
-		TxFifo.ri = (i + 1) % sizeof TxFifo.buff;
+		TxFifo[uart].ct = --n;
+		i = TxFifo[uart].ri;
+		*UDR[uart] = TxFifo[uart].buff[i];
+		TxFifo[uart].ri = (i + 1) % sizeof TxFifo[uart].buff;
 	}
-	if (n == 0) UCSR0B = _BV(RXEN0)|_BV(RXCIE0)|_BV(TXEN0);
+	if (n == 0) *UCSRB[uart] = _BV(RXEN0)|_BV(RXCIE0)|_BV(TXEN0);
+}
+
+ISR(USART0_UDRE_vect)
+{
+    uart_udre_vect(0);
+}
+
+ISR(USART1_UDRE_vect)
+{
+    uart_udre_vect(1);
 }
 
 /*
- * uart_getchar and uart_putchar functions are from libc-avr stdio demo
+ * "Cooked" terminal mode functions are from libc-avr stdio demo
  * ----------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
  * <joerg@FreeBSD.ORG> wrote this file.  As long as you retain this notice you
@@ -168,7 +202,7 @@ int uart_putchar(char c, FILE * stream)
 
     if (c == '\n')
         uart_putchar('\r', stream);
-    uart_putc(c);
+    uart_putc(0, c);
 
     return 0;
 }
@@ -216,9 +250,9 @@ int uart_getchar(FILE * stream)
     if (rxp == 0)
         for (cp = b;;) {
             // block for character
-            while (uart_testrx() == 0)
+            while (uart_testrx(0) == 0)
                 ;
-            c = uart_getc();
+            c = uart_getc(0);
             /* behaviour similar to Unix stty ICRNL */
             if (c == '\r')
                 c = '\n';
