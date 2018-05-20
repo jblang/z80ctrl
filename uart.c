@@ -1,18 +1,23 @@
-/*
- * ----------------------------------------------------------------------------
- * "THE BEER-WARE LICENSE" (Revision 42):
- * <joerg@FreeBSD.ORG> wrote this file.  As long as you retain this notice you
- * can do whatever you want with this stuff. If we meet some day, and you think
- * this stuff is worth it, you can buy me a beer in return.        Joerg Wunsch
- * ----------------------------------------------------------------------------
+/* z80ctrl (https://github.com/jblang/z80ctrl)
+ * Copyright 2018 J.B. Langston
  *
- * Stdio demo, UART implementation
- *
- * $Id: uart.c 1008 2005-12-28 21:38:59Z joerg_wunsch $
+ * Permission is hereby granted, free of charge, to any person obtaining a 
+ * copy of this software and associated documentation files (the "Software"), 
+ * to deal in the Software without restriction, including without limitation 
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense, 
+ * and/or sell copies of the Software, and to permit persons to whom the 
+ * Software is furnished to do so, subject to the following conditions:
  * 
- * uart_getc and uart_putc functions from FatFs AVR sample by ChaN
- * (C)ChaN, 2017
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
  * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
+ * DEALINGS IN THE SOFTWARE.
  */
 
 #include <stdint.h>
@@ -23,17 +28,18 @@
 
 #include "uart.h"
 
-#ifndef F_CPU
-#define F_CPU 20000000UL
-#endif
+#define	UART_BUFF  64
+#define LINE_BUFF  80
 
-#ifndef BAUD
-#define BAUD  115200
-#endif
-
-#include <util/setbaud.h>
-
-#define	UART_BUFF		64
+ /* 
+ /  UART FIFO implementation is from the FatFS AVR sample code
+ /  Copyright (C) 2016, ChaN, all right reserved.
+ /
+ / * This software is a free software and there is NO WARRANTY.
+ / * No restriction on use. You can use, modify and redistribute it for
+ /   any purpose as you like UNDER YOUR RESPONSIBILITY.
+ / * Redistributions of source code must retain the above copyright notice.
+*/
 
 typedef struct {
 	uint16_t	wi, ri, ct;
@@ -42,22 +48,21 @@ typedef struct {
 static
 volatile FIFO TxFifo, RxFifo;
 
-/*
- * Initialize the UART to 9600 Bd, tx/rx, 8N1.
- */
-void uart_init(void)
+/* Initialize UART */
+
+void uart_init (uint32_t bps)
 {
-    UBRR0H = UBRRH_VALUE;
-    UBRR0L = UBRRL_VALUE;
+	uint16_t n;
 
-#if USE_2X
-    UCSR0A |= _BV(U2X0);
-#else
-    UCSR0A &= ~(_BV(U2X0));
-#endif
 
-    UCSR0C = _BV(UCSZ01) | _BV(UCSZ00); /* 8-bit data */
-    UCSR0B = _BV(RXEN0) | _BV(TXEN0);   /* Enable RX and TX */
+	UCSR0B = 0;
+
+	RxFifo.ct = 0; RxFifo.ri = 0; RxFifo.wi = 0;
+	TxFifo.ct = 0; TxFifo.ri = 0; TxFifo.wi = 0;
+
+	n = F_CPU / bps / 8;
+	UBRR0L = (n >> 1) + (n & 1) - 1;
+	UCSR0B = _BV(RXEN0)|_BV(RXCIE0)|_BV(TXEN0);
 }
 
 /* Get a received character */
@@ -67,17 +72,13 @@ uint16_t uart_testrx (void)
 	return RxFifo.ct;
 }
 
-uint16_t uart_testtx (void)
-{
-	return TxFifo.ct;
-}
-
 uint8_t uart_getc (void)
 {
 	uint8_t d, i;
 
-
-	while (RxFifo.ct == 0) ;
+    // Non-blocking
+    if (RxFifo.ct == 0)
+        return 0;
 
 	i = RxFifo.ri;
 	d = RxFifo.buff[i];
@@ -89,8 +90,12 @@ uint8_t uart_getc (void)
 	return d;
 }
 
-
 /* Put a character to transmit */
+
+uint16_t uart_testtx (void)
+{
+	return TxFifo.ct;
+}
 
 void uart_putc (uint8_t d)
 {
@@ -145,6 +150,16 @@ ISR(USART0_UDRE_vect)
 }
 
 /*
+ * uart_getchar and uart_putchar functions are from libc-avr stdio demo
+ * ----------------------------------------------------------------------------
+ * "THE BEER-WARE LICENSE" (Revision 42):
+ * <joerg@FreeBSD.ORG> wrote this file.  As long as you retain this notice you
+ * can do whatever you want with this stuff. If we meet some day, and you think
+ * this stuff is worth it, you can buy me a beer in return.        Joerg Wunsch
+ * ----------------------------------------------------------------------------
+ */
+
+/*
  * Send character c down the UART Tx, wait until tx holding register
  * is empty.
  */
@@ -195,11 +210,14 @@ int uart_getchar(FILE * stream)
 {
     uint8_t c;
     char *cp, *cp2;
-    static char b[UART_BUFF];
+    static char b[LINE_BUFF];
     static char *rxp;
 
     if (rxp == 0)
         for (cp = b;;) {
+            // block for character
+            while (uart_testrx() == 0)
+                ;
             c = uart_getc();
             /* behaviour similar to Unix stty ICRNL */
             if (c == '\r')
@@ -214,7 +232,7 @@ int uart_getchar(FILE * stream)
 
             if ((c >= (uint8_t) ' ' && c <= (uint8_t) '\x7e') ||
                 c >= (uint8_t) '\xa0') {
-                if (cp == b + UART_BUFF - 1)
+                if (cp == b + LINE_BUFF - 1)
                     uart_putchar('\a', stream);
                 else {
                     *cp++ = c;
@@ -269,4 +287,3 @@ int uart_getchar(FILE * stream)
 
     return c;
 }
-
