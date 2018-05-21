@@ -22,9 +22,18 @@
 
 #include <stdint.h>
 #include <avr/pgmspace.h>
+#include <stdio.h>
 
 #include "util.h"
+#include "ff.h"
 
+/**
+ * @file Miscellaneous utility functions
+ */
+
+/**
+ * Look up a text string by index from a NULL-separated PROGMEM array
+ */
 PGM_P strlookup(PGM_P str, uint32_t index)
 {
     PGM_P p;
@@ -35,4 +44,30 @@ PGM_P strlookup(PGM_P str, uint32_t index)
             ;
 
     return p;
+}
+
+/**
+ * FatFS wrapper to write a single byte to a file, used by stdio library
+ */
+int fatfs_putchar(char c, FILE * stream)
+{
+    FIL *fil = stream->udata;
+    if (f_write(fil, &c, 1, NULL) != FR_OK)
+        return EOF;
+    else
+        return 0;
+}
+
+/**
+ * FatFS wrapper to read a single byte from a file, used by stdio library
+ */
+int fatfs_getchar(FILE * stream)
+{
+    FIL *fil = stream->udata;
+    char c;
+
+    if (f_read(fil, &c, 1, NULL) == FR_OK)
+        return c;
+    else
+        return EOF;
 }

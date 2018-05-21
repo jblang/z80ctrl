@@ -24,35 +24,13 @@
 #define IHEX_H
 
 #include <stdint.h>
+#include <stdio.h>
 
-enum ihex_rectype {
-    IHEX_DATA = 0,
-    IHEX_EOF,
-    IHEX_ESA,
-    IHEX_SSA,
-    IHEX_ELA,
-    IHEX_SLA
-};
+/**
+ * @file Functions for loading and saving Intel HEX files
+ */
 
-enum ihex_rc {
-    IHEX_OK = 0,
-    IHEX_FORMAT, 
-    IHEX_COUNT,
-    IHEX_CKSUM,
-    IHEX_RECTYPE
-};
-
-extern const char ihex_rc_text[];
-
-typedef struct _ihex_res {
-    uint8_t count;
-    uint16_t addr;
-    uint8_t type;
-    uint8_t rc;
-} ihex_res;
-
-ihex_res ihex_to_bin(char *ihex, uint8_t *bin);
-void bin_to_ihex(uint8_t *bin, char *ihex, uint16_t addr, uint8_t count);
-
+int save_ihex(uint32_t start, uint16_t end, FILE *file);    /**< Save an intel hex file */
+uint16_t load_ihex(FILE *file);                             /**< Load an intel hex file */
 
 #endif

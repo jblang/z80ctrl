@@ -25,6 +25,12 @@
 
 #include <stdint.h>
 
-const char *strlookup(const char *str, uint32_t index);
+/**
+ * @file Miscellaneous utility functions
+ */
+
+const char *strlookup(const char *str, uint32_t index); /**< Lookup a string by index in a NULL-separated PROGMEM array */
+int fatfs_getchar(FILE * stream);                       /**< FatFS wrapper to read a single byte from a file */
+int fatfs_putchar(char c, FILE * stream);               /**< FatFS wrapper to write a single byte to a file */
 
 #endif

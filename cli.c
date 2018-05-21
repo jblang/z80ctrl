@@ -42,121 +42,69 @@
 
 FATFS fs;
 
+/**
+ * @file Monitor command-line interface
+ */
+
+/**
+ * Load an Intel HEX file from disk or stdin
+ */
 void cli_loadhex(int argc, char *argv[])
 {
-    FIL fp;
+    FIL fil;
+    FILE file;
     FRESULT fr;
-    ihex_res res;
-    char ihex[524];
-    uint8_t bin[256];
-    char *filename = NULL;
-    uint16_t total = 0;
-    uint16_t line = 0;
     if (argc == 2) {
-        filename = argv[1];
-        printf_P(PSTR("loading from %s\n"), filename);
-        if ((fr = f_open(&fp, filename, FA_READ)) != FR_OK) {
-            printf_P(PSTR("error opening file: %S\n"), strlookup(fr_text, fr));
+        printf_P(PSTR("loading from %s\n"), argv[1]);
+        if ((fr = f_open(&fil, argv[1], FA_READ)) == FR_OK) {
+            fdev_setup_stream(&file, fatfs_putchar, fatfs_getchar, _FDEV_SETUP_RW);
+            fdev_set_udata(&file, &fil);
+            load_ihex(&file);
+            if ((fr = f_close(&fil)) != FR_OK)
+                printf_P(PSTR("error closing file: %S\n"), strlookup(fr_text, fr));
+        } else {
+            load_ihex(stdin);
             return;
         }        
     } else {
         printf_P(PSTR("loading from console; enter blank line to cancel\n"));
     }
-    for (;;) {
-        if (filename != NULL) {
-            if (f_gets(ihex, 524, &fp) == NULL) {
-                if (f_error(&fp))
-                    printf_P(PSTR("error: unable to read file\n"));
-                else if (f_eof(&fp))
-                    printf_P(PSTR("error: unexpected eof\n"));
-                break;
-            }
-        } else {
-            gets(ihex);
-            if (strlen(ihex) == 0)
-                break;
-        }
-        line++;
-        res = ihex_to_bin(ihex, bin);
-        if (res.rc == IHEX_OK && res.type == IHEX_DATA && res.count > 0) {
-            write_mem(res.addr, bin, res.count);
-            printf_P(PSTR("loaded 0x%02X bytes to 0x%04X\n"), res.count, res.addr);
-            total += res.count;
-        }
-        else if (res.rc == IHEX_OK && res.count == 0) {
-            printf_P(PSTR("loaded 0x%04X bytes total\n"), total);
-            break;
-        } else
-            printf_P(PSTR("error: %S on line %d\n"), strlookup(ihex_rc_text, res.rc), line);
-    }
-    if (filename != NULL)
-        if ((fr = f_close(&fp)) != FR_OK) {
-            printf_P(PSTR("error closing file: %S\n"), strlookup(fr_text, fr));
-            return;
-        }
 }
 
-#define BYTESPERLINE 16
-
+/**
+ * Save an Intel HEX file to disk or stdout
+ */
 void cli_savehex(int argc, char *argv[])
 {
     FRESULT fr;
-    FIL fp;
-
-    uint32_t start;
-    uint16_t end;
-    uint8_t count;
-    char *filename = NULL;
-    char bin[BYTESPERLINE];
-    char ihex[BYTESPERLINE*2+12];
-    uint16_t i;
+    FILE file;
+    FIL fil;
     if (argc < 3) {
         printf_P(PSTR("usage: savehex <start> <end> [file]\n"));
         return;
     }
-    start = strtol(argv[1], NULL, 16) & 0xffff;
-    end = strtol(argv[2], NULL, 16) & 0xffff;
+    uint16_t start = strtol(argv[1], NULL, 16) & 0xffff;
+    uint16_t end = strtol(argv[2], NULL, 16) & 0xffff;
     if (argc == 4) {
-        filename = argv[3];
-        if ((fr = f_open(&fp, filename, FA_WRITE | FA_CREATE_ALWAYS)) != FR_OK) {
-            printf_P(PSTR("error opening file: %S\n"), strlookup(fr_text, fr));
-            return;
-        }        
-    }
-    for (;;) {
-        if (end - start + 1 > BYTESPERLINE)
-            count = BYTESPERLINE;
-        else
-            count = end - start + 1;
-        read_mem(start, bin, count);
-        bin_to_ihex(bin, ihex, start, count);
-        if (filename != NULL) {
-            if (f_printf(&fp, "%s\n", ihex) == EOF) {
-                printf_P(PSTR("error writing file\n"));
-                break;
-            }
+        if ((fr = f_open(&fil, argv[3], FA_WRITE | FA_CREATE_ALWAYS)) == FR_OK) {
+            fdev_setup_stream(&file, fatfs_putchar, fatfs_getchar, _FDEV_SETUP_RW);
+            fdev_set_udata(&file, &fil);
+            if (save_ihex(start, end, &file) == EOF)
+                printf_P(PSTR("error writing file"));
+            if ((fr = f_close(&fil)) != FR_OK)
+                printf_P(PSTR("error closing file: %s\n"), strlookup(fr_text, fr));
         } else {
-            puts(ihex);
-        }
-        start += count;
-        if (start > end) {
-            bin_to_ihex(bin, ihex, 0, 0);
-            if (filename != NULL) {
-                if (f_printf(&fp, "%s\n", ihex) == EOF)
-                    printf_P(PSTR("error writing file\n"));
-            } else
-                puts(ihex);
-            break;
-        }
-    }
-    if (filename != NULL) {
-        if ((fr = f_close(&fp)) != FR_OK) {
-            printf_P(PSTR("error closing file: %s\n"), strlookup(fr_text, fr));
-            return;
-        }
+            printf_P(PSTR("error opening file: %S\n"), strlookup(fr_text, fr));
+        }        
+    } else {
+        if (save_ihex(start, end, stdout) == EOF)
+            printf_P(PSTR("error writing file"));
     }
 }
 
+/**
+ * Disassemble code from memory
+ */
 void cli_disasm(int argc, char *argv[])
 {
     uint16_t start, end;
@@ -172,6 +120,9 @@ void cli_disasm(int argc, char *argv[])
     disasm_mem(start, end);
 }
 
+/**
+ * Generate a hex dump from memory
+ */
 void cli_dump(int argc, char *argv[])
 {
     uint16_t start, end;
@@ -207,6 +158,9 @@ void cli_dump(int argc, char *argv[])
     }
 }
 
+/**
+ * Run the processor at full speed from an optional starting address
+ */
 void cli_run(int argc, char *argv[])
 {
     if (argc >= 2) {
@@ -216,6 +170,9 @@ void cli_run(int argc, char *argv[])
     z80_run();
 }
 
+/**
+ * Reset the processor and optionally set up a reset vector
+ */
 void cli_reset(int argc, char *argv[])
 {
     uint16_t addr = 0;
@@ -225,6 +182,9 @@ void cli_reset(int argc, char *argv[])
     z80_reset(addr);
 }
 
+/**
+ * Run the processor with debugging enabled from an optional starting address
+ */
 void cli_debug(int argc, char *argv[])
 {
     if (argc >= 2) {
@@ -234,6 +194,9 @@ void cli_debug(int argc, char *argv[])
     z80_debug(0);
 }
 
+/**
+ * Run the processor for a specified number of instructions
+ */
 void cli_step(int argc, char *argv[])
 {
     uint32_t cycles = 1;
@@ -242,6 +205,9 @@ void cli_step(int argc, char *argv[])
     z80_debug(cycles);
 }
 
+/**
+ * Interrogate or set breakpoint and watch ranges
+ */
 void cli_breakwatch(int argc, char *argv[])
 {
     range *ranges;
@@ -305,6 +271,9 @@ void cli_breakwatch(int argc, char *argv[])
 }
 
 #ifdef SET_BANK
+/**
+ * Set the active bank
+ */
 void cli_bank(int argc, char *argv[])
 {
     uint8_t bank;
@@ -317,6 +286,9 @@ void cli_bank(int argc, char *argv[])
 }
 #endif
 
+/**
+ * Load altmon from AVR flash to external SRAM and run it
+ */
 void cli_altmon(int argc, char *argv[])
 {
     write_mem_P(0xf800, altmon_bin, altmon_bin_len);
@@ -324,6 +296,9 @@ void cli_altmon(int argc, char *argv[])
     z80_run();
 }
 
+/**
+ * Boot a disk using Altair Disk Bootloader
+ */
 void cli_dboot(int argc, char *argv[])
 {
     write_mem_P(0xff00, dbl_bin, dbl_bin_len);
@@ -333,6 +308,9 @@ void cli_dboot(int argc, char *argv[])
     }
 }
 
+/**
+ * Boot a disk using the SIMH AltairZ80 bootloader
+ */
 void cli_sboot(int argc, char *argv[])
 {
     write_mem_P(0xff00, simhboot_bin, simhboot_bin_len);
@@ -342,13 +320,15 @@ void cli_sboot(int argc, char *argv[])
     }
 }
 
+/**
+ * Show a directory of files on the SD Card
+ */
 void cli_dir(int argc, char *argv[])
 {
  	FRESULT fr;
     FILINFO finfo;
     DIR dir;
 	UINT cnt;
-    FATFS *fs;
     char fname[14];
 
     if (argc == 1)
@@ -382,7 +362,9 @@ void cli_dir(int argc, char *argv[])
 }
 
 
-// Verify specified number of bytes from external memory against a buffer
+/**
+ * Verify specified number of bytes from external memory against a buffer
+ */
 int verify_mem(uint16_t start, uint16_t end, uint8_t *src, uint8_t log)
 {
     uint8_t buf[256];
@@ -405,6 +387,9 @@ int verify_mem(uint16_t start, uint16_t end, uint8_t *src, uint8_t log)
     return errors;
 }
 
+/**
+ * Fill memory with a specified byte for a specified range
+ */
 void cli_fill(int argc, char*argv[]) {
     if (argc != 4) {
         printf_P(PSTR("usage: fill <start> <end> <value>\n"));
@@ -428,10 +413,16 @@ void cli_fill(int argc, char*argv[]) {
     }
 }
 
+/**
+ * Display the bus status
+ */
 void cli_bus(int argc, char *argv[]) {
     z80_buslog(bus_status());
 }
 
+/**
+ * Mount a disk image
+ */
 void cli_mount(int argc, char *argv[])
 {
     if (argc != 3) {
@@ -441,6 +432,19 @@ void cli_mount(int argc, char *argv[])
     uint8_t drv = strtol(argv[1], NULL, 10);
     char *filename = argv[2];
     drive_mount(drv, filename);
+}
+
+/**
+ * Unmount a disk image
+ */
+void cli_unmount(int argc, char *argv[])
+{
+    if (argc != 2) {
+        printf_P(PSTR("usage: unmount <drive #>\n"));
+        return;
+    }
+    uint8_t drv = strtol(argv[1], NULL, 10);
+    drive_unmount(drv);
 }
 
 void cli_attach(int argc, char *argv[])
@@ -454,6 +458,9 @@ void cli_attach(int argc, char *argv[])
     z80_uart[virtual] = physical;
 }
 
+/**
+ * Set the baud rate for the UART
+ */
 void cli_baud(int argc, char *argv[]) {
     if (argc != 3) {
         printf_P(PSTR("usage: baud <uart> <baud>\n"));
@@ -478,23 +485,17 @@ void cli_baud(int argc, char *argv[]) {
     uart_init(uart, ubrr);
 }
 
-void cli_unmount(int argc, char *argv[])
-{
-    if (argc != 2) {
-        printf_P(PSTR("usage: unmount <drive #>\n"));
-        return;
-    }
-    uint8_t drv = strtol(argv[1], NULL, 10);
-    drive_unmount(drv);
-}
-
+/**
+ * Clear the screen
+ */
 void cli_cls(int argc, char *argv[])
 {
     printf_P(PSTR("\e[2J"));
 }
 
-void cli_help(int argc, char *argv[]);
-
+/**
+ * Lookup table of monitor command names
+ */
 const char cli_cmd_names[] PROGMEM = 
     "altmon\0"
     "attach\0"
@@ -524,9 +525,12 @@ const char cli_cmd_names[] PROGMEM =
     "unmount\0"
     "watch";
 
+/**
+ * Lookup table of help text for monitor commands
+ */
 const char cli_cmd_help[] PROGMEM =
     "run altmon 8080 monitor\0"                     // altmon
-    "attach virtual uart to physical uart\0"            // attach
+    "attach virtual uart to physical uart\0"        // attach
 #ifdef SET_BANK
     "select active 64K bank\0"                      // bank
 #endif
@@ -553,6 +557,11 @@ const char cli_cmd_help[] PROGMEM =
     "unmount a disk image\0"                        // unmount
     "set watch points";                             // watch
 
+void cli_help(int argc, char *argv[]);
+
+/**
+ * Lookup table of function pointers for monitor commands
+ */
 void * const cli_cmd_functions[] PROGMEM = {
     &cli_altmon,
     &cli_attach,
@@ -585,6 +594,9 @@ void * const cli_cmd_functions[] PROGMEM = {
 
 #define NUM_CMDS (sizeof(cli_cmd_functions)/sizeof(void *))
 
+/**
+ * List available commands with help text
+ */
 void cli_help(int argc, char *argv[])
 {
     int i;
@@ -598,6 +610,10 @@ void cli_help(int argc, char *argv[])
 #define MAXBUF 80
 #define MAXARGS 8
 
+
+/**
+ * Main command-line loop for monitor
+ */
 void cli_loop(void) {
     char buf[MAXBUF];
     char *cmd;

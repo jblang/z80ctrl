@@ -25,7 +25,39 @@
 #include <avr/pgmspace.h>
 
 #include "ihex.h"
+#include "bus.h"
+#include "util.h"
 
+/**
+ * @file ihex.c Functions for loading and saving Intel HEX files
+ */
+
+/**
+ * Record types for Intel HEX files
+ */
+enum ihex_rectype {
+    IHEX_DATA = 0,
+    IHEX_EOF,
+    IHEX_ESA,
+    IHEX_SSA,
+    IHEX_ELA,
+    IHEX_SLA
+};
+
+/**
+ * Result codes from parsing a single Intel HEX record
+ */
+enum ihex_rc {
+    IHEX_OK = 0,
+    IHEX_FORMAT, 
+    IHEX_COUNT,
+    IHEX_CKSUM,
+    IHEX_RECTYPE
+};
+
+/**
+ * Error text corresponding to result codes
+ */
 const char ihex_rc_text[] PROGMEM = {
     "ok\0"
     "invalid record format\0"
@@ -34,6 +66,19 @@ const char ihex_rc_text[] PROGMEM = {
     "unsupported_record type"
 };
 
+/**
+ * Decoded Intel HEX record
+ */
+typedef struct {
+    uint8_t count;
+    uint16_t addr;
+    uint8_t type;
+    uint8_t rc;
+} ihex_res;
+
+/**
+ * Convert from a hex digit to a binary nybble
+ */
 uint8_t fromhex(char hex)
 {
     if ('0' <= hex && hex <= '9')
@@ -46,6 +91,9 @@ uint8_t fromhex(char hex)
         return 255;
 }
 
+/**
+ * Convert a binary nybble to a hex digit
+ */
 uint8_t tohex(uint8_t nyb)
 {
     if (0 <= nyb && nyb <= 9)
@@ -56,6 +104,9 @@ uint8_t tohex(uint8_t nyb)
         return 0;
 }
 
+/**
+ * Parse a single Intel HEX record and convert it to binary
+ */
 ihex_res ihex_to_bin(char *ihex, uint8_t *bin) 
 {
     ihex_res res;
@@ -100,6 +151,43 @@ ihex_res ihex_to_bin(char *ihex, uint8_t *bin)
     return res;
 }
 
+/**
+ * Load an Intel HEX file into memory
+ */
+uint16_t load_ihex(FILE *file)
+{
+    char ihex[524];
+    uint8_t bin[256];
+    uint16_t total = 0;
+    uint16_t line = 0;
+    ihex_res res;
+    for (;;) {
+        if (fgets(ihex, 524, file) == NULL)
+            break;
+        if (strlen(ihex) == 0)
+            break;
+        line++;
+        res = ihex_to_bin(ihex, bin);
+        if (res.rc == IHEX_OK && res.type == IHEX_DATA && res.count > 0) {
+            write_mem(res.addr, bin, res.count);
+            printf_P(PSTR("loaded 0x%02X bytes to 0x%04X\n"), res.count, res.addr);
+            total += res.count;
+        } else if (res.rc == IHEX_OK && res.count == 0) {
+            printf_P(PSTR("loaded 0x%04X bytes total\n"), total);
+            break;
+        } else {
+            printf_P(PSTR("error: %S on line %d\n"), strlookup(ihex_rc_text, res.rc), line);
+            break;
+        }
+    }
+    return total;
+}
+
+#define BYTESPERLINE 16
+
+/**
+ * Encode a byte array to a single Intel HEX record
+ */
 void bin_to_ihex(uint8_t *bin, char *ihex, uint16_t addr, uint8_t count) 
 {
     uint8_t check = count + (addr >> 8) + (addr & 0xff);
@@ -128,4 +216,33 @@ void bin_to_ihex(uint8_t *bin, char *ihex, uint16_t addr, uint8_t count)
     ihex[count*2+9] = tohex(check >> 4);
     ihex[count*2+10] = tohex(check & 0xf);
     ihex[count*2+11] = '\0';
+}
+
+/**
+ * Save a range of memory to an Intel HEX file
+ */
+int save_ihex(uint32_t start, uint16_t end, FILE *file)
+{
+    uint8_t count;
+    char bin[BYTESPERLINE];
+    char ihex[BYTESPERLINE*2+12];
+    uint16_t i;
+    for (;;) {
+        if (end - start + 1 > BYTESPERLINE)
+            count = BYTESPERLINE;
+        else
+            count = end - start + 1;
+        read_mem(start, bin, count);
+        bin_to_ihex(bin, ihex, start, count);
+        if (fprintf_P(file, PSTR("%s\n"), ihex) == EOF)
+            return EOF;
+        start += count;
+        if (start > end) {
+            bin_to_ihex(bin, ihex, 0, 0);
+            if (fprintf_P(file, PSTR("%s\n"), ihex) == EOF)
+                return EOF;
+            break;
+        }
+    }
+    return 0;
 }
