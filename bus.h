@@ -181,6 +181,8 @@ typedef struct {
 
 #define FLAG(b, f) ((b) & (1<<f))
 
+extern uint8_t clkdiv;
+
 void clk_cycle(uint8_t cycles);
 void clk_run(void);
 void clk_stop(void);

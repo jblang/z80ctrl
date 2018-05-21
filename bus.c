@@ -45,6 +45,8 @@ void clk_cycle(uint8_t cycles)
     }
 }
 
+uint8_t clkdiv = 1;
+
 /**
  * Run the Z80's clock
  */
@@ -53,8 +55,8 @@ void clk_run(void)
     // Fast PWM mode with adjustable top and no prescaler
     TCCR2A |= (1 << COM2B1) | (1 << WGM21) | (1 << WGM20);
     TCCR2B |= (1 << WGM22) | (1 << CS20);
-    OCR2A = 1;
-    OCR2B = 0;
+    OCR2A = clkdiv;
+    OCR2B = clkdiv >> 1;
 }
 
 /**

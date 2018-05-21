@@ -215,6 +215,20 @@ void cli_step(int argc, char *argv[])
 }
 
 /**
+ * Reduce the Z80 clock speed by the specified factor
+ */
+void cli_clkdiv(int argc, char *argv[])
+{
+    uint8_t tmp = 0;
+    if (argc >= 2)
+        tmp = strtol(argv[1], NULL, 10);
+    if (tmp > 0)
+        clkdiv = tmp;
+    else
+        printf_P(PSTR("current clkdiv=%d\nusage: clkdiv <divider>\n"), clkdiv);
+}
+
+/**
  * Interrogate or set breakpoint and watch ranges
  */
 void cli_breakwatch(int argc, char *argv[])
@@ -562,6 +576,7 @@ const char cli_cmd_names[] PROGMEM =
     "bus\0"
     "break\0"
     "c\0"
+    "clkdiv\0"
     "cls\0"
     "dboot\0"
     "debug\0"
@@ -596,6 +611,7 @@ const char cli_cmd_help[] PROGMEM =
     "set breakpoints\0"                             // break
     "shorthand to continue debugging\0"             // c
     "clear screen\0"                                // cls
+    "set Z80 clock divider\0"                       // clkdiv
     "boot disk using Altair disk bootloader\0"      // dboot
     "debug code at address\0"                       // debug
     "shows directory listing\0"                     // dir
@@ -630,6 +646,7 @@ void * const cli_cmd_functions[] PROGMEM = {
     &cli_bus,
     &cli_breakwatch,
     &cli_debug,
+    &cli_clkdiv,
     &cli_cls,
     &cli_dboot,
     &cli_debug,
