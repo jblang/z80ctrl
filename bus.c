@@ -115,8 +115,8 @@ void bus_slave(void)
 bus_stat bus_status()
 {
     bus_stat status;
-    status.flags.bytes.lo = GET_XFLAGS;
-    status.flags.bytes.hi = GET_BFLAGS | GET_DFLAGS;
+    status.flags = GET_BFLAGS | GET_DFLAGS;
+    status.xflags = GET_XFLAGS;
     status.data = GET_DATA;
     status.addr = GET_ADDR;
     return status;

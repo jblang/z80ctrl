@@ -21,7 +21,7 @@
  */
 
 /**
- * @file z80.c Z80 debugger
+ * @file z80.c Z80 run loop and debugger
  */
 
 #include <stdint.h>
@@ -86,19 +86,21 @@ void z80_buslog(bus_stat status)
         status.addr,
         status.data,
         0x20 <= status.data && status.data <= 0x7e ? status.data : ' ',
-        !status.flags.bits.rd ? "rd  " :
-        !status.flags.bits.wr ? "wr  " :
-        !status.flags.bits.rfsh ? "rfsh" : "    ",
-        !status.flags.bits.mreq ? "mem" :
-        !status.flags.bits.iorq ? "io " : "   ",
-        !status.flags.bits.m1 ? "m1" : "  ",
-        !status.flags.bits.halt ? "halt" : "    ", 
-        !status.flags.bits.interrupt ? "int" : "   ",
-        !status.flags.bits.nmi ? "nmi" : "   ",
-        !status.flags.bits.reset ? "rst" : "   ",
-        !status.flags.bits.busrq ? "busrq" : "     ",
-        !status.flags.bits.busack ? "busack" : "      ",
-        !status.flags.bits.ioack ? "ioack" : "     ");
+        !FLAG(status.xflags, MREQ) ? "memrq" :
+        !FLAG(status.flags, IORQ) ? "iorq " : "     ",
+
+        !FLAG(status.flags, RD) ? "rd  " :
+        !FLAG(status.flags, WR) ? "wr  " :
+        !FLAG(status.xflags, RFSH) ? "rfsh" : "    ",
+
+        !FLAG(status.flags, M1) ? "m1" : "  ",
+        !FLAG(status.xflags, BUSRQ) ? "busrq" : "     ",
+        !FLAG(status.xflags, BUSACK) ? "busack" : "      ",
+        (!FLAG(status.flags, IORQ) && FLAG(status.flags, IOACK)) ? "wait" : "    ",
+        !FLAG(status.flags, HALT) ? "halt" : "    ", 
+        !FLAG(status.xflags, INTERRUPT) ? "int" : "   ",
+        !FLAG(status.xflags, NMI) ? "nmi" : "   ",
+        !FLAG(status.xflags, RESET) ? "reset" : "     ");
 
         // wait until output is fully transmitted to avoid
         // interfering with z80_uart status for running program
@@ -123,7 +125,7 @@ uint8_t z80_tick()
     // Only do expensive IO-expander read if memory logging or breakpoint is enabled
     if (ENABLED(watches, MEMRD) || ENABLED(breaks, MEMRD) || ENABLED(watches, MEMWR) || ENABLED(breaks, MEMWR)) {
         bus_stat status = bus_status();
-        if (!status.flags.bits.mreq)
+        if (!FLAG(status.flags, MREQ))
             // Only log memory access once, on the falling edge of RD or WR
             if (lastrd && !GET_RD) {
                 if (logged = INRANGE(watches, MEMRD, status.addr))

@@ -30,14 +30,14 @@
 #include <avr/io.h>
 #include "iox.h"
 
-// Address bus ////////////////////////////////////////////////////////////////
+/**
+ * Address Bus
+ */
 
-// Address bus LSB on local port
 #define ADDRLO_DDR DDRA
 #define ADDRLO_PORT PORTA
 #define ADDRLO_PIN PINA
 
-// Address bus MSB on i/o expander
 #define ADDRHI_IODIR IODIRA0
 #define ADDRHI_GPPU GPPUA0
 #define ADDRHI_GPIO GPIOA0
@@ -54,7 +54,9 @@
 #define GET_ADDR (GET_ADDRLO | (GET_ADDRHI << 8))
 #define SET_ADDR(addr) (SET_ADDRLO((addr) & 0xFF), SET_ADDRHI((addr) >> 8))
 
-// Data bus ///////////////////////////////////////////////////////////////////
+/**
+ * Data Bus
+ */
 
 #define DATA_DDR DDRC
 #define DATA_PORT PORTC
@@ -65,7 +67,9 @@
 #define GET_DATA DATA_PIN
 #define SET_DATA(data) DATA_PORT = (data)
 
-// PORTB flags ////////////////////////////////////////////////////////////////
+/**
+ * PORTB flags
+ */
 
 #define IOACK 0
 #define IORQ 1
@@ -84,7 +88,9 @@
 #define M1_INPUT DDRB &= ~(1 << M1)
 #define GET_M1 (PINB & (1 << M1))
 
-// PORTD Flags ////////////////////////////////////////////////////////////////
+/**
+ * PORTD Flags
+ */
 
 #define RD 4
 #define WR 5
@@ -115,7 +121,9 @@
 #define HALT_PULLUP PORTD |= (1 << HALT)
 #define GET_HALT (PIND & (1 << HALT))
 
-// IOX GPIOB flags ////////////////////////////////////////////////////////////
+/**
+ * IOX GPIOB flags
+ */
 
 #define CTRLX_IODIR IODIRB0
 #define CTRLX_GPPU GPPUB0
@@ -161,43 +169,17 @@
 #define MREQ_LO iox_write(CTRLX_GPIO, iox_read(CTRLX_GPIO) & ~(1 << MREQ))
 #define MREQ_HI iox_write(CTRLX_GPIO, iox_read(CTRLX_GPIO) | (1 << MREQ))
 
-// Functions //////////////////////////////////////////////////////////////////
-
-typedef struct _flag_bits {
-        uint8_t : 1;
-        uint8_t rfsh : 1;
-        uint8_t reset : 1;
-        uint8_t interrupt : 1;
-        uint8_t busack : 1;
-        uint8_t mreq : 1;
-        uint8_t busrq : 1;
-        uint8_t nmi : 1;
-
-        uint8_t ioack : 1;
-        uint8_t iorq : 1;
-        uint8_t m1: 1;
-        uint8_t : 1;
-        uint8_t rd : 1;
-        uint8_t wr : 1;
-        uint8_t clk : 1;
-        uint8_t halt : 1;
-} flag_bits;
-
-typedef struct _flag_bytes {
-        uint8_t lo;
-        uint8_t hi;
-} flag_bytes;
-
-typedef union _flag_union {
-        flag_bytes bytes;
-        flag_bits bits;
-} flag_union;
-
-typedef struct _bus_stat {
-        flag_union flags;
+/**
+ * Complete bus status all in one place
+ */
+typedef struct {
+        uint8_t flags;
+        uint8_t xflags;
         uint16_t addr;
         uint8_t data;
 } bus_stat;
+
+#define FLAG(b, f) ((b) & (1<<f))
 
 void clk_cycle(uint8_t cycles);
 void clk_run(void);
