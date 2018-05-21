@@ -502,7 +502,51 @@ void cli_baud(int argc, char *argv[]) {
  */
 void cli_cls(int argc, char *argv[])
 {
-    printf_P(PSTR("\e[2J"));
+    printf_P(PSTR("\e[0m\e[;H\e[2J"));
+}
+
+void cli_dispatch(char *buf);
+
+#define WHITESPACE " \t\r\n"
+#define MAXBUF 80
+#define MAXARGS 8
+#define AUTOEXEC "autoexec.z8c"
+
+/**
+ * Execute the commands in a file
+ */
+void cli_exec(char *filename)
+{
+    FIL fil;
+    FILE file;
+    FRESULT fr;
+    char buf[MAXBUF];
+    if ((fr = f_open(&fil, filename, FA_READ)) == FR_OK) {
+        fdev_setup_stream(&file, fatfs_putchar, fatfs_getchar, _FDEV_SETUP_RW);
+        fdev_set_udata(&file, &fil);
+        while (fgets(buf, sizeof buf - 1, &file) != NULL && strlen(buf) != 0) {
+            printf_P(PSTR("%s>%s"), filename, buf);
+            cli_dispatch(buf);
+        }
+        if ((fr = f_close(&fil)) != FR_OK)
+            printf_P(PSTR("error closing file: %S\n"), strlookup(fr_text, fr));
+    } else {
+        // don't show a file not found error for autoexec.bat
+        if (fr != FR_NO_FILE || strcmp_P(filename, PSTR(AUTOEXEC)) != 0)
+            printf_P(PSTR("error opening file: %S\n"), strlookup(fr_text, fr));
+    }
+}
+
+/**
+ * Submit the commands in a batch file
+ */
+void cli_submit(int argc, char *argv[]) 
+{
+    if (argc < 2) {
+        printf_P(PSTR("usage: submit <filename>\n"));
+        return;
+    }
+    cli_exec(argv[1]);
 }
 
 /**
@@ -534,6 +578,7 @@ const char cli_cmd_names[] PROGMEM =
     "sboot\0"
     "s\0"
     "step\0"
+    "submit\0"
     "unmount\0"
     "watch";
 
@@ -566,6 +611,7 @@ const char cli_cmd_help[] PROGMEM =
     "boot disk using SIMH bootloader\0"             // sboot
     "shorthand for step\0"                          // s
     "step processor N cycles\0"                     // step
+    "submit a batch file to be executed\0"          // submit
     "unmount a disk image\0"                        // unmount
     "set watch points";                             // watch
 
@@ -600,6 +646,7 @@ void * const cli_cmd_functions[] PROGMEM = {
     &cli_sboot,
     &cli_step,
     &cli_step,
+    &cli_submit,
     &cli_unmount,
     &cli_breakwatch
 };
@@ -618,42 +665,47 @@ void cli_help(int argc, char *argv[])
     }
 }
 
-#define WHITESPACE " \t\r\n"
-#define MAXBUF 80
-#define MAXARGS 8
-
-
 /**
- * Main command-line loop for monitor
+ * Dispatch a single command
  */
-void cli_loop(void) {
-    char buf[MAXBUF];
+void cli_dispatch(char *buf) 
+{
     char *cmd;
     char *argv[MAXARGS];
     int argc;
     int i;
     void (*cmd_func)(int, char*[]);
+    if ((argv[0] = strtok(buf, WHITESPACE)) == NULL)
+        return;            
+    for (argc = 1; argc < MAXARGS; argc++) {
+        if ((argv[argc] = strtok(NULL, WHITESPACE)) == NULL)
+            break;
+    }
+    for (i = 0; i < NUM_CMDS; i++) {
+        if (strcmp_P(argv[0], strlookup(cli_cmd_names, i)) == 0) {
+            cmd_func = pgm_read_ptr(&cli_cmd_functions[i]);
+            break;
+        }
+    }
+    if (i == NUM_CMDS)
+        printf_P(PSTR("unknown command: %s. type help for list.\n"), argv[0]);
+    else
+        cmd_func(argc, argv);
+}
 
-    printf_P(PSTR("type help to list available commands\n"));
+/**
+ * Main command-line loop for monitor
+ */
+void cli_loop(void) 
+{
+    char buf[MAXBUF];
+    printf_P(PSTR(
+        "z80ctrl 0.9 by J.B. Langston\n\n"
+        "type help to list available commands\n"));
     for (;;) {
         printf_P(PSTR("z80ctrl>"));
         if (fgets(buf, sizeof buf - 1, stdin) != NULL) {
-            if ((argv[0] = strtok(buf, WHITESPACE)) == NULL)
-                continue;            
-            for (argc = 1; argc < MAXARGS; argc++) {
-                if ((argv[argc] = strtok(NULL, WHITESPACE)) == NULL)
-                    break;
-            }
-            for (i = 0; i < NUM_CMDS; i++) {
-                if (strcmp_P(argv[0], strlookup(cli_cmd_names, i)) == 0) {
-                    cmd_func = pgm_read_ptr(&cli_cmd_functions[i]);
-                    break;
-                }
-            }
-            if (i == NUM_CMDS)
-                printf_P(PSTR("unknown command: %s. type help for list.\n"), argv[0]);
-            else
-                cmd_func(argc, argv);
+            cli_dispatch(buf);
         }
     }
 }
@@ -669,13 +721,12 @@ int main(void)
     uart_init(1, UBRR115200);
     stdout = stdin = &uart_str;
 
-    puts_P(PSTR("z80ctrl 0.9 by J.B. Langston\n\n"));
-
     disk_initialize(DRV_MMC);
     if ((fr = f_mount(&fs, "", 1)) != FR_OK)
         printf_P(PSTR("error mounting drive: %S\n"), strlookup(fr_text, fr));
 
     bus_init();
 
+    cli_exec(AUTOEXEC);
     cli_loop();
 }
