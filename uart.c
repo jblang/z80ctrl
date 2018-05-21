@@ -48,16 +48,16 @@ typedef struct {
 
 static volatile FIFO TxFifo[2], RxFifo[2];
 
+volatile uint8_t * const UCSRA[] = {&UCSR0A, &UCSR1A};
 volatile uint8_t * const UCSRB[] = {&UCSR0B, &UCSR1B};
 volatile uint8_t * const UBRRL[] = {&UBRR0L, &UBRR1L};
+volatile uint8_t * const UBRRH[] = {&UBRR0H, &UBRR1H};
 volatile uint8_t * const UDR[] = {&UDR0, &UDR1};
 
 /* Initialize UART */
 
-
-void uart_init (uint8_t uart, uint32_t bps)
+void uart_init (uint8_t uart, uint16_t ubrr)
 {
-	uint16_t n;
     uart &= 1;
 
 	*UCSRB[uart] = 0;
@@ -65,8 +65,9 @@ void uart_init (uint8_t uart, uint32_t bps)
 	RxFifo[uart].ct = 0; RxFifo[uart].ri = 0; RxFifo[uart].wi = 0;
 	TxFifo[uart].ct = 0; TxFifo[uart].ri = 0; TxFifo[uart].wi = 0;
 
-	n = F_CPU / bps / 8;
-	*UBRRL[uart] = (n >> 1) + (n & 1) - 1;
+    *UBRRH[uart] = ubrr >> 8;
+    *UBRRL[uart] = ubrr & 0xff;
+
 	*UCSRB[uart] = _BV(RXEN0)|_BV(RXCIE0)|_BV(TXEN0);
 }
 
@@ -110,7 +111,9 @@ void uart_flush(void)
 {
     while (uart_testtx(0) || uart_testtx(1))
         ;
-}
+    loop_until_bit_is_set(UCSR0A, UDRE0);
+    loop_until_bit_is_set(UCSR1A, UDRE1);
+ }
 
 void uart_putc (uint8_t uart, uint8_t d)
 {

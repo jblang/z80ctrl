@@ -38,6 +38,7 @@
 #include "disasm.h"
 #include "diskemu.h"
 #include "diskio.h"
+#include "uart.h"
 
 FATFS fs;
 
@@ -445,12 +446,36 @@ void cli_mount(int argc, char *argv[])
 void cli_attach(int argc, char *argv[])
 {
     if (argc != 3) {
-        printf_P(PSTR("usage: attach <virtual uart #> <physical uart #>\n"));
+        printf_P(PSTR("usage: attach <virtual uart> <physical uart>\n"));
         return;
     }
     uint8_t virtual = strtol(argv[1], NULL, 10) & 1;
     uint8_t physical = strtol(argv[2], NULL, 10) & 1;
     z80_uart[virtual] = physical;
+}
+
+void cli_baud(int argc, char *argv[]) {
+    if (argc != 3) {
+        printf_P(PSTR("usage: baud <uart> <baud>\n"));
+        return;
+    }
+    uint8_t uart = strtol(argv[1], NULL, 10) & 1;
+    uint32_t requested = strtoul(argv[2], NULL, 10);
+    uint16_t ubrr = 0;
+    uint32_t actual = 0;
+    // Find closest possible actual baud rate
+    for (;;) {
+        actual = (uint32_t)F_CPU / ((uint32_t)16 * ((uint32_t)ubrr + (uint32_t)1));
+        if (actual <= requested)
+            break;
+        ubrr++;
+        // stop if we have maxed out UBRR
+        if (ubrr == 0)
+            break;
+    }
+    printf_P(PSTR("UART %u: requested: %lu, actual: %lu\n"), uart, requested, actual);
+    uart_flush();
+    uart_init(uart, ubrr);
 }
 
 void cli_unmount(int argc, char *argv[])
@@ -476,6 +501,7 @@ const char cli_cmd_names[] PROGMEM =
 #ifdef SET_BANK
     "bank\0"
 #endif
+    "baud\0"
     "bus\0"
     "break\0"
     "c\0"
@@ -504,6 +530,7 @@ const char cli_cmd_help[] PROGMEM =
 #ifdef SET_BANK
     "select active 64K bank\0"                      // bank
 #endif
+    "configure UART baud rate\0"                    // baud
     "display low-level bus status\0"                // bus
     "set breakpoints\0"                             // break
     "shorthand to continue debugging\0"             // c
@@ -532,6 +559,7 @@ void * const cli_cmd_functions[] PROGMEM = {
 #ifdef SET_BANK
     &cli_bank,
 #endif
+    &cli_baud,
     &cli_bus,
     &cli_breakwatch,
     &cli_debug,

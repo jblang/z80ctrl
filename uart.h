@@ -20,7 +20,11 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-void uart_init(uint8_t uart, uint32_t bps);     /* Perform UART startup initialization. */
+#include <stdint.h>
+
+#define UBRR115200 10
+
+void uart_init(uint8_t uart, uint16_t ubrr);     /* Perform UART startup initialization. */
 uint16_t uart_testrx(uint8_t uart);		/* Check number of bytes in UART Rx FIFO */
 uint16_t uart_testtx(uint8_t uart);		/* Check number of bytes in UART Rx FIFO */
 uint8_t uart_getc(uint8_t uart);		/* Get a byte from UART Rx FIFO */
