@@ -30,9 +30,9 @@
 
 #include "z80.h"
 #include "bus.h"
-#include "diskemu.h"
 #include "disasm.h"
 #include "uart.h"
+#include "iorq.h"
 
 /**
  * Breakpoints and watch names
@@ -62,117 +62,6 @@ void z80_reset(uint16_t addr)
 }
 
 /**
- * IO registers
- */
-#define SIO0_STATUS 0x10
-#define SIO0_DATA 0x11
-#define SIO1_STATUS 0x12
-#define SIO1_DATA 0x13
-#define SIOA_CONTROL 0x80
-#define SIOA_DATA 0x81
-#define SIOB_CONTROL 0x82
-#define SIOB_DATA 0x83
-
-/**
- * Physical to virtual UART mapping.
- */
-uint8_t z80_uart[] = {0 , 1};
-
-/**
- * Utility macros to generate SIO status register values
- */
-#define ALTAIR_SIO_STATUS(u) ((((uart_testtx(z80_uart[(u)]) == 0) << 1) & 0x2) | ((uart_testrx(z80_uart[(u)]) > 0) & 0x1))
-#define ZILOG_SIO_STATUS(u) ((1 << 3) | (1  << 5) | (((uart_testtx(z80_uart[(u)]) == 0) << 2) & 0x4) | ((uart_testrx(z80_uart[(u)]) > 0) & 0x1))
-
-/**
- * Handle Z80 IO request
- */
-void z80_iorq(void)
-{
-    switch (GET_ADDRLO) {
-        case SIO0_STATUS:
-            if (!GET_RD) {
-                SET_DATA(ALTAIR_SIO_STATUS(0));
-                DATA_OUTPUT;
-            }
-            break;
-        case SIO1_STATUS:
-            if (!GET_RD) {
-                SET_DATA(ALTAIR_SIO_STATUS(1));
-                DATA_OUTPUT;
-            }
-            break;
-        case SIOA_CONTROL:
-            if (!GET_RD) {
-                SET_DATA(ZILOG_SIO_STATUS(0));
-                DATA_OUTPUT;
-            }
-            break;
-        case SIOB_CONTROL:
-            if (!GET_RD) {
-                SET_DATA(ZILOG_SIO_STATUS(1));
-                DATA_OUTPUT;
-            }
-            break;
-        case SIO0_DATA:
-        case SIOA_DATA:
-            if (!GET_RD) {
-                SET_DATA(uart_getc(z80_uart[0]));
-                DATA_OUTPUT;
-            } else if (!GET_WR) {
-                uart_putc(z80_uart[0], GET_DATA);
-            }
-            break;
-        case SIO1_DATA:
-        case SIOB_DATA:
-            if (!GET_RD) {
-                SET_DATA(uart_getc(z80_uart[1]));
-                DATA_OUTPUT;
-            } else if (!GET_WR) {
-                uart_putc(z80_uart[1], GET_DATA);
-            }
-            break;
-        case DRIVE_STATUS:
-            if (!GET_RD) {
-                SET_DATA(drive_status());
-                DATA_OUTPUT;
-            } else if (!GET_WR) {
-                drive_select(GET_DATA);
-            }
-            break;
-        case DRIVE_CONTROL:
-            if (!GET_RD) {
-                SET_DATA(drive_sector());
-                DATA_OUTPUT;
-            } else if (!GET_WR) {
-                drive_control(GET_DATA);
-            }
-            break;
-        case DRIVE_DATA:
-            if (!GET_RD) {
-                SET_DATA(drive_read());
-                DATA_OUTPUT;
-            } else if (!GET_WR) {
-                drive_write(GET_DATA);
-            }
-            break;
-        default:
-            if (!GET_RD) {
-                SET_DATA(0xFF);
-            }
-    }
-    if (!GET_RD)
-        BUSRQ_LO;
-    IOACK_LO;
-    while (!GET_IORQ) {
-        CLK_TOGGLE;
-    }
-    DATA_INPUT;
-    IOACK_HI;
-    BUSRQ_HI;
-}
-
-/**
  * Run the Z80 at full speed
  */
 void z80_run(void)
@@ -180,7 +69,7 @@ void z80_run(void)
     clk_run();
     while (GET_HALT) {
         if (!GET_IORQ) {
-            z80_iorq();
+            iorq_dispatch();
         }
     }
     clk_stop();
@@ -273,7 +162,7 @@ uint8_t z80_tick()
 
     // Handle I/O request
     if (!GET_IORQ)
-        z80_iorq();
+        iorq_dispatch();
         
     return brk;
 }

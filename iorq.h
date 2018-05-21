@@ -21,35 +21,12 @@
  */
 
 /**
- * @file z80.h Z80 run loop and debugger
+ * @file iorq.c I/O request handler
  */
 
-#ifndef Z80_H
-#define Z80_H
+ #ifndef IORQ_H
+ #define IORQ_H
 
-#include <stdint.h>
-#include "bus.h"
+void iorq_dispatch(void); 
 
-
-enum {MEMRD, MEMWR, IORD, IOWR, OPFETCH, BUS, DEBUGCNT};
-
-typedef struct {
-        uint16_t start;
-        uint16_t end;
-} range;
-
-extern range breaks[];
-extern range watches[];
-extern const char debug_names[];
-
-#define INRANGE(ranges, type, addr) ((ranges)[(type)].start <= (addr) && (addr) <= (ranges)[type].end)
-#define ENABLED(ranges, type) ((ranges)[(type)].start <= (ranges)[(type)].end)
-
-extern uint8_t z80_uart[];
-
-void z80_reset(uint16_t addr);
-void z80_run(void);
-void z80_debug(uint32_t cycles);
-void z80_buslog(bus_stat status);
-
-#endif
+ #endif
