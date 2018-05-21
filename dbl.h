@@ -1,9 +1,11 @@
 #ifndef DBL_H
 #define DBL_H
 
-// Altair Disk Boot Loader
-// Version 4.1
-// see dbl.asm for more details
+/**
+ * @file dbl.h Altair Disk Boot Loader
+ * 
+ * Assembled from dbl.asm
+*/
 
 unsigned const char dbl_bin[] PROGMEM = {
   0x21, 0x13, 0xff, 0x11, 0x00, 0x2c, 0x0e, 0xeb, 0x7e, 0x12, 0x23, 0x13,

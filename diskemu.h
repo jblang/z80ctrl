@@ -20,6 +20,9 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+/** @file diskemu.h MITS Altair 88-DISK Simulator */
+
+
 #ifndef DISKEMU_H
 #define DISKEMU_H
 

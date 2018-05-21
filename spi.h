@@ -20,6 +20,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+/**
+ * @file spi.h SPI chip select pin definitions
+ */
+
 #ifndef SPI_H
 #define SPI_H
 

@@ -28,29 +28,48 @@
 #include <string.h>
 #include <stdio.h>
 
-// reference: http://www.z80.info/decoding.htm
+/**
+ * @file disasm.c Z80 disassembler
+ * 
+ * This disassembler decodes Z80 instructions using techniques described 
+ * in http://www.z80.info/decoding.htm.
+ */
 
-// 8-bit registers
+/**
+ *  8-bit registers
+ */
 const char *registers[] = {"B", "C", "D", "E", "H", "L", "(HL)", "A", "IXH", "IXL", "IYH", "IYL"};
 enum {B, C, D, E, H, L, HLI, A, IXH, IXL, IYH, IYL};
 
-// 16-bit register pairs
+/**
+ *  16-bit register pairs
+ */
 const char *register_pairs[] = {"BC", "DE", "HL", "SP", "AF", "IX", "IY"};
 enum {BC, DE, HL, _SP, AF, IX, IY};
 
-// condition codes
+/**
+ * condition codes
+ */
 const char *conditions[] = {"NZ", "Z", "NC", "C", "PO", "PE", "P", "M"};
 
-// arithmetic/logic operations
+/**
+ * arithmetic/logic operations
+ */
 const char *alu_ops[] = {"ADD A,", "ADC A,", "SUB ", "SBC A,", "AND ", "XOR ", "OR ", "CP "};
 
-// rotation/shift operations
+/**
+ * rotation/shift operations
+ */
 const char *rot_ops[] = {"RLC", "RRC", "RL", "RR", "SLA", "SRA", "SLL", "SRL"};
 
-// interrupt modes
+/**
+ * interrupt modes
+ */
 const char *int_modes[] = {"0", "0", "1", "2"};
 
-// block instructions
+/**
+ * block instructions
+ */
 const char *block_ops[] = {
     "LDI", "LDD", "LDIR", "LDDR", 
     "CPI", "CPD", "CPIR", "CPDR", 
@@ -58,18 +77,26 @@ const char *block_ops[] = {
     "OUTI", "OUTD", "OTIR", "OTDR"
 };
 
-// indirect load ops
+/**
+ * indirect load ops
+ */
 const char *ld_ops[] = {"LD (BC),A", "LD A,(BC)", "LD (DE),A", "LD A,(DE)"};
 
-// accumulator and flag ops for x = 0, z = 7
+/**
+ * accumulator and flag ops for x = 0, z = 7
+ */
 const char *af_ops[] = {"RLCA", "RRCA", "RLA", "RRA", "DAA", "CPL", "SCF", "CCF"};
 
-// miscellaneous 0xED operations
+/**
+ * miscellaneous 0xED operations
+ */
 const char *misc_ops[] = {"LD I,A", "LD R,A", "LD A,I", "LD A,R", "RRD", "RLD", "NOP", "NOP"};
 
 const char *bit_ops[] = {"BIT", "RES", "SET"};
 
-// disassemble a single instruction
+/**
+ * disassemble a single instruction
+ */
 uint8_t disasm(uint16_t addr, uint8_t (*input)(), char *output)
 {
     uint8_t opcode = 0;
@@ -349,14 +376,16 @@ uint8_t disasm(uint16_t addr, uint8_t (*input)(), char *output)
     //printf_P(PSTR("%s %02X %03o %04X\t"), register_pairs[im], prefix, opcode, operand);
 }
 
-uint8_t disasm_index = 0;   // index of next byte within 256 byte buffer
-uint16_t disasm_addr = 0;   // address of next chunk
-uint8_t *disasm_buf;
+uint8_t disasm_index = 0;   /**< index of next byte within 256 byte buffer */
+uint16_t disasm_addr = 0;   /**< address of next chunk to read from external RAM */
+uint8_t *disasm_buf;        /**< pointer to disassembly buffer */
 
-uint8_t instr_bytes[8];     // bytes contained in the current instruction
-uint8_t instr_length = 0;   // length of the current construction
+uint8_t instr_bytes[8];     /**< bytes contained in the current instruction */
+uint8_t instr_length = 0;   /**< length of the current construction */
 
-// Return next byte for instruction from memory
+/**
+ * Return next byte for instruction from memory
+ */
 uint8_t disasm_next_byte()
 {
     if (disasm_index == 0)
@@ -366,7 +395,9 @@ uint8_t disasm_next_byte()
     return instr_bytes[instr_length++];
 }
 
-// Disassemble memory to console
+/**
+ * Disassemble instructions from external memory to console
+ */
 void disasm_mem(uint16_t start, uint16_t end)
 {
     char mnemonic[64];

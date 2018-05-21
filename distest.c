@@ -20,6 +20,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+/**
+ * @file distest.c Disassembler driver for testing on a PC
+ */
+
 #include <stdio.h>
 #include <stdint.h>
 

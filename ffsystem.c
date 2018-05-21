@@ -1,7 +1,8 @@
-/*------------------------------------------------------------------------*/
-/* Sample Code of OS Dependent Functions for FatFs                        */
+/** 
+ * @file ffsystem.c Sample Code of OS Dependent Functions for FatFs
+ */
+
 /* (C)ChaN, 2017                                                          */
-/*------------------------------------------------------------------------*/
 
 
 #include "ff.h"

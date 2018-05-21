@@ -20,6 +20,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+/**
+ * @file bus.c Low-level control of the Z80 bus
+ */
+
 #include "bus.h"
 #include "iox.h"
 
@@ -29,6 +33,9 @@
 
 #include <stdio.h>
 
+/**
+ * Run the clock for a specified number of cycles
+ */
 void clk_cycle(uint8_t cycles)
 {
     uint8_t i;
@@ -38,17 +45,9 @@ void clk_cycle(uint8_t cycles)
     }
 }
 
-void clk_trace(uint8_t cycles)
-{
-    uint8_t i;
-    for (i = 0; i < cycles; i++) {
-        CLK_HI;
-        CLK_LO;
-        bus_status();
-    }
-}
-
-// Run the Z80's clock
+/**
+ * Run the Z80's clock
+ */
 void clk_run(void)
 {
     // Fast PWM mode with adjustable top and no prescaler
@@ -58,7 +57,9 @@ void clk_run(void)
     OCR2B = 0;
 }
 
-// Stop the Z80's clock
+/**
+ * Stop the Z80's clock
+ */
 void clk_stop()
 {
     TCCR2A = 0;
@@ -67,7 +68,9 @@ void clk_stop()
     OCR2B = 0;
 }
 
-// Request control of the bus from the Z80
+/**
+ *  Request control of the bus from the Z80
+ */
 uint8_t bus_master(void)
 {
     uint8_t i = 255;
@@ -93,7 +96,9 @@ uint8_t bus_master(void)
     return 1;
 }
 
-// Return control of the bus to the Z80
+/**
+ *  Return control of the bus to the Z80
+ */
 void bus_slave(void)
 {
     MREQ_INPUT;
@@ -104,7 +109,9 @@ void bus_slave(void)
     BUSRQ_HI;
 }
 
-// Log current bus status
+/**
+ * Retrieve the current bus status
+ */
 bus_stat bus_status()
 {
     bus_stat status;
@@ -115,7 +122,9 @@ bus_stat bus_status()
     return status;
 }
 
-// Initialize bus
+/**
+ * Initialize the bus
+ */
 void bus_init(void)
 {
     // Initialize I/O expander
@@ -162,7 +171,9 @@ void bus_init(void)
     bus_slave();
 }
 
-// Read specified number of bytes from external memory to a buffer
+/**
+ * Read specified number of bytes from external memory to a buffer
+ */
 void read_mem(uint16_t addr, uint8_t *buf, uint16_t len)
 {
     uint16_t i;
@@ -187,7 +198,9 @@ void read_mem(uint16_t addr, uint8_t *buf, uint16_t len)
     bus_slave();
 }
 
-// Write specified number of bytes to external memory from a buffer
+/**
+ *  Write specified number of bytes to external memory from a buffer
+ */
 void _write_mem(uint16_t addr, const uint8_t *buf, uint16_t len, uint8_t pgmspace)
 {
     if(!bus_master())

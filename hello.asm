@@ -19,7 +19,7 @@
 ; FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
 ; DEALINGS IN THE SOFTWARE.
 
-; hello world example program
+; @file hello.asm: hello world example program
 
          org 100h
 

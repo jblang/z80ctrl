@@ -20,6 +20,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+/**
+ * @file uart.c Interrupt-driven buffered UART driver with cooked mode terminal
+ */
+
 #include <stdint.h>
 #include <stdio.h>
 

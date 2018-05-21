@@ -20,6 +20,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+/**
+ * @file iox.h MCP21S17 register definitions and convenience functions
+ */
+
 #ifndef IOX_H
 #define IOX_H
 

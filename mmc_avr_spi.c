@@ -1,6 +1,7 @@
 /*-----------------------------------------------------------------------*/
-/* MMCv3/SDv1/SDv2 Controls via AVR SPI module                           */
-/*-----------------------------------------------------------------------*/
+/**
+ * @file mmc_avr_spi.c MMCv3/SDv1/SDv2 Controls via AVR SPI module
+ */
 /*
 /  Copyright (C) 2016, ChaN, all right reserved.
 /

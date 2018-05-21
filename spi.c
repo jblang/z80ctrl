@@ -20,6 +20,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+/**
+ * @file spi.c Low-level SPI convenience functions
+ */
+
 #include "spi.h"
 
 #include <avr/io.h>

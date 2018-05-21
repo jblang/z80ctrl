@@ -20,6 +20,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+/**
+ * @file z80.h Z80 debugger
+ */
+
 #ifndef Z80_H
 #define Z80_H
 

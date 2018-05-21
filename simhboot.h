@@ -20,10 +20,14 @@
     Based on work by Charles E Owen (c) 1997
 */
 
+/**
+ * @file simhboot.h SIMH AltairZ80 bootloader
+ * 
+ * Assembled version of simhboot.asm
+ */
+
 #ifndef SIMHBOOT_H
 #define SIMHBOOT_H
-
-// Boot rom taken from https://github.com/simh/simh/blob/master/AltairZ80/altairz80_dsk.c
 
 unsigned const char simhboot_bin[] PROGMEM = {
     0xf3, 0x06, 0x80, 0x3e, 0x0e, 0xd3, 0xfe, 0x05, /* ff00-ff07 */

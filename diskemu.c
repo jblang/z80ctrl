@@ -1,7 +1,5 @@
 /* 
    z80ctrl (https://github.com/jblang/z80ctrl)
-   diskemu.c: MITS Altair 88-DISK Simulator
-
    Copyright (c) 2018 J.B. Langston
    Copyright (c) 1997-2010, Charles E. Owen
 
@@ -25,6 +23,9 @@
    Except as contained in this notice, the name of Charles E. Owen shall not be
    used in advertising or otherwise to promote the sale, use or other dealings
    in this Software without prior written authorization from Charles E. Owen.
+*/
+
+/** @file diskemu.c MITS Altair 88-DISK Simulator
 
     The 88_DISK is a 8-inch floppy controller which can control up
     to 16 daisy-chained Pertec FD-400 hard-sectored floppy drives.

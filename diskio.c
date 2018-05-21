@@ -1,5 +1,6 @@
 /*-----------------------------------------------------------------------*/
-/* Low level disk I/O module glue functions         (C)ChaN, 2016        */
+/** @file diskio.c Low level disk I/O module glue functions              */
+/*  (C)ChaN, 2016                                                        */
 /*-----------------------------------------------------------------------*/
 /* If a working storage control module is available, it should be        */
 /* attached to the FatFs via a glue function rather than modifying it.   */
@@ -16,10 +17,9 @@
 #endif
 
 
-/*-----------------------------------------------------------------------*/
-/* Get Drive Status                                                      */
-/*-----------------------------------------------------------------------*/
-
+/**
+ * Get Drive Status                                                      
+ */
 DSTATUS disk_status (
     BYTE pdrv		/* Physical drive nmuber to identify the drive */
 )
@@ -39,10 +39,9 @@ DSTATUS disk_status (
 
 
 
-/*-----------------------------------------------------------------------*/
-/* Inidialize a Drive                                                    */
-/*-----------------------------------------------------------------------*/
-
+/**
+ * Initialize a Drive                                                    
+ */
 DSTATUS disk_initialize (
     BYTE pdrv				/* Physical drive nmuber to identify the drive */
 )
@@ -62,10 +61,9 @@ DSTATUS disk_initialize (
 
 
 
-/*-----------------------------------------------------------------------*/
-/* Read Sector(s)                                                        */
-/*-----------------------------------------------------------------------*/
-
+/**
+ * Read Sector(s)                                                        
+ */
 DRESULT disk_read (
     BYTE pdrv,		/* Physical drive nmuber to identify the drive */
     BYTE *buff,		/* Data buffer to store read data */
@@ -88,10 +86,9 @@ DRESULT disk_read (
 
 
 
-/*-----------------------------------------------------------------------*/
-/* Write Sector(s)                                                       */
-/*-----------------------------------------------------------------------*/
-
+/**
+ * Write Sector(s)
+ */
 #if _USE_WRITE
 DRESULT disk_write (
     BYTE pdrv,			/* Physical drive nmuber to identify the drive */
@@ -115,10 +112,9 @@ DRESULT disk_write (
 #endif
 
 
-/*-----------------------------------------------------------------------*/
-/* Miscellaneous Functions                                               */
-/*-----------------------------------------------------------------------*/
-
+/**
+ * Miscellaneous Functions
+ */
 #if _USE_IOCTL
 DRESULT disk_ioctl (
     BYTE pdrv,		/* Physical drive nmuber (0..) */
@@ -141,11 +137,9 @@ DRESULT disk_ioctl (
 #endif
 
 
-/*-----------------------------------------------------------------------*/
-/* Timer driven procedure                                                */
-/*-----------------------------------------------------------------------*/
-
-
+/**
+ * Timer driven procedure
+ */
 void disk_timerproc (void)
 {
 #ifdef DRV_CFC

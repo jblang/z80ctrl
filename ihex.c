@@ -20,6 +20,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+/**
+ * @file ihex.c Functions for loading and saving Intel HEX files
+ */
+
 #include <stdint.h>
 #include <string.h>
 #include <avr/pgmspace.h>
@@ -27,10 +31,6 @@
 #include "ihex.h"
 #include "bus.h"
 #include "util.h"
-
-/**
- * @file ihex.c Functions for loading and saving Intel HEX files
- */
 
 /**
  * Record types for Intel HEX files

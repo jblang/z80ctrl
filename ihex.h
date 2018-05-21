@@ -20,15 +20,15 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+/**
+ * @file ihex.h Functions for loading and saving Intel HEX files
+ */
+
 #ifndef IHEX_H
 #define IHEX_H
 
 #include <stdint.h>
 #include <stdio.h>
-
-/**
- * @file Functions for loading and saving Intel HEX files
- */
 
 int save_ihex(uint32_t start, uint16_t end, FILE *file);    /**< Save an intel hex file */
 uint16_t load_ihex(FILE *file);                             /**< Load an intel hex file */

@@ -1,6 +1,5 @@
 ;***************************************************************
-;*                                                             *
-;* Altair Disk Boot Loader                                     *
+;* @file dbl.asm: Altair Disk Boot Loader                      *
 ;* Version 4.1                                                 *
 ;*                                                             *
 ;* DISASSEMBLED BY MARTIN EBERHARD, 4 MARCH 2012               *

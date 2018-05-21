@@ -25,6 +25,10 @@
 
 #include <stdint.h>
 
+/**
+ * @file disasm.h Z80 disassembler
+ */
+
 uint8_t disasm(uint16_t addr, uint8_t (*input)(), char *output);
 void disasm_mem(uint16_t start, uint16_t end);
 

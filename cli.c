@@ -20,6 +20,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+/**
+ * @file cli.c Monitor command-line interface
+ */
+
 #include <avr/pgmspace.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -41,10 +45,6 @@
 #include "uart.h"
 
 FATFS fs;
-
-/**
- * @file Monitor command-line interface
- */
 
 /**
  * Load an Intel HEX file from disk or stdin

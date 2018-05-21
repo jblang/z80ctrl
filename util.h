@@ -23,11 +23,11 @@
 #ifndef UTIL_H
 #define UTIL_H
 
-#include <stdint.h>
-
 /**
- * @file Miscellaneous utility functions
+ * @file util.h Miscellaneous utility functions
  */
+
+#include <stdint.h>
 
 const char *strlookup(const char *str, uint32_t index); /**< Lookup a string by index in a NULL-separated PROGMEM array */
 int fatfs_getchar(FILE * stream);                       /**< FatFS wrapper to read a single byte from a file */

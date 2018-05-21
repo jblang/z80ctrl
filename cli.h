@@ -20,6 +20,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+/**
+ * @file cli.h Monitor command-line interface
+ */
+
 #ifndef CLI_H
 #define CLI_H
 

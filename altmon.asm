@@ -1,5 +1,5 @@
 ;-------------------------------------------------------------------------
-;  ALTMON.ASM - 1K ROM monitor for the Altair 8800.
+;  @file ALTMON.ASM - 1K ROM monitor for the Altair 8800.
 ; 
 ;     This monitor is based on the 2.0C monitor from Vector Graphic. The
 ;     original version has been updated to use Altair 2SIO serial ports

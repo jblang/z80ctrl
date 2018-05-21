@@ -1,5 +1,7 @@
-/*------------------------------------------------------------------------*/
-/* Unicode handling functions for FatFs R0.13a                            */
+/**
+ * @file ffunicode.c Unicode handling functions for FatFs R0.13a
+ */
+
 /*------------------------------------------------------------------------*/
 /* This module will occupy a huge memory in the .const section when the    /
 /  FatFs is configured for LFN with DBCS. If the system has any Unicode    /

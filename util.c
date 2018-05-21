@@ -20,16 +20,16 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+/**
+ * @file util.c Miscellaneous utility functions
+ */
+
 #include <stdint.h>
 #include <avr/pgmspace.h>
 #include <stdio.h>
 
 #include "util.h"
 #include "ff.h"
-
-/**
- * @file Miscellaneous utility functions
- */
 
 /**
  * Look up a text string by index from a NULL-separated PROGMEM array

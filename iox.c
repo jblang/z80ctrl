@@ -20,6 +20,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+/**
+ * @file iox.c MCP21S17 convenience functions
+ */
+
 #include "iox.h"
 #include "spi.h"
 

@@ -20,6 +20,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+/**
+ * @file bus.h Low-level control of the Z80 bus
+ */
+
 #ifndef BUS_H
 #define BUS_H
 
@@ -196,7 +200,6 @@ typedef struct _bus_stat {
 } bus_stat;
 
 void clk_cycle(uint8_t cycles);
-void clk_trace(uint8_t cycles);
 void clk_run(void);
 void clk_stop(void);
 uint8_t bus_master(void);

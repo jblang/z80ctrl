@@ -20,6 +20,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+/**
+ * @file z80.c Z80 debugger
+ */
+
 #include <stdint.h>
 #include <stdio.h>
 #include <avr/pgmspace.h>
@@ -30,13 +34,20 @@
 #include "disasm.h"
 #include "uart.h"
 
-// Breakpoints and watches
+/**
+ * Breakpoints and watch names
+ */
 const char debug_names[] PROGMEM = "memrd\0memwr\0iord\0iowr\0opfetch\0bus";
 
+/**
+ * Breakpoint and watch ranges
+ */
 range breaks[] = {{0xffff, 0}, {0xffff, 0}, {0xffff, 0}, {0xffff, 0}, {0xffff, 0}, {0xffff, 0}};
 range watches[] = {{0xffff, 0}, {0xffff, 0}, {0xffff, 0}, {0xffff, 0}, {0xffff, 0}, {0xffff, 0}};
 
-// Reset the Z80
+/**
+ * Reset the Z80 to a specified address
+ */
 void z80_reset(uint16_t addr)
 {
     uint8_t reset_vect[] = { 0xc3, (addr & 0xFF), (addr >> 8) };
@@ -50,6 +61,9 @@ void z80_reset(uint16_t addr)
     IOACK_HI;
 }
 
+/**
+ * IO registers
+ */
 #define SIO0_STATUS 0x10
 #define SIO0_DATA 0x11
 #define SIO1_STATUS 0x12
@@ -59,12 +73,20 @@ void z80_reset(uint16_t addr)
 #define SIOB_CONTROL 0x82
 #define SIOB_DATA 0x83
 
+/**
+ * Physical to virtual UART mapping.
+ */
 uint8_t z80_uart[] = {0 , 1};
 
+/**
+ * Utility macros to generate SIO status register values
+ */
 #define ALTAIR_SIO_STATUS(u) ((((uart_testtx(z80_uart[(u)]) == 0) << 1) & 0x2) | ((uart_testrx(z80_uart[(u)]) > 0) & 0x1))
 #define ZILOG_SIO_STATUS(u) ((1 << 3) | (1  << 5) | (((uart_testtx(z80_uart[(u)]) == 0) << 2) & 0x4) | ((uart_testrx(z80_uart[(u)]) > 0) & 0x1))
 
-// Handle Z80 IO request
+/**
+ * Handle Z80 IO request
+ */
 void z80_iorq(void)
 {
     switch (GET_ADDRLO) {
@@ -150,7 +172,9 @@ void z80_iorq(void)
     BUSRQ_HI;
 }
 
-// Run the Z80 at full speed
+/**
+ * Run the Z80 at full speed
+ */
 void z80_run(void)
 {
     clk_run();
@@ -163,7 +187,9 @@ void z80_run(void)
     CLK_LO;
 }
 
-// Log the bus status
+/**
+ * Log the bus status
+ */
 void z80_buslog(bus_stat status)
 {
     printf_P(
@@ -190,7 +216,9 @@ void z80_buslog(bus_stat status)
         uart_flush();
 }
 
-// Do a single T cycle, optionally logging and breaking on the bus status
+/**
+ * Do a single T cycle, optionally logging and breaking on the bus status
+ */
 uint8_t z80_tick()
 {
     // Save previous RD and WR values to detect falling edge
@@ -250,7 +278,9 @@ uint8_t z80_tick()
     return brk;
 }
 
-// Clock the Z80 until it completes a memory read cycle and return the value read
+/**
+ * Clock the Z80 until it completes a memory read cycle and return the value read
+ */
 uint8_t z80_read()
 {
     uint8_t data;
@@ -265,7 +295,9 @@ uint8_t z80_read()
     return data;
 }
 
-// Run the Z80 with watches and breakpoints for a specified number of instructions
+/**
+ * Run the Z80 with watches and breakpoints for a specified number of instructions
+ */
 void z80_debug(uint32_t cycles)
 {
     char mnemonic[255];

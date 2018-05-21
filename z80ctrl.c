@@ -20,6 +20,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+/**
+ * @file z80ctrl.c z80ctrl main function
+ */
+
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
@@ -34,6 +38,9 @@ FILE uart_str = FDEV_SETUP_STREAM(uart_putchar, uart_getchar, _FDEV_SETUP_RW);
 
 FATFS fs;
 
+/**
+ * z80ctrl entry point
+ */
 int main(void)
 {
     uart_init(0, UBRR115200);
