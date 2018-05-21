@@ -163,7 +163,6 @@ void z80_run(void)
     CLK_LO;
 }
 
-
 // Log the bus status
 void z80_buslog(bus_stat status)
 {
@@ -205,7 +204,7 @@ uint8_t z80_tick()
     CLK_HI;
 
     // Only do expensive IO-expander read if memory logging or breakpoint is enabled
-    if (ENABLED(watches, MEMRD) || ENABLED(breaks, MEMRD)) {
+    if (ENABLED(watches, MEMRD) || ENABLED(breaks, MEMRD) || ENABLED(watches, MEMWR) || ENABLED(breaks, MEMWR)) {
         bus_stat status = bus_status();
         if (!status.flags.bits.mreq)
             // Only log memory access once, on the falling edge of RD or WR
@@ -220,7 +219,7 @@ uint8_t z80_tick()
             }
     } 
     
-    // Handle IO requests, and optionally log or break on them
+    // Log or break on I/O requests if within range
     if (!GET_IORQ) {
         if (lastrd && !GET_RD) {
             if (logged = INRANGE(watches, IORD, GET_ADDRLO)) {
@@ -235,7 +234,6 @@ uint8_t z80_tick()
             }
             brk = INRANGE(breaks, IOWR, GET_ADDRLO);
         }
-        z80_iorq();
     }
 
     // Log if bus logging is enabled and this cycle wasn't already logged for another reason
@@ -244,6 +242,11 @@ uint8_t z80_tick()
         if (INRANGE(watches, BUS, status.addr))
             z80_buslog(status);
     }
+
+    // Handle I/O request
+    if (!GET_IORQ)
+        z80_iorq();
+        
     return brk;
 }
 
@@ -257,7 +260,7 @@ uint8_t z80_read()
     // Capture value read
     data = GET_DATA;
     // Wait for read cycle to end
-    while (!GET_MREQ || !GET_RD)
+    while (!GET_MREQ && !GET_RD)
         z80_tick();
     return data;
 }
