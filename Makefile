@@ -1,6 +1,6 @@
 BIN=z80ctrl
 FF_OBJS=diskio.o ff.o mmc_avr_spi.o
-OBJS=z80ctrl.o uart.o spi.o iox.o bus.o ihex.o z80.o cli.o diskemu.o disasm.o util.o $(FF_OBJS)
+OBJS=uart.o spi.o iox.o bus.o ihex.o z80.o cli.o diskemu.o disasm.o util.o $(FF_OBJS)
 
 CC=avr-gcc
 OBJCOPY=avr-objcopy

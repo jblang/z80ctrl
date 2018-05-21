@@ -30,13 +30,13 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "ff.h"
 #include "altmon.h"
 #include "dbl.h"
 #include "simhboot.h"
 #include "bus.h"
 #include "z80.h"
 #include "cli.h"
-#include "ff.h"
 #include "ihex.h"
 #include "util.h"
 #include "disasm.h"
@@ -44,7 +44,16 @@
 #include "diskio.h"
 #include "uart.h"
 
+/**
+ * SD card filesystem
+ */
 FATFS fs;
+
+/**
+ * UART stdio stream
+ */
+FILE uart_str = FDEV_SETUP_STREAM(uart_putchar, uart_getchar, _FDEV_SETUP_RW);
+
 
 /**
  * Load an Intel HEX file from disk or stdin
@@ -623,12 +632,7 @@ void cli_loop(void) {
     char *argv[MAXARGS];
     int argc;
     int i;
-    FRESULT fr;
     void (*cmd_func)(int, char*[]);
-
-    disk_initialize(DRV_MMC);
-    if ((fr = f_mount(&fs, "", 1)) != FR_OK)
-        printf_P(PSTR("error mounting drive: %S\n"), strlookup(fr_text, fr));
 
     printf_P(PSTR("type help to list available commands\n"));
     for (;;) {
@@ -652,4 +656,26 @@ void cli_loop(void) {
                 cmd_func(argc, argv);
         }
     }
+}
+
+/**
+ * z80ctrl entry point
+ */
+int main(void)
+{
+    FRESULT fr;
+
+    uart_init(0, UBRR115200);
+    uart_init(1, UBRR115200);
+    stdout = stdin = &uart_str;
+
+    puts_P(PSTR("z80ctrl 0.9 by J.B. Langston\n\n"));
+
+    disk_initialize(DRV_MMC);
+    if ((fr = f_mount(&fs, "", 1)) != FR_OK)
+        printf_P(PSTR("error mounting drive: %S\n"), strlookup(fr_text, fr));
+
+    bus_init();
+
+    cli_loop();
 }
