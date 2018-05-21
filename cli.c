@@ -447,6 +447,9 @@ void cli_unmount(int argc, char *argv[])
     drive_unmount(drv);
 }
 
+/**
+ * Attach a virtual UART to a physical one
+ */
 void cli_attach(int argc, char *argv[])
 {
     if (argc != 3) {
