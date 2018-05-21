@@ -161,3 +161,56 @@ void bus_init(void)
     // Make bidirectional signals inputs
     bus_slave();
 }
+
+// Read specified number of bytes from external memory to a buffer
+void read_mem(uint16_t addr, uint8_t *buf, uint16_t len)
+{
+    uint16_t i;
+
+    if(!bus_master())
+        return;
+    DATA_INPUT;
+    MREQ_LO;
+    RD_LO;
+    SET_ADDR(addr);
+    for (i = 0; i < len; i++) {
+        buf[i] = GET_DATA;
+        addr++;
+        if ((addr & 0xFF) == 0) {
+            SET_ADDR(addr);
+        } else {
+            SET_ADDRLO(addr & 0xFF);
+        }
+    }
+    RD_HI;
+    MREQ_HI;
+    bus_slave();
+}
+
+// Write specified number of bytes to external memory from a buffer
+void _write_mem(uint16_t addr, const uint8_t *buf, uint16_t len, uint8_t pgmspace)
+{
+    if(!bus_master())
+        return;
+    DATA_OUTPUT;
+    MREQ_LO;
+    SET_ADDR(addr);
+    uint16_t i;
+    for (i = 0; i < len; i++) {
+        if (pgmspace)
+            SET_DATA(pgm_read_byte(&buf[i]));
+        else
+            SET_DATA(buf[i]);
+        WR_LO;
+        WR_HI;
+        addr++;
+        if ((addr & 0xFF) == 0) {
+            SET_ADDR(addr);
+        } else {
+            SET_ADDRLO(addr & 0xFF);
+        }
+    }
+    MREQ_HI;
+    DATA_INPUT;
+    bus_slave();
+}

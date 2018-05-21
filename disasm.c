@@ -21,7 +21,7 @@
  */
 
 #include "disasm.h"
-#include "memory.h"
+#include "bus.h"
 
 #include <avr/pgmspace.h>
 #include <stdint.h>

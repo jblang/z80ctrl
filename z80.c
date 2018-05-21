@@ -28,7 +28,6 @@
 #include "bus.h"
 #include "diskemu.h"
 #include "disasm.h"
-#include "memory.h"
 #include "uart.h"
 
 // Breakpoints and watches

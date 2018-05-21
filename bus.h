@@ -204,5 +204,10 @@ void bus_slave(void);
 bus_stat bus_status(void);
 void bus_init(void);
 
+void read_mem(uint16_t addr, uint8_t * buf, uint16_t len);
+void _write_mem(uint16_t addr, const uint8_t *buf, uint16_t len, uint8_t pgmspace);
+
+#define write_mem(addr, buf, len) _write_mem((addr), (buf), (len), 0);
+#define write_mem_P(addr, buf, len) _write_mem((addr), (buf), (len), 1);
 
 #endif

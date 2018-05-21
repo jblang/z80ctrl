@@ -30,7 +30,6 @@
 #include "dbl.h"
 #include "simhboot.h"
 #include "bus.h"
-#include "memory.h"
 #include "z80.h"
 #include "cli.h"
 #include "ff.h"
@@ -184,8 +183,27 @@ void cli_dump(int argc, char *argv[])
         end = start + 0xff;
     else
         end = strtol(argv[2], NULL, 16) & 0xffff;
-    printf_P(PSTR("%04x %04x\n"), start, end);
-    dump_mem(start, end);
+    uint8_t buf[16];
+    uint8_t j;
+    uint8_t buflen = 16;
+    uint32_t i = start;
+
+    printf_P(PSTR("%04x-%04x\n"), start, end);
+    while (i <= end) {
+        printf_P(PSTR("%04X: "), i);
+        read_mem(i, buf, buflen);
+        for (j = 0; j < buflen; j++) {
+            printf_P(PSTR("%02X "), buf[j]);
+        }
+        printf_P(PSTR("  "));
+        for (j = 0; j < buflen; j++, i++) {
+            if (0x20 <= buf[j] && buf[j] <= 0x7e)
+                printf_P(PSTR("%c"), buf[j]);
+            else
+                printf_P(PSTR("."));
+        }
+        printf_P(PSTR("\n"));
+    }
 }
 
 void cli_run(int argc, char *argv[])
@@ -362,6 +380,30 @@ void cli_dir(int argc, char *argv[])
         printf_P(PSTR("%u item(s)\n"), cnt);
 }
 
+
+// Verify specified number of bytes from external memory against a buffer
+int verify_mem(uint16_t start, uint16_t end, uint8_t *src, uint8_t log)
+{
+    uint8_t buf[256];
+    int errors = 0;
+    uint16_t j = 0, buflen = 256;
+    uint32_t i = start;
+
+    while (i <= end) {
+        if (end - i + 1 < buflen)
+            buflen = end - i + 1;
+        read_mem(start, buf, buflen);
+        for (j = 0; j < buflen; i++, j++) {
+            if (buf[j] != src[i]) {
+                if (log)
+                    printf_P(PSTR("%04x: expected %02x but read %02x\n"), start+i, src[i], buf[j]);
+                errors++;
+            }
+        }
+    }
+    return errors;
+}
+
 void cli_fill(int argc, char*argv[]) {
     if (argc != 4) {
         printf_P(PSTR("usage: fill <start> <end> <value>\n"));
@@ -370,7 +412,19 @@ void cli_fill(int argc, char*argv[]) {
     uint16_t start = strtol(argv[1], NULL, 16) & 0xffff;
     uint16_t end = strtol(argv[2], NULL, 16) & 0xffff;
     uint8_t value = strtol(argv[3], NULL, 16) & 0xff;
-    fill_mem(start, end, value);
+    uint8_t buf[256];
+    uint16_t i;
+    for (i = 0; i < 256; i++)
+        buf[i] = value;
+    for (;;) {
+        if (end - start > 256) {
+            write_mem(start, buf, 256);
+            start += 256;
+        } else {
+            write_mem(start, buf, end - start + 1);
+            break;
+        }
+    }
 }
 
 void cli_bus(int argc, char *argv[]) {
