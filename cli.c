@@ -437,6 +437,46 @@ void cli_fill(int argc, char*argv[]) {
 }
 
 /**
+ * Poke values into memory
+ */
+void cli_poke(int argc, char *argv[])
+{
+    uint8_t value;
+    if (argc < 2)
+        printf_P(PSTR("usage: poke <start> [value]\n"));
+    uint16_t addr = strtol(argv[1], NULL, 16) & 0xffff;
+    if (argc == 3) {
+        value = strtol(argv[2], NULL, 16) & 0xff;
+        write_mem(addr, &value, 1);
+        return;
+    }
+    printf_P(PSTR("valid hex to replace; blank to leave unchanged; 'x' to exit.\n"));
+    for (;;) {
+        char buf[16];
+        read_mem(addr, &value, 1);
+        printf_P(PSTR("%04X=%02X : "), addr, value);
+        if (fgets(buf, sizeof buf - 1, stdin) == NULL) {
+            break;
+        } else {
+            char *end;
+            value = strtol(buf, &end, 16);
+            if (*buf == '\n' || *buf == '\r' || *buf == '\0') {
+                addr++;
+                continue;
+            } else if (end == buf) {
+                break;
+            } else {
+                write_mem(addr, &value, 1);
+                addr++;
+            }
+        }
+    }
+    
+}
+
+
+
+/**
  * Display the bus status
  */
 void cli_bus(int argc, char *argv[]) {
@@ -587,6 +627,7 @@ const char cli_cmd_names[] PROGMEM =
     "help\0"
     "loadhex\0"
     "mount\0"
+    "poke\0"
     "run\0"
     "reset\0"
     "savehex\0"
@@ -621,6 +662,7 @@ const char cli_cmd_help[] PROGMEM =
     "list available commands\0"                     // help
     "load intel hex file to memory\0"               // loadhex
     "mount a disk image\0"                          // mount
+    "poke values into memory\0"                     // poke
     "execute code at address\0"                     // run
     "reset the processor, with optional vector\0"   // reset
     "save intel hex file from memory\0"             // savehex
@@ -657,6 +699,7 @@ void * const cli_cmd_functions[] PROGMEM = {
     &cli_help,
     &cli_loadhex,
     &cli_mount,
+    &cli_poke,
     &cli_run,
     &cli_reset,
     &cli_savehex,
