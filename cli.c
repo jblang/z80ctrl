@@ -31,7 +31,6 @@
 #include <stdlib.h>
 
 #include "ff.h"
-#include "altmon.h"
 #include "dbl.h"
 #include "simhboot.h"
 #include "bus.h"
@@ -310,16 +309,6 @@ void cli_bank(int argc, char *argv[])
 #endif
 
 /**
- * Load altmon from AVR flash to external SRAM and run it
- */
-void cli_altmon(int argc, char *argv[])
-{
-    write_mem_P(0xf800, altmon_bin, altmon_bin_len);
-    z80_reset(0xf800);
-    z80_run();
-}
-
-/**
  * Boot a disk using Altair Disk Bootloader
  */
 void cli_dboot(int argc, char *argv[])
@@ -474,8 +463,6 @@ void cli_poke(int argc, char *argv[])
     
 }
 
-
-
 /**
  * Display the bus status
  */
@@ -607,7 +594,6 @@ void cli_submit(int argc, char *argv[])
  * Lookup table of monitor command names
  */
 const char cli_cmd_names[] PROGMEM = 
-    "altmon\0"
     "attach\0"
 #ifdef SET_BANK
     "bank\0"
@@ -642,7 +628,6 @@ const char cli_cmd_names[] PROGMEM =
  * Lookup table of help text for monitor commands
  */
 const char cli_cmd_help[] PROGMEM =
-    "run altmon 8080 monitor\0"                     // altmon
     "attach virtual uart to physical uart\0"        // attach
 #ifdef SET_BANK
     "select active 64K bank\0"                      // bank
@@ -679,7 +664,6 @@ void cli_help(int argc, char *argv[]);
  * Lookup table of function pointers for monitor commands
  */
 void * const cli_cmd_functions[] PROGMEM = {
-    &cli_altmon,
     &cli_attach,
 #ifdef SET_BANK
     &cli_bank,
