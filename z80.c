@@ -86,6 +86,7 @@ void z80_buslog(bus_stat status)
         status.addr,
         status.data,
         0x20 <= status.data && status.data <= 0x7e ? status.data : ' ',
+        
         !FLAG(status.xflags, MREQ) ? "memrq" :
         !FLAG(status.flags, IORQ) ? "iorq " : "     ",
 
@@ -122,11 +123,11 @@ uint8_t z80_tick()
     CLK_LO;
     CLK_HI;
 
-    if (ENABLED(watches, MEMRD) || ENABLED(breaks, MEMRD) || 
-        ENABLED(watches, MEMWR) || ENABLED(breaks, MEMWR)) {
-        bus_stat status = bus_status();
-        if (!FLAG(status.xflags, MREQ)) {
-            if (lastrd && !GET_RD) {
+    if (GET_IORQ && (ENABLED(watches, MEMRD) || ENABLED(breaks, MEMRD) || 
+                     ENABLED(watches, MEMWR) || ENABLED(breaks, MEMWR))) {
+        if (lastrd && !GET_RD) {
+            bus_stat status = bus_status();
+            if (!FLAG(status.xflags, MREQ)) {
                 if (logged = INRANGE(watches, MEMRD, status.addr))
                     z80_buslog(status);
                 if (INRANGE(breaks, MEMRD, status.addr)) {
@@ -134,10 +135,12 @@ uint8_t z80_tick()
                     uart_flush();
                     brk = 1;
                 }
-            } else if (lastwr && !GET_WR) {
+            }
+        } else if (lastwr && !GET_WR) {
+            bus_stat status = bus_status();
+            if (!FLAG(status.xflags, MREQ)) {
                 if (logged = INRANGE(watches, MEMWR, status.addr))
                     z80_buslog(status);
-
                 if (INRANGE(breaks, MEMWR, status.addr)) {
                     printf_P(PSTR("memwr break at %04X\n"), status.addr);
                     uart_flush();
@@ -191,10 +194,10 @@ uint8_t disasmbrk = 0;
 uint8_t z80_read()
 {
     uint8_t data;
-    while (GET_MREQ || GET_RD)
+    while (GET_RD || GET_MREQ)
         disasmbrk |= z80_tick();
     data = GET_DATA;
-    while (!GET_MREQ && !GET_RD)
+    while (!GET_RD && !GET_MREQ)
         disasmbrk |= z80_tick();
     return data;
 }
@@ -209,9 +212,9 @@ void z80_debug(uint32_t cycles)
     static uint8_t brkonce = 0;
 
     while (GET_HALT && (cycles == 0 || c < cycles)) {
-        if ((ENABLED(watches, OPFETCH) || ENABLED(breaks, OPFETCH) || cycles) && !GET_M1) {
-            uint16_t addr = GET_ADDR;
-            if (!GET_MREQ && !GET_RD) {
+        if ((ENABLED(watches, OPFETCH) || ENABLED(breaks, OPFETCH) || cycles)) {
+            if (!GET_M1 && !GET_RD && !GET_MREQ) {
+                uint16_t addr = GET_ADDR;
                 if (INRANGE(breaks, OPFETCH, addr) && !cycles && !brkonce) {
                     printf_P(PSTR("opfetch break at %04X\n"), addr);
                     brkonce = 1;
