@@ -69,11 +69,12 @@ void cli_loadhex(int argc, char *argv[])
             if ((fr = f_close(&fil)) != FR_OK)
                 printf_P(PSTR("error closing file: %S\n"), strlookup(fr_text, fr));
         } else {
-            load_ihex(stdin);
+            printf_P(PSTR("error opening file: %S\n"), strlookup(fr_text, fr));
             return;
         }        
     } else {
         printf_P(PSTR("loading from console; enter blank line to cancel\n"));
+        load_ihex(stdin);
     }
 }
 
