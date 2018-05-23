@@ -31,8 +31,6 @@
 #include <stdlib.h>
 
 #include "ff.h"
-#include "dbl.h"
-#include "simhboot.h"
 #include "bus.h"
 #include "z80.h"
 #include "cli.h"
@@ -309,30 +307,6 @@ void cli_bank(int argc, char *argv[])
 #endif
 
 /**
- * Boot a disk using Altair Disk Bootloader
- */
-void cli_dboot(int argc, char *argv[])
-{
-    write_mem_P(0xff00, dbl_bin, dbl_bin_len);
-    if (argc <= 1 || strcmp(argv[1], "-l")) {
-        z80_reset(0xff00);
-        z80_run();
-    }
-}
-
-/**
- * Boot a disk using the SIMH AltairZ80 bootloader
- */
-void cli_sboot(int argc, char *argv[])
-{
-    write_mem_P(0xff00, simhboot_bin, simhboot_bin_len);
-    if (argc <= 1 || strcmp(argv[1], "-l")) {
-        z80_reset(0xff00);
-        z80_run();
-    }
-}
-
-/**
  * Show a directory of files on the SD Card
  */
 void cli_dir(int argc, char *argv[])
@@ -464,9 +438,24 @@ void cli_poke(int argc, char *argv[])
 }
 
 /**
+ * Boot from a disk
+ */
+void cli_boot(int argc, char*argv[])
+{
+    if (argc == 2) {
+        drive_mount(0, argv[1]);
+    }
+    if(drive_bootload()) {
+        z80_reset(0);
+        z80_run();
+    }
+}
+
+/**
  * Display the bus status
  */
-void cli_bus(int argc, char *argv[]) {
+void cli_bus(int argc, char *argv[]) 
+{
     z80_buslog(bus_status());
 }
 
@@ -599,12 +588,12 @@ const char cli_cmd_names[] PROGMEM =
     "bank\0"
 #endif
     "baud\0"
+    "boot\0"
     "bus\0"
     "break\0"
     "c\0"
     "clkdiv\0"
     "cls\0"
-    "dboot\0"
     "debug\0"
     "dir\0"
     "disasm\0"
@@ -617,7 +606,6 @@ const char cli_cmd_names[] PROGMEM =
     "run\0"
     "reset\0"
     "savehex\0"
-    "sboot\0"
     "s\0"
     "step\0"
     "submit\0"
@@ -633,12 +621,12 @@ const char cli_cmd_help[] PROGMEM =
     "select active 64K bank\0"                      // bank
 #endif
     "configure UART baud rate\0"                    // baud
+    "boot from specified disk image\0"              // boot
     "display low-level bus status\0"                // bus
     "set breakpoints\0"                             // break
     "shorthand to continue debugging\0"             // c
     "clear screen\0"                                // cls
     "set Z80 clock divider\0"                       // clkdiv
-    "boot disk using Altair disk bootloader\0"      // dboot
     "debug code at address\0"                       // debug
     "shows directory listing\0"                     // dir
     "disassembles memory location\0"                // disasm
@@ -651,7 +639,6 @@ const char cli_cmd_help[] PROGMEM =
     "execute code at address\0"                     // run
     "reset the processor, with optional vector\0"   // reset
     "save intel hex file from memory\0"             // savehex
-    "boot disk using SIMH bootloader\0"             // sboot
     "shorthand for step\0"                          // s
     "step processor N cycles\0"                     // step
     "submit a batch file to be executed\0"          // submit
@@ -669,12 +656,12 @@ void * const cli_cmd_functions[] PROGMEM = {
     &cli_bank,
 #endif
     &cli_baud,
+    &cli_boot,
     &cli_bus,
     &cli_breakwatch,
     &cli_debug,
     &cli_clkdiv,
     &cli_cls,
-    &cli_dboot,
     &cli_debug,
     &cli_dir,
     &cli_disasm,
@@ -687,7 +674,6 @@ void * const cli_cmd_functions[] PROGMEM = {
     &cli_run,
     &cli_reset,
     &cli_savehex,
-    &cli_sboot,
     &cli_step,
     &cli_step,
     &cli_submit,

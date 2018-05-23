@@ -114,6 +114,8 @@
 #include <stdio.h>
 #include <avr/pgmspace.h>
 
+#include "util.h"
+#include "bus.h"
 #include "diskemu.h"
 #include "ff.h"
 
@@ -160,6 +162,52 @@ drive *selected;
 
 uint8_t sectorbuf[SECTORSIZE+1];
 uint8_t dirtysector = 0;
+
+int drive_bootload()
+{
+    FRESULT fr;
+    UINT read;
+    uint8_t buf[137];
+    uint16_t addr = 0;
+    uint8_t sector = 0;
+    uint8_t track = 0;
+    uint16_t end;
+    if (drives[0].status & (1 << S_MOUNTED)) {
+        if (f_read(&drives[0].fp, buf, 3, &read) != FR_OK) {
+            printf_P(PSTR("read error: %S\n"), strlookup(fr_text, fr));
+            return 0;
+        }
+        if (buf[0] == 0xE5 && buf[1] == 0xE5 && buf[2] == 0xE5) {
+            sector = 8;
+            end = 0x5c00;
+        } else {
+            sector = 0;
+            end = buf[1] | (buf[2] << 8);
+        }
+        for (addr = 0; addr < 0x5c00; addr += 0x80) {
+            if (f_lseek(&drives[0].fp, track * NUMSECTORS * SECTORSIZE + sector * SECTORSIZE) != FR_OK) {
+                printf_P(PSTR("seek error: %S\n"), strlookup(fr_text, fr));
+                return 0;
+            }
+            if (f_read(&drives[0].fp, buf, SECTORSIZE, &read) != FR_OK) {
+                printf_P(PSTR("read error: %S\n"), strlookup(fr_text, fr));
+                return 0;
+            }
+            write_mem(addr, buf+3, 0x80);
+            sector += 2;
+            if (sector == NUMSECTORS)
+                sector = 1;
+            else if (sector > NUMSECTORS) {
+                sector = 0;
+                track++;
+            }
+        }
+    } else {
+        printf_P(PSTR("boot error: drive 0 not mounted\n"));
+        return 0;
+    }
+    return 1;
+}
 
 void drive_unmount(uint8_t drv) 
 {
