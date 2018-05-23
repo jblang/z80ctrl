@@ -163,6 +163,9 @@ drive *selected;
 uint8_t sectorbuf[SECTORSIZE+1];
 uint8_t dirtysector = 0;
 
+/**
+ * Load a CPM boot sector directly from disk image mounted on drive 0
+ */
 int drive_bootload()
 {
     FRESULT fr;
@@ -178,9 +181,11 @@ int drive_bootload()
             return 0;
         }
         if (buf[0] == 0xE5 && buf[1] == 0xE5 && buf[2] == 0xE5) {
+            // SIMH disks
             sector = 8;
             end = 0x5c00;
         } else {
+            // Other disks
             sector = 0;
             end = buf[1] | (buf[2] << 8);
         }
@@ -209,6 +214,9 @@ int drive_bootload()
     return 1;
 }
 
+/**
+ * Unmount a disk image
+ */
 void drive_unmount(uint8_t drv) 
 {
     if (drv >= NUMDRIVES) {
@@ -217,11 +225,14 @@ void drive_unmount(uint8_t drv)
     }
     FRESULT fr;
     if ((fr = f_close(&drives[drv].fp)) != FR_OK) {
-        printf_P(PSTR("error unmounting disk: %d"), fr);
+        printf_P(PSTR("error unmounting disk: %S\n"), strlookup(fr_text, fr));
     }
     drives[drv].status &= ~(1 << S_MOUNTED);
 }
 
+/**
+ * Mount a disk image
+ */
 void drive_mount(uint8_t drv, char *filename) 
 {
     if (drv >= NUMDRIVES) {
@@ -232,12 +243,15 @@ void drive_mount(uint8_t drv, char *filename)
     if (drives[drv].status & (1 << S_MOUNTED))
         drive_unmount(drv);
     if ((fr = f_open(&drives[drv].fp, filename, FA_READ | FA_WRITE | FA_OPEN_ALWAYS)) != FR_OK) {
-        printf_P(PSTR("error mounting disk: %d"), fr);
+        printf_P(PSTR("error mounting disk: %S"), strlookup(fr_text, fr));
         return;
     }
     drives[drv].status |= 1 << S_MOUNTED;
 }
 
+/**
+ * Write the current sector to SD card
+ */
 void write_sector(void) 
 {
     FSIZE_t ofs;
@@ -255,10 +269,10 @@ void write_sector(void)
     ofs += selected->sector * SECTORSIZE;
 
     if ((fr = f_lseek(&selected->fp, ofs)) != FR_OK) {
-        printf_P(PSTR("seek error: %d\n"), fr);
+        printf_P(PSTR("seek error: %S\n"), strlookup(fr_text, fr));
     } else {
         if ((fr = f_write(&selected->fp, sectorbuf, SECTORSIZE, &bw)) != FR_OK) {
-            printf_P(PSTR("write error: %d\n"), fr);
+            printf_P(PSTR("write error: %S\n"), strlookup(fr_text, fr));
         }
     }
     selected->status &= ~(1 << S_WRITERDY);
@@ -266,6 +280,9 @@ void write_sector(void)
     dirtysector = 0;
 }
 
+/**
+ * Select the active drive
+ */
 void drive_select(uint8_t newdrv) 
 {
     if (dirtysector)
@@ -292,6 +309,9 @@ void drive_select(uint8_t newdrv)
     }
 }
 
+/**
+ * Get the current drive's status
+ */
 uint8_t drive_status() 
 {
     if (selected) {
@@ -302,10 +322,13 @@ uint8_t drive_status()
     }
 }
 
+/**
+ * Update the current drive's control register
+ */
 void drive_control(uint8_t cmd) 
 {
     if (!selected) {
-        printf_P(PSTR("drive control error: no drive selected"));
+        printf_P(PSTR("drive control error: no drive selected\n"));
         return;
     }
 
@@ -349,6 +372,9 @@ void drive_control(uint8_t cmd)
     }
 }
 
+/**
+ * Get the current drive's active sector
+ */
 uint8_t drive_sector(void) 
 {
     if (!selected) {
@@ -369,6 +395,9 @@ uint8_t drive_sector(void)
     }
 }
 
+/**
+ * Write a byte to the current drive
+ */
 void drive_write(uint8_t data) 
 {
     if (!selected) {
@@ -386,6 +415,9 @@ void drive_write(uint8_t data)
     }
 }
 
+/**
+ * Read a byte from the current drive
+ */
 uint8_t drive_read(void) 
 {
     FSIZE_t ofs;
@@ -405,10 +437,10 @@ uint8_t drive_read(void)
         ofs = selected->track * NUMSECTORS * SECTORSIZE;
         ofs += selected->sector * SECTORSIZE;
         if ((fr = f_lseek(&selected->fp, ofs)) != FR_OK) {
-            printf_P(PSTR("seek error: %d\n"), fr);
+            printf_P(PSTR("seek error: %S\n"), strlookup(fr_text, fr));
         } else {
             if ((fr = f_read(&selected->fp, sectorbuf, SECTORSIZE, &br)) != FR_OK) {
-                printf_P(PSTR("read error: %d\n"), fr);
+                printf_P(PSTR("read error: %S\n"), strlookup(fr_text, fr));
             }
         }
         selected->byte = 1;
