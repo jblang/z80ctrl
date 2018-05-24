@@ -29,6 +29,8 @@
 #include "bus.h"
 #include "diskemu.h"
 
+void (*dma_function)(void) = NULL;
+
 /**
  * IO registers
  */
@@ -40,6 +42,9 @@
 #define SIOA_DATA 0x81
 #define SIOB_CONTROL 0x82
 #define SIOB_DATA 0x83
+#define HDISK_IO 0xFD
+#define SIMH_DEV 0xFE
+#define SENSE_SW 0xFF
 
 /**
  * Physical to virtual UART mapping.
@@ -124,18 +129,31 @@ void iorq_dispatch(void)
                 drive_write(GET_DATA);
             }
             break;
+        case HDISK_IO:
+            if (!GET_RD) { 
+                SET_DATA(hdsk_in());
+                DATA_OUTPUT;
+            } else if (!GET_WR) {
+                hdsk_out(GET_DATA);
+            }
+            break;
         default:
             if (!GET_RD) {
                 SET_DATA(0xFF);
             }
     }
-    if (!GET_RD)
-        BUSRQ_LO;
-    IOACK_LO;
-    while (!GET_IORQ) {
-        CLK_TOGGLE;
+    if (dma_function != NULL) {
+        dma_function();
+        dma_function = NULL;
+    } else {
+        if (!GET_RD)
+            BUSRQ_LO;
+        IOACK_LO;
+        while (!GET_IORQ) {
+            CLK_TOGGLE;
+        }
+        DATA_INPUT;
+        IOACK_HI;
+        BUSRQ_HI;
     }
-    DATA_INPUT;
-    IOACK_HI;
-    BUSRQ_HI;
 }

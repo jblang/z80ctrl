@@ -79,6 +79,8 @@ uint8_t bus_master(void)
 
     BUSRQ_LO;           // request bus
     IOACK_LO;           // make sure not in WAIT state
+    while (!GET_IORQ)
+        CLK_TOGGLE;
     IOACK_HI;
     while (GET_BUSACK && i--)  // wait for BUSACK to go low
         CLK_TOGGLE;

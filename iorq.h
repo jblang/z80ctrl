@@ -29,4 +29,6 @@
 
 void iorq_dispatch(void); 
 
+extern void (*dma_function)(void);
+
  #endif

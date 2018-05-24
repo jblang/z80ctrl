@@ -42,4 +42,7 @@ uint8_t drive_sector(void);
 void drive_write(uint8_t data);
 uint8_t drive_read(void);
 
+uint8_t hdsk_in();
+void hdsk_out(uint8_t data);
+
 #endif
