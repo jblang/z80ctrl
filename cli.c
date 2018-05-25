@@ -110,6 +110,85 @@ void cli_savehex(int argc, char *argv[])
 }
 
 /**
+ * Load a binary file to specifie address from disk with optional offset and length
+ */
+void cli_loadbin(int argc, char *argv[])
+{
+    FIL fil;
+    FILE file;
+    FRESULT fr;
+    UINT br;
+    uint8_t buf[256];
+    uint16_t offset = 0;
+    uint32_t len = 0x10000;
+    if (argc < 3) {
+        printf_P(PSTR("usage: loadbin <start addr> <filename> [offset] [length]\n"));
+        return;
+    }
+    uint16_t start = strtol(argv[1], NULL, 16) & 0xffff;
+    char *filename = argv[2];
+    if (argc >= 4)
+        offset = strtol(argv[3], NULL, 16) & 0xffff;
+    if (argc >= 5)
+        len = strtol(argv[4], NULL, 16) & 0xffff;
+    if ((fr = f_open(&fil, filename, FA_READ)) != FR_OK) {
+        printf_P(PSTR("error opening file: %S\n"), strlookup(fr_text, fr));
+        return;
+    } else if ((fr = f_lseek(&fil, offset)) != FR_OK) {
+        printf_P(PSTR("seek error: %S\n"), strlookup(fr_text, fr));
+    } else {
+        while ((fr = f_read(&fil, buf, 256, &br)) == FR_OK) {
+            if (br > len)
+                br = len;
+            write_mem(start, buf, br);
+            if (br < 256)
+                break;
+            start += br;
+            len -= br;
+        }
+        if (fr != FR_OK)
+            printf_P(PSTR("read error: %S\n"), strlookup(fr_text, fr));
+    }
+    if ((fr = f_close(&fil)) != FR_OK)
+        printf_P(PSTR("error closing file: %S\n"), strlookup(fr_text, fr));
+}
+
+/**
+ * Save an region of memory to a binary file on disk
+ */
+void cli_savebin(int argc, char *argv[])
+{
+    FRESULT fr;
+    FILE file;
+    FIL fil;
+    UINT bw;
+    uint16_t len = 256;
+    uint8_t buf[256];
+    if (argc < 4) {
+        printf_P(PSTR("usage: savebin <start> <end> [file]\n"));
+        return;
+    }
+    uint16_t start = strtol(argv[1], NULL, 16) & 0xffff;
+    uint16_t end = strtol(argv[2], NULL, 16) & 0xffff;
+    if ((fr = f_open(&fil, argv[3], FA_WRITE | FA_CREATE_ALWAYS)) == FR_OK) {
+        while (start <= end) {
+            if (end - start + 1 < len)
+                len = end - start + 1;
+            read_mem(start, buf, len);
+            if ((fr = f_write(&fil, buf, len, &bw)) != FR_OK) {
+                printf_P(PSTR("write error: %S\n"), strlookup(fr_text, fr));
+                break;
+            }
+            start += len;
+        }
+        if ((fr = f_close(&fil)) != FR_OK)
+            printf_P(PSTR("error closing file: %s\n"), strlookup(fr_text, fr));
+    } else {
+        printf_P(PSTR("error opening file: %S\n"), strlookup(fr_text, fr));
+    }        
+}
+
+/**
  * Disassemble code from memory
  */
 void cli_disasm(int argc, char *argv[])
@@ -601,11 +680,13 @@ const char cli_cmd_names[] PROGMEM =
     "dump\0"
     "fill\0"
     "help\0"
+    "loadbin\0"
     "loadhex\0"
     "mount\0"
     "poke\0"
     "run\0"
     "reset\0"
+    "savebin\0"
     "savehex\0"
     "s\0"
     "step\0"
@@ -634,11 +715,13 @@ const char cli_cmd_help[] PROGMEM =
     "dump memory in hex and ascii\0"                // dump
     "fill memory with byte\0"                       // fill
     "list available commands\0"                     // help
+    "load binary file to memory\0"                  // loadbin
     "load intel hex file to memory\0"               // loadhex
     "mount a disk image\0"                          // mount
     "poke values into memory\0"                     // poke
     "execute code at address\0"                     // run
     "reset the processor, with optional vector\0"   // reset
+    "save binary file from memory\0"                // savebin
     "save intel hex file from memory\0"             // savehex
     "shorthand for step\0"                          // s
     "step processor N cycles\0"                     // step
@@ -669,11 +752,13 @@ void * const cli_cmd_functions[] PROGMEM = {
     &cli_dump,
     &cli_fill,
     &cli_help,
+    &cli_loadbin,
     &cli_loadhex,
     &cli_mount,
     &cli_poke,
     &cli_run,
     &cli_reset,
+    &cli_savebin,
     &cli_savehex,
     &cli_step,
     &cli_step,
