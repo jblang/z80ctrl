@@ -626,8 +626,8 @@ const char cli_cmd_help[] PROGMEM =
     "display low-level bus status\0"                // bus
     "set breakpoints\0"                             // break
     "shorthand to continue debugging\0"             // c
-    "clear screen\0"                                // cls
     "set Z80 clock divider\0"                       // clkdiv
+    "clear screen\0"                                // cls
     "debug code at address\0"                       // debug
     "shows directory listing\0"                     // dir
     "disassembles memory location\0"                // disasm
