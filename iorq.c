@@ -29,6 +29,11 @@
 #include "bus.h"
 #include "diskemu.h"
 
+#include <avr/interrupt.h>
+
+/**
+ * Function pointer of to DMA transfer function to be run after IORQ is acknowledged
+ */
 void (*dma_function)(void) = NULL;
 
 /**
@@ -62,6 +67,7 @@ uint8_t z80_uart[] = {0 , 1};
  */
 void iorq_dispatch(void)
 {
+    cli();
     switch (GET_ADDRLO) {
         case SIO0_STATUS:
             if (!GET_RD) {
@@ -146,14 +152,16 @@ void iorq_dispatch(void)
         dma_function();
         dma_function = NULL;
     } else {
-        if (!GET_RD)
+        uint8_t ddr = DATA_DDR;
+        if (ddr)
             BUSRQ_LO;
         IOACK_LO;
-        while (!GET_IORQ) {
+        while (!GET_IORQ)
             CLK_TOGGLE;
-        }
         DATA_INPUT;
         IOACK_HI;
-        BUSRQ_HI;
+        if (ddr)
+            BUSRQ_HI;
     }
+    sei();
 }

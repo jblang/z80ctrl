@@ -111,50 +111,6 @@
 
 */
 
-/*  The hard disk port is 0xfd. It understands the following commands.
-    1.  Reset
-        ld  b,32
-        ld  a,HDSK_RESET
-    l:  out (0fdh),a
-        dec b
-        jp  nz,l
-    2.  Read / write
-        ; parameter block
-        cmd:        db  HDSK_READ or HDSK_WRITE
-        hd:         db  0   ; 0 .. 7, defines hard disk to be used
-        sector:     db  0   ; 0 .. 31, defines sector
-        track:      dw  0   ; 0 .. 2047, defines track
-        dma:        dw  0   ; defines where result is placed in memory
-        ; routine to execute
-        ld  b,7             ; size of parameter block
-        ld  hl,cmd          ; start address of parameter block
-    l:  ld  a,(hl)          ; get byte of parameter block
-        out (0fdh),a        ; send it to port
-        inc hl              ; point to next byte
-        dec b               ; decrement counter
-        jp  nz,l            ; again, if not done
-        in  a,(0fdh)        ; get result code
-    3.  Retrieve Disk Parameters from controller (Howard M. Harte)
-        Reads a 19-byte parameter block from the disk controller.
-        This parameter block is in CP/M DPB format for the first 17 bytes,
-        and the last two bytes are the lsb/msb of the disk's physical
-        sector size.
-        ; routine to execute
-        ld   a,hdskParam    ; hdskParam = 4
-        out  (hdskPort),a   ; Send 'get parameters' command, hdskPort = 0fdh
-        ld   a,(diskno)
-        out  (hdskPort),a   ; Send selected HDSK number
-        ld   b,17
-    1:  in   a,(hdskPort)   ; Read 17-bytes of DPB
-        ld   (hl), a
-        inc  hl
-        djnz 1
-        in   a,(hdskPort)   ; Read LSB of disk's physical sector size.
-        ld   (hsecsiz), a
-        in   a,(hdskPort)   ; Read MSB of disk's physical sector size.
-        ld   (hsecsiz+1), a
-*/
-
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
@@ -165,6 +121,7 @@
 #include "diskemu.h"
 #include "ff.h"
 #include "iorq.h"
+#include "simhboot.h"
 
 typedef struct _drive {
     FIL fp;
@@ -177,6 +134,8 @@ typedef struct _drive {
 #define NUMTRACKS 254ul // Altair disk has 77 but SIMH allows disk images with more
 #define NUMSECTORS 32ul
 #define SECTORSIZE 137ul
+
+#define OFFSET(track, sector) (((track) * NUMSECTORS * SECTORSIZE) + ((sector) * SECTORSIZE))
 
 // Drive deselect bit
 #define DESELECT 7
@@ -191,7 +150,7 @@ typedef struct _drive {
 #define S_HEADMOVE 1
 #define S_WRITERDY 0
 
-// Disk hdsk_command bits
+// Disk command bits
 #define C_WRITE 7
 #define C_LOWER 6
 #define C_INTENABLE 5
@@ -223,7 +182,7 @@ int drive_bootload()
     uint8_t track = 0;
     uint16_t end;
     if (drives[0].status & (1 << S_MOUNTED)) {
-        if (f_read(&drives[0].fp, buf, 3, &read) != FR_OK) {
+        if ((fr = f_read(&drives[0].fp, buf, 3, &read)) != FR_OK) {
             printf_P(PSTR("read error: %S\n"), strlookup(fr_text, fr));
             return 0;
         }
@@ -231,17 +190,19 @@ int drive_bootload()
             // SIMH disks
             sector = 8;
             end = 0x5c00;
+            // SIMH BIOS expects the bootloader to be there even though we don't use it
+            write_mem_P(0xff00, simhboot_bin, simhboot_bin_len);
         } else {
             // Other disks
             sector = 0;
             end = buf[1] | (buf[2] << 8);
         }
         for (addr = 0; addr < 0x5c00; addr += 0x80) {
-            if (f_lseek(&drives[0].fp, track * NUMSECTORS * SECTORSIZE + sector * SECTORSIZE) != FR_OK) {
+            if ((fr = f_lseek(&drives[0].fp, OFFSET(track, sector))) != FR_OK) {
                 printf_P(PSTR("seek error: %S\n"), strlookup(fr_text, fr));
                 return 0;
             }
-            if (f_read(&drives[0].fp, buf, SECTORSIZE, &read) != FR_OK) {
+            if ((fr = f_read(&drives[0].fp, buf, SECTORSIZE, &read)) != FR_OK) {
                 printf_P(PSTR("read error: %S\n"), strlookup(fr_text, fr));
                 return 0;
             }
@@ -301,7 +262,6 @@ void drive_mount(uint8_t drv, char *filename)
  */
 void write_sector(void) 
 {
-    FSIZE_t ofs;
     FRESULT fr;
     UINT bw;
     uint8_t i;
@@ -312,10 +272,7 @@ void write_sector(void)
     for (i = selected->byte; i < SECTORSIZE; i++)
         sectorbuf[i] = 0;
 
-    ofs = selected->track * NUMSECTORS * SECTORSIZE;
-    ofs += selected->sector * SECTORSIZE;
-
-    if ((fr = f_lseek(&selected->fp, ofs)) != FR_OK) {
+    if ((fr = f_lseek(&selected->fp, OFFSET(selected->track, selected->sector))) != FR_OK) {
         printf_P(PSTR("seek error: %S\n"), strlookup(fr_text, fr));
     } else {
         if ((fr = f_write(&selected->fp, sectorbuf, SECTORSIZE, &bw)) != FR_OK) {
@@ -467,7 +424,6 @@ void drive_write(uint8_t data)
  */
 uint8_t drive_read(void) 
 {
-    FSIZE_t ofs;
     FRESULT fr;
     UINT br;
     uint8_t i;
@@ -481,9 +437,7 @@ uint8_t drive_read(void)
         selected->byte++;
         return sectorbuf[i];
     } else {
-        ofs = selected->track * NUMSECTORS * SECTORSIZE;
-        ofs += selected->sector * SECTORSIZE;
-        if ((fr = f_lseek(&selected->fp, ofs)) != FR_OK) {
+        if ((fr = f_lseek(&selected->fp, OFFSET(selected->track, selected->sector))) != FR_OK) {
             printf_P(PSTR("seek error: %S\n"), strlookup(fr_text, fr));
         } else {
             if ((fr = f_read(&selected->fp, sectorbuf, SECTORSIZE, &br)) != FR_OK) {
@@ -495,16 +449,59 @@ uint8_t drive_read(void)
     }
 }
 
+/*  The hard disk port is 0xfd. It understands the following commands.
+    1.  Reset
+        ld  b,32
+        ld  a,HDSK_RESET
+    l:  out (0fdh),a
+        dec b
+        jp  nz,l
+    2.  Read / write
+        ; parameter block
+        cmd:        db  HDSK_READ or HDSK_WRITE
+        hd:         db  0   ; 0 .. 7, defines hard disk to be used
+        sector:     db  0   ; 0 .. 31, defines sector
+        track:      dw  0   ; 0 .. 2047, defines track
+        dma:        dw  0   ; defines where result is placed in memory
+        ; routine to execute
+        ld  b,7             ; size of parameter block
+        ld  hl,cmd          ; start address of parameter block
+    l:  ld  a,(hl)          ; get byte of parameter block
+        out (0fdh),a        ; send it to port
+        inc hl              ; point to next byte
+        dec b               ; decrement counter
+        jp  nz,l            ; again, if not done
+        in  a,(0fdh)        ; get result code
+    3.  Retrieve Disk Parameters from controller (Howard M. Harte)
+        Reads a 19-byte parameter block from the disk controller.
+        This parameter block is in CP/M DPB format for the first 17 bytes,
+        and the last two bytes are the lsb/msb of the disk's physical
+        sector size.
+        ; routine to execute
+        ld   a,hdskParam    ; hdskParam = 4
+        out  (hdskPort),a   ; Send 'get parameters' command, hdskPort = 0fdh
+        ld   a,(diskno)
+        out  (hdskPort),a   ; Send selected HDSK number
+        ld   b,17
+    1:  in   a,(hdskPort)   ; Read 17-bytes of DPB
+        ld   (hl), a
+        inc  hl
+        djnz 1
+        in   a,(hdskPort)   ; Read LSB of disk's physical sector size.
+        ld   (hsecsiz), a
+        in   a,(hdskPort)   ; Read MSB of disk's physical sector size.
+        ld   (hsecsiz+1), a
+*/
+
 #define CPM_OK                  0               /* indicates to CP/M everything ok          */
 #define CPM_ERROR               1               /* indicates to CP/M an error condition     */
 #define CPM_EMPTY               0xe5
+
 #define HDSK_NONE               0
 #define HDSK_RESET              1
 #define HDSK_READ               2
 #define HDSK_WRITE              3
 #define HDSK_PARAM              4
-
-#define HDSK_NUMBER             16  
 
 uint8_t skew[] =  { 
     0,  17, 2,  19, 4,  21, 6,  23,
@@ -515,7 +512,7 @@ uint8_t skew[] =  {
 
 uint8_t dpb[] = {
 //  SPTL, SPTH, BSH,  BLM,  EXM,  DSML, DSMH, DRML, DRMH, AL0, 
-    0x32, 0x00, 0x04, 0x0F, 0x00, 0xEF, 0x01, 0xFF, 0x00, 0xF0,   
+    0x20, 0x00, 0x04, 0x0F, 0x00, 0xEF, 0x01, 0xFF, 0x00, 0xF0,   
 //  AL1,  CKSL, CKSH, OFFL, OFFH, PSH,  PHM,  SSL,  SSH
     0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x80, 0x00
 };
@@ -530,6 +527,9 @@ uint8_t dma_sector;
 uint16_t dma_track;
 uint16_t dma_addr;
 
+/**
+ * Perform DMA disk read
+ */
 void hdsk_dma_read()
 {
     UINT br;
@@ -540,21 +540,43 @@ void hdsk_dma_read()
     if (dma_track >= NUMTRACKS) 
         dma_track = 0;
     dma_sector = skew[dma_sector];
-    FSIZE_t ofs = dma_track * NUMSECTORS * SECTORSIZE + dma_sector * SECTORSIZE;
     //printf_P(PSTR("read disk %d sector %d track %d address %04x\n"), dma_disk, dma_sector, dma_track, dma_addr);
-    if ((fr = f_lseek(&drives[dma_disk].fp, ofs)) != FR_OK) {
-        printf_P(PSTR("seek error: %S\n"), strlookup(fr_text, fr));
+    if ((fr = f_lseek(&drives[dma_disk].fp, OFFSET(dma_track, dma_sector))) != FR_OK) {
+        printf_P(PSTR("dma seek error: %S\n"), strlookup(fr_text, fr));
     } else if ((fr = f_read(&drives[dma_disk].fp, buf, SECTORSIZE, &br)) != FR_OK) {
-        printf_P(PSTR("read error: %S\n"), strlookup(fr_text, fr));
+        printf_P(PSTR("dma read error: %S\n"), strlookup(fr_text, fr));
     } else {
-        if (br < SECTORSIZE) {
-            for (uint8_t i = br; i < SECTORSIZE; i++)
-                buf[i] = CPM_EMPTY;
-        }
         write_mem(dma_addr, buf+3, 0x80);
     }
 }
 
+/**
+ * Perform DMA disk write
+ */
+void hdsk_dma_write()
+{
+    UINT bw;
+    FRESULT fr;
+    uint8_t buf[SECTORSIZE+1];
+    if (dma_sector >= NUMSECTORS)
+        dma_sector = 0;
+    if (dma_track >= NUMTRACKS) 
+        dma_track = 0;
+    dma_sector = skew[dma_sector];
+    //printf_P(PSTR("write disk %d sector %d track %d address %04x\n"), dma_disk, dma_sector, dma_track, dma_addr);
+    if ((fr = f_lseek(&drives[dma_disk].fp, OFFSET(dma_track, dma_sector))) != FR_OK) {
+        printf_P(PSTR("dma seek error: %S\n"), strlookup(fr_text, fr));
+    } else {
+        read_mem(dma_addr, buf+3, 0x80);
+        if ((fr = f_write(&drives[dma_disk].fp, buf, SECTORSIZE, &bw)) != FR_OK) {
+            printf_P(PSTR("dma write error: %S\n"), strlookup(fr_text, fr));
+        }        
+    }
+}
+
+/**
+ * Initiate command and return status read from hard drive port
+ */
 uint8_t hdsk_in() 
 {
     uint8_t result = CPM_ERROR;
@@ -562,7 +584,7 @@ uint8_t hdsk_in()
         if (hdsk_command == HDSK_READ)
             dma_function = &hdsk_dma_read;
         else
-            printf_P(PSTR("write unimplemented\n"));
+            dma_function = &hdsk_dma_write;
         hdsk_command = HDSK_NONE;
         hdsk_index = 0;
         result = CPM_OK;
@@ -576,6 +598,9 @@ uint8_t hdsk_in()
     return result;
 }
 
+/**
+ * Set up command written to hard drive port
+ */
 void hdsk_out(uint8_t data) 
 {
     if (hdsk_command == HDSK_PARAM) {
