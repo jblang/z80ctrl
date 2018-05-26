@@ -95,8 +95,8 @@ void cli_savehex(int argc, char *argv[])
         printf_P(PSTR("usage: savehex <start> <end> [file]\n"));
         return;
     }
-    uint16_t start = strtol(argv[1], NULL, 16) & 0xffff;
-    uint16_t end = strtol(argv[2], NULL, 16) & 0xffff;
+    uint16_t start = strtoul(argv[1], NULL, 16) & 0xffff;
+    uint16_t end = strtoul(argv[2], NULL, 16) & 0xffff;
     if (argc == 4) {
         if ((fr = f_open(&fil, argv[3], FA_WRITE | FA_CREATE_ALWAYS)) == FR_OK) {
             fdev_setup_stream(&file, fatfs_putchar, fatfs_getchar, _FDEV_SETUP_RW);
@@ -130,12 +130,12 @@ void cli_loadbin(int argc, char *argv[])
         printf_P(PSTR("usage: loadbin <start addr> <filename> [offset] [length]\n"));
         return;
     }
-    uint16_t start = strtol(argv[1], NULL, 16) & 0xffff;
+    uint16_t start = strtoul(argv[1], NULL, 16) & 0xffff;
     char *filename = argv[2];
     if (argc >= 4)
-        offset = strtol(argv[3], NULL, 16) & 0xffff;
+        offset = strtoul(argv[3], NULL, 16) & 0xffff;
     if (argc >= 5)
-        len = strtol(argv[4], NULL, 16) & 0xffff;
+        len = strtoul(argv[4], NULL, 16) & 0xffff;
     if ((fr = f_open(&fil, filename, FA_READ)) != FR_OK) {
         printf_P(PSTR("error opening file: %S\n"), strlookup(fr_text, fr));
         return;
@@ -173,8 +173,8 @@ void cli_savebin(int argc, char *argv[])
         printf_P(PSTR("usage: savebin <start> <end> [file]\n"));
         return;
     }
-    uint16_t start = strtol(argv[1], NULL, 16) & 0xffff;
-    uint16_t end = strtol(argv[2], NULL, 16) & 0xffff;
+    uint16_t start = strtoul(argv[1], NULL, 16) & 0xffff;
+    uint16_t end = strtoul(argv[2], NULL, 16) & 0xffff;
     if ((fr = f_open(&fil, argv[3], FA_WRITE | FA_CREATE_ALWAYS)) == FR_OK) {
         while (start <= end) {
             if (end - start + 1 < len)
@@ -203,11 +203,11 @@ void cli_disasm(int argc, char *argv[])
         printf_P(PSTR("usage: disasm <start> [end]\n"));
         return;
     }
-    start = strtol(argv[1], NULL, 16) & 0xffff;
+    start = strtoul(argv[1], NULL, 16) & 0xffff;
     if (argc < 3)
         end = start + 0xf;
     else
-        end = strtol(argv[2], NULL, 16) & 0xffff;
+        end = strtoul(argv[2], NULL, 16) & 0xffff;
     disasm_mem(start, end);
 }
 
@@ -221,11 +221,11 @@ void cli_dump(int argc, char *argv[])
         printf_P(PSTR("usage: dump <start> [end]\n"));
         return;
     }
-    start = strtol(argv[1], NULL, 16) & 0xffff;
+    start = strtoul(argv[1], NULL, 16) & 0xffff;
     if (argc < 3)
         end = start + 0xff;
     else
-        end = strtol(argv[2], NULL, 16) & 0xffff;
+        end = strtoul(argv[2], NULL, 16) & 0xffff;
     uint8_t buf[16];
     uint8_t j;
     uint8_t buflen = 16;
@@ -257,7 +257,7 @@ void cli_dump(int argc, char *argv[])
 void cli_run(int argc, char *argv[])
 {
     if (argc >= 2) {
-        uint16_t addr = strtol(argv[1], NULL, 16) & 0xffff;
+        uint16_t addr = strtoul(argv[1], NULL, 16) & 0xffff;
         z80_reset(addr);
     }
     z80_run();
@@ -270,7 +270,7 @@ void cli_reset(int argc, char *argv[])
 {
     uint16_t addr = 0;
     if (argc >= 2) {
-        addr = strtol(argv[1], NULL, 16) & 0xffff;
+        addr = strtoul(argv[1], NULL, 16) & 0xffff;
     }
     z80_reset(addr);
 }
@@ -281,7 +281,7 @@ void cli_reset(int argc, char *argv[])
 void cli_debug(int argc, char *argv[])
 {
     if (argc >= 2) {
-        uint16_t addr = strtol(argv[1], NULL, 16) & 0xffff;
+        uint16_t addr = strtoul(argv[1], NULL, 16) & 0xffff;
         z80_reset(addr);
     }
     z80_debug(0);
@@ -294,7 +294,7 @@ void cli_step(int argc, char *argv[])
 {
     uint32_t cycles = 1;
     if (argc >= 2)
-        cycles = strtol(argv[1], NULL, 10);            
+        cycles = strtoul(argv[1], NULL, 10);            
     z80_debug(cycles);
 }
 
@@ -305,7 +305,7 @@ void cli_clkdiv(int argc, char *argv[])
 {
     uint8_t tmp = 0;
     if (argc >= 2)
-        tmp = strtol(argv[1], NULL, 10);
+        tmp = strtoul(argv[1], NULL, 10);
     if (tmp > 0)
         clkdiv = tmp;
     else
@@ -365,10 +365,10 @@ void cli_breakwatch(int argc, char *argv[])
                 ranges[type].end = 0;
             } else {
                 // get starting address
-                ranges[type].start = strtol(argv[2], NULL, 16);
+                ranges[type].start = strtoul(argv[2], NULL, 16);
                 if (argc >= 4)
                     // get ending address if specified
-                    ranges[type].end = strtol(argv[3], NULL, 16);
+                    ranges[type].end = strtoul(argv[3], NULL, 16);
                 else
                     // if no ending address, start and end are the same
                     ranges[type].end = ranges[type].start;
@@ -388,7 +388,7 @@ void cli_bank(int argc, char *argv[])
         printf_P(PSTR("usage: bank <0-7>\n"));
         return;
     }
-    bank = strtol(argv[1], NULL, 10) & 0x7;
+    bank = strtoul(argv[1], NULL, 10) & 0x7;
     SET_BANK(bank);
 }
 #endif
@@ -468,9 +468,9 @@ void cli_fill(int argc, char*argv[]) {
         printf_P(PSTR("usage: fill <start> <end> <value>\n"));
         return;
     }
-    uint16_t start = strtol(argv[1], NULL, 16) & 0xffff;
-    uint16_t end = strtol(argv[2], NULL, 16) & 0xffff;
-    uint8_t value = strtol(argv[3], NULL, 16) & 0xff;
+    uint16_t start = strtoul(argv[1], NULL, 16) & 0xffff;
+    uint16_t end = strtoul(argv[2], NULL, 16) & 0xffff;
+    uint8_t value = strtoul(argv[3], NULL, 16) & 0xff;
     uint8_t buf[256];
     uint16_t i;
     for (i = 0; i < 256; i++)
@@ -494,9 +494,9 @@ void cli_poke(int argc, char *argv[])
     uint8_t value;
     if (argc < 2)
         printf_P(PSTR("usage: poke <start> [value]\n"));
-    uint16_t addr = strtol(argv[1], NULL, 16) & 0xffff;
+    uint16_t addr = strtoul(argv[1], NULL, 16) & 0xffff;
     if (argc == 3) {
-        value = strtol(argv[2], NULL, 16) & 0xff;
+        value = strtoul(argv[2], NULL, 16) & 0xff;
         write_mem(addr, &value, 1);
         return;
     }
@@ -509,7 +509,7 @@ void cli_poke(int argc, char *argv[])
             break;
         } else {
             char *end;
-            value = strtol(buf, &end, 16);
+            value = strtoul(buf, &end, 16);
             if (*buf == '\n' || *buf == '\r' || *buf == '\0') {
                 addr++;
                 continue;
@@ -555,7 +555,7 @@ void cli_mount(int argc, char *argv[])
         printf_P(PSTR("usage: mount <drive #> <filename>\n"));
         return;
     }
-    uint8_t drv = strtol(argv[1], NULL, 10);
+    uint8_t drv = strtoul(argv[1], NULL, 10);
     char *filename = argv[2];
     drive_mount(drv, filename);
 }
@@ -569,7 +569,7 @@ void cli_unmount(int argc, char *argv[])
         printf_P(PSTR("usage: unmount <drive #>\n"));
         return;
     }
-    uint8_t drv = strtol(argv[1], NULL, 10);
+    uint8_t drv = strtoul(argv[1], NULL, 10);
     drive_unmount(drv);
 }
 
@@ -582,8 +582,8 @@ void cli_attach(int argc, char *argv[])
         printf_P(PSTR("usage: attach <virtual uart> <physical uart>\n"));
         return;
     }
-    uint8_t virtual = strtol(argv[1], NULL, 10) & 1;
-    uint8_t physical = strtol(argv[2], NULL, 10) & 1;
+    uint8_t virtual = strtoul(argv[1], NULL, 10) & 1;
+    uint8_t physical = strtoul(argv[2], NULL, 10) & 1;
     z80_uart[virtual] = physical;
 }
 
@@ -595,7 +595,7 @@ void cli_baud(int argc, char *argv[]) {
         printf_P(PSTR("usage: baud <uart> <baud>\n"));
         return;
     }
-    uint8_t uart = strtol(argv[1], NULL, 10) & 1;
+    uint8_t uart = strtoul(argv[1], NULL, 10) & 1;
     uint32_t requested = strtoul(argv[2], NULL, 10);
     uint16_t ubrr = 0;
     uint32_t actual = 0;
