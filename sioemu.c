@@ -20,30 +20,15 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-/** @file diskemu.h MITS Altair 88-DISK Simulator */
-
-
-#ifndef DISKEMU_H
-#define DISKEMU_H
+/**
+ * @file sioemu.c Serial I/O emulation
+ */
 
 #include <stdint.h>
 
-#define DRIVE_STATUS 0x8
-#define DRIVE_CONTROL 0x9
-#define DRIVE_DATA 0xA
-#define DRIVE_DMA 0xFD
+#include "sioemu.h"
 
-int drive_bootload();
-void drive_unmount(uint8_t drv);
-void drive_mount(uint8_t drv, char *filename);
-void drive_select(uint8_t newdrv);
-uint8_t drive_status();
-void drive_control(uint8_t cmd);
-uint8_t drive_sector(void);
-void drive_write(uint8_t data);
-uint8_t drive_read(void);
-
-uint8_t drive_dma_result();
-void drive_dma_command(uint8_t data);
-
-#endif
+/**
+ * Physical to virtual UART mapping.
+ */
+uint8_t z80_uart[] = {0 , 1};

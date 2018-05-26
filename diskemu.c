@@ -521,7 +521,7 @@ uint8_t dpb[] = {
 #define CMDLEN 6
 
 uint8_t hdsk_command;
-uint8_t hdsk_index;
+uint8_t drive_dma_resultdex;
 uint8_t dma_disk;
 uint8_t dma_sector;
 uint16_t dma_track;
@@ -553,7 +553,7 @@ void hdsk_dma_read()
 /**
  * Perform DMA disk write
  */
-void hdsk_dma_write()
+void drive_dma_write()
 {
     UINT bw;
     FRESULT fr;
@@ -577,22 +577,22 @@ void hdsk_dma_write()
 /**
  * Initiate command and return status read from hard drive port
  */
-uint8_t hdsk_in() 
+uint8_t drive_dma_result() 
 {
     uint8_t result = CPM_ERROR;
-    if ((hdsk_index == CMDLEN) && ((hdsk_command == HDSK_READ) || (hdsk_command == HDSK_WRITE))) {
+    if ((drive_dma_resultdex == CMDLEN) && ((hdsk_command == HDSK_READ) || (hdsk_command == HDSK_WRITE))) {
         if (hdsk_command == HDSK_READ)
             dma_function = &hdsk_dma_read;
         else
-            dma_function = &hdsk_dma_write;
+            dma_function = &drive_dma_write;
         hdsk_command = HDSK_NONE;
-        hdsk_index = 0;
+        drive_dma_resultdex = 0;
         result = CPM_OK;
     } else if (hdsk_command == HDSK_PARAM) {
-        result = dpb[hdsk_index++];
-        if (hdsk_index >= DPBLEN) {
+        result = dpb[drive_dma_resultdex++];
+        if (drive_dma_resultdex >= DPBLEN) {
             hdsk_command = HDSK_NONE;
-            hdsk_index = 0;
+            drive_dma_resultdex = 0;
         }
     }
     return result;
@@ -601,43 +601,43 @@ uint8_t hdsk_in()
 /**
  * Set up command written to hard drive port
  */
-void hdsk_out(uint8_t data) 
+void drive_dma_command(uint8_t data) 
 {
     if (hdsk_command == HDSK_PARAM) {
-        hdsk_index = 0;
+        drive_dma_resultdex = 0;
     } else if (hdsk_command == HDSK_READ || hdsk_command == HDSK_WRITE) {
-        if (hdsk_index < CMDLEN) {
-            switch(hdsk_index) {
+        if (drive_dma_resultdex < CMDLEN) {
+            switch(drive_dma_resultdex) {
                 case 0:
                     dma_disk = data;
-                    hdsk_index++;
+                    drive_dma_resultdex++;
                     break;
                 case 1:
                     dma_sector = data;
-                    hdsk_index++;
+                    drive_dma_resultdex++;
                     break;
                 case 2:
                     dma_track = data;
-                    hdsk_index++;
+                    drive_dma_resultdex++;
                     break;
                 case 3:
                     dma_track += (data << 8);
-                    hdsk_index++;
+                    drive_dma_resultdex++;
                     break;
                 case 4:
                     dma_addr = data;
-                    hdsk_index++;
+                    drive_dma_resultdex++;
                     break;
                 case 5:
                     dma_addr += (data << 8);
-                    hdsk_index++;
+                    drive_dma_resultdex++;
                     break;
                 default:
                     hdsk_command = HDSK_NONE;
-                    hdsk_index = 0;
+                    drive_dma_resultdex = 0;
             }        } else {
             hdsk_command = HDSK_NONE;
-            hdsk_index = 0;
+            drive_dma_resultdex = 0;
         }
     } else {
         if ((HDSK_RESET <= data) && (data <= HDSK_PARAM)) {
@@ -645,6 +645,6 @@ void hdsk_out(uint8_t data)
         } else {
             hdsk_command = HDSK_RESET;
         }
-        hdsk_index = 0;
+        drive_dma_resultdex = 0;
     }
 }

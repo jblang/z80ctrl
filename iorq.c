@@ -28,6 +28,7 @@
 #include "uart.h"
 #include "bus.h"
 #include "diskemu.h"
+#include "sioemu.h"
 
 #include <avr/interrupt.h>
 
@@ -39,28 +40,8 @@ void (*dma_function)(void) = NULL;
 /**
  * IO registers
  */
-#define SIO0_STATUS 0x10
-#define SIO0_DATA 0x11
-#define SIO1_STATUS 0x12
-#define SIO1_DATA 0x13
-#define SIOA_CONTROL 0x80
-#define SIOA_DATA 0x81
-#define SIOB_CONTROL 0x82
-#define SIOB_DATA 0x83
-#define HDISK_IO 0xFD
 #define SIMH_DEV 0xFE
 #define SENSE_SW 0xFF
-
-/**
- * Physical to virtual UART mapping.
- */
-uint8_t z80_uart[] = {0 , 1};
-
-/**
- * Utility macros to generate SIO status register values
- */
-#define ALTAIR_SIO_STATUS(u) ((((uart_testtx(z80_uart[(u)]) == 0) << 1) & 0x2) | ((uart_testrx(z80_uart[(u)]) > 0) & 0x1))
-#define ZILOG_SIO_STATUS(u) ((1 << 3) | (1  << 5) | (((uart_testtx(z80_uart[(u)]) == 0) << 2) & 0x4) | ((uart_testrx(z80_uart[(u)]) > 0) & 0x1))
 
 /**
  * Handle Z80 IO request
@@ -71,25 +52,25 @@ void iorq_dispatch(void)
     switch (GET_ADDRLO) {
         case SIO0_STATUS:
             if (!GET_RD) {
-                SET_DATA(ALTAIR_SIO_STATUS(0));
+                SET_DATA(ACIA_STATUS(0));
                 DATA_OUTPUT;
             }
             break;
         case SIO1_STATUS:
             if (!GET_RD) {
-                SET_DATA(ALTAIR_SIO_STATUS(1));
+                SET_DATA(ACIA_STATUS(1));
                 DATA_OUTPUT;
             }
             break;
         case SIOA_CONTROL:
             if (!GET_RD) {
-                SET_DATA(ZILOG_SIO_STATUS(0));
+                SET_DATA(ZSIO_STATUS(0));
                 DATA_OUTPUT;
             }
             break;
         case SIOB_CONTROL:
             if (!GET_RD) {
-                SET_DATA(ZILOG_SIO_STATUS(1));
+                SET_DATA(ZSIO_STATUS(1));
                 DATA_OUTPUT;
             }
             break;
@@ -135,12 +116,12 @@ void iorq_dispatch(void)
                 drive_write(GET_DATA);
             }
             break;
-        case HDISK_IO:
+        case DRIVE_DMA:
             if (!GET_RD) { 
-                SET_DATA(hdsk_in());
+                SET_DATA(drive_dma_result());
                 DATA_OUTPUT;
             } else if (!GET_WR) {
-                hdsk_out(GET_DATA);
+                drive_dma_command(GET_DATA);
             }
             break;
         default:

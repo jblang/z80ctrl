@@ -20,30 +20,28 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-/** @file diskemu.h MITS Altair 88-DISK Simulator */
+/**
+ * @file sioemu.h Serial I/O emulation
+ */
 
+#ifndef SIOEMU_H
+#define SIOEMU_H
 
-#ifndef DISKEMU_H
-#define DISKEMU_H
+#define SIO0_STATUS 0x10
+#define SIO0_DATA 0x11
+#define SIO1_STATUS 0x12
+#define SIO1_DATA 0x13
+#define SIOA_CONTROL 0x80
+#define SIOA_DATA 0x81
+#define SIOB_CONTROL 0x82
+#define SIOB_DATA 0x83
 
-#include <stdint.h>
+/**
+ * Utility macros to generate SIO status register values
+ */
+#define ACIA_STATUS(u) ((((uart_testtx(z80_uart[(u)]) == 0) << 1) & 0x2) | ((uart_testrx(z80_uart[(u)]) > 0) & 0x1))
+#define ZSIO_STATUS(u) ((1 << 3) | (1  << 5) | (((uart_testtx(z80_uart[(u)]) == 0) << 2) & 0x4) | ((uart_testrx(z80_uart[(u)]) > 0) & 0x1))
 
-#define DRIVE_STATUS 0x8
-#define DRIVE_CONTROL 0x9
-#define DRIVE_DATA 0xA
-#define DRIVE_DMA 0xFD
-
-int drive_bootload();
-void drive_unmount(uint8_t drv);
-void drive_mount(uint8_t drv, char *filename);
-void drive_select(uint8_t newdrv);
-uint8_t drive_status();
-void drive_control(uint8_t cmd);
-uint8_t drive_sector(void);
-void drive_write(uint8_t data);
-uint8_t drive_read(void);
-
-uint8_t drive_dma_result();
-void drive_dma_command(uint8_t data);
+extern uint8_t z80_uart[];
 
 #endif
