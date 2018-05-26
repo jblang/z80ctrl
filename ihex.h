@@ -30,7 +30,14 @@
 #include <stdint.h>
 #include <stdio.h>
 
+typedef struct {
+    uint16_t min;
+    uint16_t max;
+    uint16_t total;
+    uint8_t errors;
+} ihex_res;
+
 int save_ihex(uint32_t start, uint16_t end, FILE *file);    /**< Save an intel hex file */
-uint16_t load_ihex(FILE *file);                             /**< Load an intel hex file */
+ihex_res load_ihex(FILE *file);                             /**< Load an intel hex file */
 
 #endif

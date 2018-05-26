@@ -60,22 +60,27 @@ void cli_loadhex(int argc, char *argv[])
     FIL fil;
     FILE file;
     FRESULT fr;
-    if (argc == 2) {
+    ihex_res result;
+    if (argc < 2) {
+        printf_P(PSTR("loading from console; enter blank line to cancel\n"));
+        result = load_ihex(stdin);
+    } else {
         printf_P(PSTR("loading from %s\n"), argv[1]);
         if ((fr = f_open(&fil, argv[1], FA_READ)) == FR_OK) {
             fdev_setup_stream(&file, fatfs_putchar, fatfs_getchar, _FDEV_SETUP_RW);
             fdev_set_udata(&file, &fil);
-            load_ihex(&file);
+            result = load_ihex(&file);
             if ((fr = f_close(&fil)) != FR_OK)
                 printf_P(PSTR("error closing file: %S\n"), strlookup(fr_text, fr));
         } else {
             printf_P(PSTR("error opening file: %S\n"), strlookup(fr_text, fr));
             return;
         }        
-    } else {
-        printf_P(PSTR("loading from console; enter blank line to cancel\n"));
-        load_ihex(stdin);
     }
+    printf_P(PSTR("loaded %d bytes total from %04x-%04x"), result.total, result.min, result.max);
+    if (result.errors > 0)
+        printf_P(PSTR(" with %d errors"), result.errors);
+    printf_P(PSTR("\n"));
 }
 
 /**
@@ -228,12 +233,14 @@ void cli_dump(int argc, char *argv[])
 
     printf_P(PSTR("%04x-%04x\n"), start, end);
     while (i <= end) {
-        printf_P(PSTR("%04X: "), i);
+        printf_P(PSTR("%04X   "), i);
         read_mem(i, buf, buflen);
         for (j = 0; j < buflen; j++) {
             printf_P(PSTR("%02X "), buf[j]);
+            if (j % 4 == 3)
+                printf_P(PSTR(" "));
         }
-        printf_P(PSTR("  "));
+        printf_P(PSTR(" "));
         for (j = 0; j < buflen; j++, i++) {
             if (0x20 <= buf[j] && buf[j] <= 0x7e)
                 printf_P(PSTR("%c"), buf[j]);
@@ -323,9 +330,9 @@ void cli_breakwatch(int argc, char *argv[])
         printf_P(PSTR("%s status:\n"), argv[0]);
         for (uint8_t i = 0; i < DEBUGCNT; i++) {
             if (!ENABLED(ranges, i))
-                printf_P(PSTR("\t%S: disabled\n"), strlookup(debug_names, i));
+                printf_P(PSTR("\t%S\tdisabled\n"), strlookup(debug_names, i));
             else
-                printf_P(PSTR("\t%S: %04x-%04x\n"), strlookup(debug_names, i), ranges[i].start, ranges[i].end);
+                printf_P(PSTR("\t%S\t%04x-%04x\n"), strlookup(debug_names, i), ranges[i].start, ranges[i].end);
         }
         printf_P(PSTR("\nusage:\n\t%s <type> [start] [end]\n"), argv[0]);
         printf_P(PSTR("\t%s <type> off to disable type\n"), argv[0]);
@@ -493,7 +500,7 @@ void cli_poke(int argc, char *argv[])
         write_mem(addr, &value, 1);
         return;
     }
-    printf_P(PSTR("valid hex to replace; blank to leave unchanged; 'x' to exit.\n"));
+    printf_P(PSTR("enter valid hex to replace; blank to leave unchanged; 'x' to exit.\n"));
     for (;;) {
         char buf[16];
         read_mem(addr, &value, 1);
@@ -650,10 +657,10 @@ void cli_exec(char *filename)
 /**
  * Submit the commands in a batch file
  */
-void cli_submit(int argc, char *argv[]) 
+void cli_do(int argc, char *argv[]) 
 {
     if (argc < 2) {
-        printf_P(PSTR("usage: submit <filename>\n"));
+        printf_P(PSTR("usage: do <filename>\n"));
         return;
     }
     cli_exec(argv[1]);
@@ -677,6 +684,7 @@ const char cli_cmd_names[] PROGMEM =
     "debug\0"
     "dir\0"
     "disasm\0"
+    "do\0"
     "dump\0"
     "fill\0"
     "help\0"
@@ -690,7 +698,6 @@ const char cli_cmd_names[] PROGMEM =
     "savehex\0"
     "s\0"
     "step\0"
-    "submit\0"
     "unmount\0"
     "watch";
 
@@ -712,6 +719,7 @@ const char cli_cmd_help[] PROGMEM =
     "debug code at address\0"                       // debug
     "shows directory listing\0"                     // dir
     "disassembles memory location\0"                // disasm
+    "exeucte a batch file\0"                        // do
     "dump memory in hex and ascii\0"                // dump
     "fill memory with byte\0"                       // fill
     "list available commands\0"                     // help
@@ -725,7 +733,6 @@ const char cli_cmd_help[] PROGMEM =
     "save intel hex file from memory\0"             // savehex
     "shorthand for step\0"                          // s
     "step processor N cycles\0"                     // step
-    "submit a batch file to be executed\0"          // submit
     "unmount a disk image\0"                        // unmount
     "set watch points";                             // watch
 
@@ -749,6 +756,7 @@ void * const cli_cmd_functions[] PROGMEM = {
     &cli_debug,
     &cli_dir,
     &cli_disasm,
+    &cli_do,
     &cli_dump,
     &cli_fill,
     &cli_help,
@@ -762,7 +770,6 @@ void * const cli_cmd_functions[] PROGMEM = {
     &cli_savehex,
     &cli_step,
     &cli_step,
-    &cli_submit,
     &cli_unmount,
     &cli_breakwatch
 };

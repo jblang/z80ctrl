@@ -74,7 +74,7 @@ typedef struct {
     uint16_t addr;
     uint8_t type;
     uint8_t rc;
-} ihex_res;
+} ihex_rec;
 
 /**
  * Convert from a hex digit to a binary nybble
@@ -107,80 +107,86 @@ uint8_t tohex(uint8_t nyb)
 /**
  * Parse a single Intel HEX record and convert it to binary
  */
-ihex_res ihex_to_bin(char *ihex, uint8_t *bin) 
+ihex_rec ihex_to_bin(char *ihex, uint8_t *bin) 
 {
-    ihex_res res;
+    ihex_rec record;
     int i;
 
     if (strlen(ihex) < 11) {
-        res.rc == IHEX_FORMAT;
-        return res;
+        record.rc == IHEX_FORMAT;
+        return record;
     }
     if (ihex[0] != ':') {
-        res.rc = IHEX_FORMAT;
-        return res;
+        record.rc = IHEX_FORMAT;
+        return record;
     }
     for (i = 1; i < strlen(ihex); i++) {
         if (fromhex(ihex[i]) > 0xf && ihex[i] != '\r' && ihex[i] != '\n') {
-            res.rc = IHEX_FORMAT;
-            return res;
+            record.rc = IHEX_FORMAT;
+            return record;
         }
     }
-    res.count = fromhex(ihex[1]) << 4 | fromhex(ihex[2]);
-    if (strlen(ihex) < 11 + res.count) {
-        res.rc = IHEX_COUNT;
-        return res;
+    record.count = fromhex(ihex[1]) << 4 | fromhex(ihex[2]);
+    if (strlen(ihex) < 11 + record.count) {
+        record.rc = IHEX_COUNT;
+        return record;
     }
-    res.addr = fromhex(ihex[3]) << 12 | fromhex(ihex[4]) << 8 | fromhex(ihex[5]) << 4 | fromhex(ihex[6]);
-    res.type = fromhex(ihex[7]) << 4 | fromhex(ihex[8]);
-    uint8_t check1 = res.count + (res.addr >> 8) + (res.addr & 0xff) + res.type;
-    for (i = 0; i < res.count; i++) {
+    record.addr = fromhex(ihex[3]) << 12 | fromhex(ihex[4]) << 8 | fromhex(ihex[5]) << 4 | fromhex(ihex[6]);
+    record.type = fromhex(ihex[7]) << 4 | fromhex(ihex[8]);
+    uint8_t check1 = record.count + (record.addr >> 8) + (record.addr & 0xff) + record.type;
+    for (i = 0; i < record.count; i++) {
         bin[i] = fromhex(ihex[i*2+9]) << 4 | fromhex(ihex[i*2+10]);
         check1 += bin[i];
     }
     check1 = ~check1 + 1;
-    uint8_t check2 = fromhex(ihex[res.count*2+9]) << 4 | fromhex(ihex[res.count*2+10]);
+    uint8_t check2 = fromhex(ihex[record.count*2+9]) << 4 | fromhex(ihex[record.count*2+10]);
     if (check1 != check2) {
-        res.rc = IHEX_CKSUM;
-        return res;
+        record.rc = IHEX_CKSUM;
+        return record;
     }
-    if (res.type == IHEX_DATA || res.type == IHEX_EOF)
-        res.rc = IHEX_OK;
+    if (record.type == IHEX_DATA || record.type == IHEX_EOF)
+        record.rc = IHEX_OK;
     else
-        res.rc = IHEX_RECTYPE;
-    return res;
+        record.rc = IHEX_RECTYPE;
+    return record;
 }
 
 /**
  * Load an Intel HEX file into memory
  */
-uint16_t load_ihex(FILE *file)
+ihex_res load_ihex(FILE *file)
 {
     char ihex[524];
     uint8_t bin[256];
-    uint16_t total = 0;
     uint16_t line = 0;
-    ihex_res res;
+    ihex_rec record;
+    ihex_res result;
+    result.min = 0xffff;
+    result.max = 0;
+    result.total = 0;
+    result.errors = 0;
     for (;;) {
         if (fgets(ihex, 524, file) == NULL)
             break;
         if (strlen(ihex) == 0)
             break;
         line++;
-        res = ihex_to_bin(ihex, bin);
-        if (res.rc == IHEX_OK && res.type == IHEX_DATA && res.count > 0) {
-            write_mem(res.addr, bin, res.count);
-            printf_P(PSTR("loaded 0x%02X bytes to 0x%04X\n"), res.count, res.addr);
-            total += res.count;
-        } else if (res.rc == IHEX_OK && res.count == 0) {
-            printf_P(PSTR("loaded 0x%04X bytes total\n"), total);
+        record = ihex_to_bin(ihex, bin);
+        if (record.rc == IHEX_OK && record.type == IHEX_DATA && record.count > 0) {
+            write_mem(record.addr, bin, record.count);
+            result.total += record.count;
+            if (record.addr < result.min)
+                result.min = record.addr;
+            if (record.addr + record.count - 1 > result.max)
+                result.max = record.addr + record.count - 1;
+        } else if (record.rc == IHEX_OK && record.count == 0) {
             break;
         } else {
-            printf_P(PSTR("error: %S on line %d\n"), strlookup(ihex_rc_text, res.rc), line);
-            break;
+            printf_P(PSTR("error: %S on line %d\n"), strlookup(ihex_rc_text, record.rc), line);
+            result.errors++;
         }
     }
-    return total;
+    return result;
 }
 
 #define BYTESPERLINE 16
