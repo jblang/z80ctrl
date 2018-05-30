@@ -79,15 +79,15 @@ uint8_t bus_master(void)
 
     BUSRQ_LO;           // request bus
     IOACK_LO;           // make sure not in WAIT state
-    while (!GET_IORQ)
-        CLK_TOGGLE;
     IOACK_HI;
-    while (GET_BUSACK && i--)  // wait for BUSACK to go low
+    // wait for BUSACK to go low
+    while (GET_BUSACK)  {
         CLK_TOGGLE;
-    if (i == 0) {
-        printf_P(PSTR("bus request timed out\n"));
-        BUSRQ_HI;
-        return 0;
+        if (i-- == 0) {
+            printf_P(PSTR("bus request timed out\n"));
+            BUSRQ_HI;
+            return 0;
+        }
     }
     MREQ_HI;
     RD_HI;

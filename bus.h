@@ -73,9 +73,17 @@
 
 #define IOACK 0
 #define IORQ 1
+#if (BOARD_REV == 1 || BOARD_REV == 2)
 #define M1 2
+#else
+#define BUSRQ 2
+#endif
 
+#if (BOARD_REV == 1 || BOARD_REV == 2)
 #define GET_BFLAGS (PINB & ((1<<IOACK) | (1<<IORQ) | (1<<M1)))
+#else
+#define GET_BFLAGS (PINB & ((1<<IOACK) | (1<<IORQ) | (1<<BUSRQ)))
+#endif
 
 #define IOACK_OUTPUT DDRB |= (1 << IOACK)
 #define GET_IOACK (PINB & (1 << IOACK))
@@ -85,8 +93,15 @@
 #define IORQ_INPUT DDRB &= ~(1 << IORQ)
 #define GET_IORQ (PINB & (1 << IORQ))
 
+#if (BOARD_REV == 1 || BOARD_REV == 2)
 #define M1_INPUT DDRB &= ~(1 << M1)
 #define GET_M1 (PINB & (1 << M1))
+#else
+#define BUSRQ_OUTPUT DDRB |= (1 << BUSRQ)
+#define GET_BUSRQ (PINB & (1 << BUSRQ))
+#define BUSRQ_HI PORTB |= (1 << BUSRQ)
+#define BUSRQ_LO PORTB &= ~(1 << BUSRQ)
+#endif
 
 /**
  * PORTD Flags
@@ -129,16 +144,25 @@
 #define CTRLX_GPPU GPPUB0
 #define CTRLX_GPIO GPIOB0
 
+#if (BOARD_REV == 1 || BOARD_REV == 2)
 #define RFSH 1
+#define BUSRQ 6
+#else
+#define M1 1
+#endif
 #define RESET 2
 #define INTERRUPT 3
 #define BUSACK 4
 #define MREQ 5
-#define BUSRQ 6
 #define NMI 7
 
+#if (BOARD_REV == 1 || BOARD_REV == 2)
 #define GET_XFLAGS (iox_read(CTRLX_GPIO) & ((1<<RFSH) | (1<<RESET) | (1<<INTERRUPT) | \
                                         (1<<BUSACK) | (1<<MREQ) | (1<<BUSRQ) | (1<<NMI)))
+#else
+#define GET_XFLAGS (iox_read(CTRLX_GPIO) & ((1<<M1) | (1<<RESET) | (1<<INTERRUPT) | \
+                                        (1<<BUSACK) | (1<<MREQ) | (1<<NMI)))
+#endif
 
 #define INT_OUTPUT iox_write(CTRLX_IODIR, iox_read(CTRLX_IODIR) & ~(1 << INTERRUPT))
 #define GET_INT (iox_read(CTRLX_GPIO) & (1 << INTERRUPT))
@@ -155,10 +179,15 @@
 #define RESET_LO iox_write(CTRLX_GPIO, iox_read(CTRLX_GPIO) & ~(1 << RESET))
 #define RESET_HI iox_write(CTRLX_GPIO, iox_read(CTRLX_GPIO) | (1 << RESET))
 
+#if (BOARD_REV == 1 || BOARD_REV == 2)
 #define BUSRQ_OUTPUT iox_write(CTRLX_IODIR, iox_read(CTRLX_IODIR) & ~(1 << BUSRQ))
 #define GET_BUSRQ (iox_read(CTRLX_GPIO) & (1 << BUSRQ))
 #define BUSRQ_LO iox_write(CTRLX_GPIO, iox_read(CTRLX_GPIO) & ~(1 << BUSRQ))
 #define BUSRQ_HI iox_write(CTRLX_GPIO, iox_read(CTRLX_GPIO) | (1 << BUSRQ))
+#else
+#define M1_INPUT iox_write(CTRLX_IODIR, iox_read(CTRLX_IODIR) | (1 << M1))
+#define GET_M1 (iox_read(CTRLX_GPIO) & (1 << M1))
+#endif
 
 #define BUSACK_INPUT iox_write(CTRLX_IODIR, iox_read(CTRLX_IODIR) | (1 << BUSACK))
 #define GET_BUSACK (iox_read(CTRLX_GPIO) & (1 << BUSACK))

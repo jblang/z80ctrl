@@ -92,10 +92,15 @@ void z80_buslog(bus_stat status)
 
         !FLAG(status.flags, RD) ? "rd  " :
         !FLAG(status.flags, WR) ? "wr  " :
+#if (BOARD_REV == 1 || BOARD_REV == 2)
         !FLAG(status.xflags, RFSH) ? "rfsh" : "    ",
-
         !FLAG(status.flags, M1) ? "m1" : "  ",
         !FLAG(status.xflags, BUSRQ) ? "busrq" : "     ",
+#else
+        !FLAG(status.xflags, MREQ) && FLAG(status.flags, RD) && FLAG(status.flags, WR) ? "rfsh" : "    ",
+        !FLAG(status.xflags, M1) ? "m1" : "  ",
+        !FLAG(status.flags, BUSRQ) ? "busrq" : "     ",
+#endif       
         !FLAG(status.xflags, BUSACK) ? "busack" : "      ",
         (!FLAG(status.flags, IORQ) && FLAG(status.flags, IOACK)) ? "wait" : "    ",
         !FLAG(status.flags, HALT) ? "halt" : "    ", 
