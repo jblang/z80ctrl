@@ -38,6 +38,7 @@
 #include "util.h"
 #include "disasm.h"
 #include "diskemu.h"
+#include "sioemu.h"
 #include "diskio.h"
 #include "uart.h"
 
@@ -377,22 +378,6 @@ void cli_breakwatch(int argc, char *argv[])
     }
 }
 
-#ifdef SET_BANK
-/**
- * Set the active bank
- */
-void cli_bank(int argc, char *argv[])
-{
-    uint8_t bank;
-    if (argc != 2) {
-        printf_P(PSTR("usage: bank <0-7>\n"));
-        return;
-    }
-    bank = strtoul(argv[1], NULL, 10) & 0x7;
-    SET_BANK(bank);
-}
-#endif
-
 /**
  * Show a directory of files on the SD Card
  */
@@ -523,6 +508,61 @@ void cli_poke(int argc, char *argv[])
     }
     
 }
+
+#ifdef OUTBOUND_IORQ
+
+/**
+ * Output value to an IO register
+ */
+void cli_out(int argc, char *argv[])
+{
+    if (argc < 2) {
+        printf_P(PSTR("usage: out <addr> <value>\n"));
+        return;
+    }
+    uint8_t addr = strtoul(argv[1], NULL, 16) & 0xff;
+    uint8_t value = strtoul(argv[2], NULL, 16) & 0xff;
+    io_out(addr, value);
+}
+
+/**
+ * Input value from an IO register
+ */
+void cli_in(int argc, char *argv[])
+{
+    if (argc < 2) {
+        printf_P(PSTR("usage: in <addr>\n"));
+        return;
+    }
+    uint8_t addr = strtoul(argv[1], NULL, 16) & 0xff;
+    printf_P(PSTR("Read %02x from %02x\n"), io_in(addr), addr);
+}
+
+/**
+ * Set the active pages in memory
+ */
+void cli_page(int argc, char *argv[])
+{
+    uint8_t page1, page2, page3, page4;
+    if (argc == 2 || argc == 5) {
+        page1 = strtoul(argv[1], NULL, 16) & 0x3f;
+        if (argc == 2) {
+            page2 = (page1 + 1) & 0x3f;
+            page3 = (page2 + 1) & 0x3f;
+            page4 = (page3 + 1) & 0x3f;
+        } else {
+            page2 = strtoul(argv[1], NULL, 16) & 0x3f;
+            page3 = strtoul(argv[1], NULL, 16) & 0x3f;
+            page4 = strtoul(argv[1], NULL, 16) & 0x3f;
+        }
+    } else {
+        printf_P(PSTR("usage: page <page1> [page2] [page3] [page4]\n"));
+        return;
+    }
+    z80_page(page1 | (page2 << 2) | (page3 << 4) | (page4 << 6));
+}
+
+#endif
 
 /**
  * Boot from a disk
@@ -671,9 +711,6 @@ void cli_do(int argc, char *argv[])
  */
 const char cli_cmd_names[] PROGMEM = 
     "attach\0"
-#ifdef SET_BANK
-    "bank\0"
-#endif
     "baud\0"
     "boot\0"
     "bus\0"
@@ -688,9 +725,16 @@ const char cli_cmd_names[] PROGMEM =
     "dump\0"
     "fill\0"
     "help\0"
+#ifdef OUTBOUND_IORQ
+    "in\0"
+#endif
     "loadbin\0"
     "loadhex\0"
     "mount\0"
+#ifdef OUTBOUND_IORQ
+    "out\0"
+    "page\0"
+#endif
     "poke\0"
     "run\0"
     "reset\0"
@@ -706,9 +750,6 @@ const char cli_cmd_names[] PROGMEM =
  */
 const char cli_cmd_help[] PROGMEM =
     "attach virtual uart to physical uart\0"        // attach
-#ifdef SET_BANK
-    "select active 64K bank\0"                      // bank
-#endif
     "configure UART baud rate\0"                    // baud
     "boot from specified disk image\0"              // boot
     "display low-level bus status\0"                // bus
@@ -723,9 +764,16 @@ const char cli_cmd_help[] PROGMEM =
     "dump memory in hex and ascii\0"                // dump
     "fill memory with byte\0"                       // fill
     "list available commands\0"                     // help
+#ifdef OUTBOUND_IORQ
+    "read a value from a port\0"                    // in
+#endif
     "load binary file to memory\0"                  // loadbin
     "load intel hex file to memory\0"               // loadhex
     "mount a disk image\0"                          // mount
+#ifdef OUTBOUND_IORQ
+    "write a value to a port\0"                     // out
+    "select active memory pages\0"                  // page
+#endif
     "poke values into memory\0"                     // poke
     "execute code at address\0"                     // run
     "reset the processor, with optional vector\0"   // reset
@@ -743,9 +791,6 @@ void cli_help(int argc, char *argv[]);
  */
 void * const cli_cmd_functions[] PROGMEM = {
     &cli_attach,
-#ifdef SET_BANK
-    &cli_bank,
-#endif
     &cli_baud,
     &cli_boot,
     &cli_bus,
@@ -760,9 +805,16 @@ void * const cli_cmd_functions[] PROGMEM = {
     &cli_dump,
     &cli_fill,
     &cli_help,
+#ifdef OUTBOUND_IORQ
+    &cli_in,
+#endif
     &cli_loadbin,
     &cli_loadhex,
     &cli_mount,
+#ifdef OUTBOUND_IORQ
+    &cli_out,
+    &cli_page,
+#endif
     &cli_poke,
     &cli_run,
     &cli_reset,

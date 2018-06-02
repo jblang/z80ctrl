@@ -45,6 +45,29 @@ const char debug_names[] PROGMEM = "memrd\0memwr\0iord\0iowr\0opfetch\0bus";
 range breaks[] = {{0xffff, 0}, {0xffff, 0}, {0xffff, 0}, {0xffff, 0}, {0xffff, 0}, {0xffff, 0}};
 range watches[] = {{0xffff, 0}, {0xffff, 0}, {0xffff, 0}, {0xffff, 0}, {0xffff, 0}, {0xffff, 0}};
 
+#ifdef OUTBOUND_IORQ
+#define PAGE_BASE 0x28
+
+uint32_t pages = 0;
+
+/**
+ * Select the current memory page
+ */
+void z80_page(uint32_t p)
+{
+    pages = p;                          // save pages so they can be restored after reset
+    if (p) {
+        io_out(PAGE_BASE + 4, 1);                // enable paging
+        io_out(PAGE_BASE + 0, p & 0x3f);         // page fofr 0x0000-0x3fff
+        io_out(PAGE_BASE + 1, (p >> 2) & 0x3f);  // page for 0x4000-0x7fff
+        io_out(PAGE_BASE + 2, (p >> 4) & 0x3f);  // page for 0x8000-0xbfff
+        io_out(PAGE_BASE + 3, (p >> 6) & 0x3f);  // page for 0xc000-0xffff
+    } else {
+        io_out(PAGE_BASE + 4, 0);                // disable paging
+    }
+}
+#endif
+
 /**
  * Reset the Z80 to a specified address
  */
@@ -57,6 +80,9 @@ void z80_reset(uint16_t addr)
     RESET_LO;
     clk_cycle(3);
     RESET_HI;
+#ifdef OUTBOUND_IORQ
+    z80_page(pages);    // Restore previous paging configuration
+#endif
     IOACK_LO;
     IOACK_HI;
 }

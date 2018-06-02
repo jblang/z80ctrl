@@ -31,6 +31,22 @@
 #include "iox.h"
 
 /**
+ * Ensure board revision is set to a supported value
+ */
+
+#if ((BOARD_REV < 1 || BOARD_REV > 3) && BOARD_REV != -3)
+#error "Unsupported board revision. Set BOARD_REV in your Makefile to match your board revision."
+#endif
+
+/**
+ * Enable outbound IORQ on board revisions where it's safe
+ */
+
+#if (BOARD_REV == -3 || BOARD_REV >= 3)
+#define OUTBOUND_IORQ
+#endif
+
+/**
  * Address Bus
  */
 
@@ -92,6 +108,11 @@
 
 #define IORQ_INPUT DDRB &= ~(1 << IORQ)
 #define GET_IORQ (PINB & (1 << IORQ))
+#ifdef OUTBOUND_IORQ
+#define IORQ_OUTPUT DDRB |= (1 << IORQ)
+#define IORQ_HI PORTB |= (1 << IORQ)
+#define IORQ_LO PORTB &= ~(1 << IORQ)
+#endif
 
 #if (BOARD_REV == 1 || BOARD_REV == 2)
 #define M1_INPUT DDRB &= ~(1 << M1)
@@ -225,5 +246,10 @@ void _write_mem(uint16_t addr, const uint8_t *buf, uint16_t len, uint8_t pgmspac
 
 #define write_mem(addr, buf, len) _write_mem((addr), (buf), (len), 0);
 #define write_mem_P(addr, buf, len) _write_mem((addr), (buf), (len), 1);
+
+#ifdef OUTBOUND_IORQ
+void io_out(uint8_t addr, uint8_t value);
+uint8_t io_in(uint8_t addr);
+#endif
 
 #endif

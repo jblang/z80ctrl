@@ -1,6 +1,6 @@
 BIN=z80ctrl
 FF_OBJS=diskio.o ff.o mmc_avr_spi.o
-OBJS=uart.o spi.o iox.o bus.o z80.o iorq.o sioemu.o diskemu.o cli.o ihex.o disasm.o util.o $(FF_OBJS)
+OBJS=cli.o uart.o spi.o iox.o bus.o z80.o iorq.o sioemu.o diskemu.o ihex.o disasm.o util.o $(FF_OBJS)
 
 CC=avr-gcc
 OBJCOPY=avr-objcopy
@@ -10,7 +10,7 @@ F_CPU=20000000L
 PROGRAMMER=arduino
 PORT=/dev/ttyS9
 BAUD=115200
-BOARD_REV=1
+BOARD_REV=0
 CFLAGS=-std=c99 -Os -DBOARD_REV=$(BOARD_REV) -DF_CPU=$(F_CPU) -DBAUD=$(BAUD) -mmcu=$(MCU) -I.
 
 $(BIN).hex: $(BIN).elf

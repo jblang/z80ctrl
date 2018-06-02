@@ -45,8 +45,7 @@ extern const char debug_names[];
 #define INRANGE(ranges, type, addr) ((ranges)[(type)].start <= (addr) && (addr) <= (ranges)[type].end)
 #define ENABLED(ranges, type) ((ranges)[(type)].start <= (ranges)[(type)].end)
 
-extern uint8_t z80_uart[];
-
+void z80_page(uint32_t p);
 void z80_reset(uint16_t addr);
 void z80_run(void);
 void z80_debug(uint32_t cycles);

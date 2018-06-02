@@ -231,3 +231,49 @@ void _write_mem(uint16_t addr, const uint8_t *buf, uint16_t len, uint8_t pgmspac
     DATA_INPUT;
     bus_slave();
 }
+
+#ifdef OUTBOUND_IORQ
+
+/**
+ * Output value to an IO register
+ */
+void io_out(uint8_t addr, uint8_t value)
+{
+    if (!bus_master())
+        return;
+    SET_ADDRLO(addr);
+    SET_DATA(value);
+    DATA_OUTPUT;
+    IORQ_OUTPUT;
+    IORQ_LO;
+    WR_LO;
+    WR_HI;
+    IORQ_HI;
+    IORQ_INPUT;
+    IOACK_LO;
+    IOACK_HI;
+    bus_slave();
+}
+
+/**
+ * Input value from an IO register
+ */
+uint8_t io_in(uint8_t addr)
+{
+    if (!bus_master())
+        return 0;
+    SET_ADDRLO(addr);
+    IORQ_OUTPUT;
+    IORQ_LO;
+    RD_LO;
+    uint8_t value = GET_DATA;
+    RD_HI;
+    IORQ_HI;
+    IORQ_INPUT;
+    IOACK_LO;
+    IOACK_HI;
+    bus_slave();
+    return value;
+}
+
+#endif
