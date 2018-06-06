@@ -559,7 +559,7 @@ void cli_page(int argc, char *argv[])
         printf_P(PSTR("usage: page <page1> [page2] [page3] [page4]\n"));
         return;
     }
-    z80_page(page1 | (page2 << 2) | (page3 << 4) | (page4 << 6));
+    mem_page(page1 | (page2 << 2) | (page3 << 4) | (page4 << 6));
 }
 
 #endif

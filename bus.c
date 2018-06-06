@@ -276,4 +276,24 @@ uint8_t io_in(uint8_t addr)
     return value;
 }
 
+#define PAGE_BASE 0x28
+
+uint32_t mem_pages = 0;
+
+/**
+ * Select the current memory page
+ */
+void mem_page(uint32_t p)
+{
+    mem_pages = p;                          // save pages so they can be restored after reset
+    if (p) {
+        io_out(PAGE_BASE + 4, 1);                // enable paging
+        io_out(PAGE_BASE + 0, p & 0x3f);         // page fofr 0x0000-0x3fff
+        io_out(PAGE_BASE + 1, (p >> 2) & 0x3f);  // page for 0x4000-0x7fff
+        io_out(PAGE_BASE + 2, (p >> 4) & 0x3f);  // page for 0x8000-0xbfff
+        io_out(PAGE_BASE + 3, (p >> 6) & 0x3f);  // page for 0xc000-0xffff
+    } else {
+        io_out(PAGE_BASE + 4, 0);                // disable paging
+    }
+}
 #endif
