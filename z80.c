@@ -58,7 +58,7 @@ void z80_reset(uint16_t addr)
     clk_cycle(3);
     RESET_HI;
 #ifdef OUTBOUND_IORQ
-    mem_page(mem_pages);    // Restore previous paging configuration
+    mem_restore();
 #endif
     IOACK_LO;
     IOACK_HI;

@@ -237,10 +237,8 @@ void _write_mem(uint16_t addr, const uint8_t *buf, uint16_t len, uint8_t pgmspac
 /**
  * Output value to an IO register
  */
-void io_out(uint8_t addr, uint8_t value)
+void io_out_bare(uint8_t addr, uint8_t value)
 {
-    if (!bus_master())
-        return;
     SET_ADDRLO(addr);
     SET_DATA(value);
     DATA_OUTPUT;
@@ -252,16 +250,21 @@ void io_out(uint8_t addr, uint8_t value)
     IORQ_INPUT;
     IOACK_LO;
     IOACK_HI;
-    bus_slave();
 }
+
+void io_out(uint8_t addr, uint8_t value)
+{
+    if (!bus_master())
+        return;
+    io_out(addr, value);
+    bus_slave();
+}   
 
 /**
  * Input value from an IO register
  */
-uint8_t io_in(uint8_t addr)
+uint8_t io_in_bare(uint8_t addr)
 {
-    if (!bus_master())
-        return 0;
     SET_ADDRLO(addr);
     IORQ_OUTPUT;
     IORQ_LO;
@@ -272,28 +275,50 @@ uint8_t io_in(uint8_t addr)
     IORQ_INPUT;
     IOACK_LO;
     IOACK_HI;
-    bus_slave();
     return value;
 }
 
-#define PAGE_BASE 0x28
+uint8_t io_in(uint8_t addr)
+{
+    if (!bus_master())
+        return 0;
+    uint8_t value = io_in_bare(addr);
+    bus_slave();
+    return value;
+}   
 
-uint32_t mem_pages = 0;
+
+#define PAGE(addr) ((addr >> 14) & 0x3f)
+#define PAGE_BASE 0x28                  // base address of page registers
+#define PAGE_ENABLE (PAGE_BASE + 4)     // enable paging
+
+uint8_t mem_pages[] = {0, 0, 0, 0};
+
+void mem_page_bare(uint8_t bank, uint8_t page)
+{
+    io_out_bare(PAGE_ENABLE, 1);
+    io_out_bare(PAGE_BASE + (bank & 3), page & 0x3f);
+}
 
 /**
- * Select the current memory page
+ * Select the specified memory page for specified bank
  */
-void mem_page(uint32_t p)
+void mem_page(uint8_t bank, uint8_t page)
 {
-    mem_pages = p;                          // save pages so they can be restored after reset
-    if (p) {
-        io_out(PAGE_BASE + 4, 1);                // enable paging
-        io_out(PAGE_BASE + 0, p & 0x3f);         // page fofr 0x0000-0x3fff
-        io_out(PAGE_BASE + 1, (p >> 2) & 0x3f);  // page for 0x4000-0x7fff
-        io_out(PAGE_BASE + 2, (p >> 4) & 0x3f);  // page for 0x8000-0xbfff
-        io_out(PAGE_BASE + 3, (p >> 6) & 0x3f);  // page for 0xc000-0xffff
-    } else {
-        io_out(PAGE_BASE + 4, 0);                // disable paging
-    }
+    mem_pages[bank & 3] = page;               // save pages so they can be restored after reset
+    if(!bus_master())
+        return;
+    mem_page_bare(bank, page);
+    bus_slave();
 }
+
+/**
+ * Restore previous paging configuration
+ */
+void mem_restore(void)
+{
+    for (uint8_t i = 0; i < 4; i++)
+        mem_page(i, mem_pages[i]);
+}
+
 #endif

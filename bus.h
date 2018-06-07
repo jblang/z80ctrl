@@ -248,11 +248,10 @@ void _write_mem(uint16_t addr, const uint8_t *buf, uint16_t len, uint8_t pgmspac
 #define write_mem_P(addr, buf, len) _write_mem((addr), (buf), (len), 1);
 
 #ifdef OUTBOUND_IORQ
-extern uint32_t mem_pages;
-
 void io_out(uint8_t addr, uint8_t value);
 uint8_t io_in(uint8_t addr);
-void mem_page(uint32_t p);
+void mem_page(uint8_t bank, uint8_t page);
+void mem_restore(void);
 #endif
 
 #endif

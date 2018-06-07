@@ -543,23 +543,18 @@ void cli_in(int argc, char *argv[])
  */
 void cli_page(int argc, char *argv[])
 {
-    uint8_t page1, page2, page3, page4;
-    if (argc == 2 || argc == 5) {
-        page1 = strtoul(argv[1], NULL, 16) & 0x3f;
-        if (argc == 2) {
-            page2 = (page1 + 1) & 0x3f;
-            page3 = (page2 + 1) & 0x3f;
-            page4 = (page3 + 1) & 0x3f;
-        } else {
-            page2 = strtoul(argv[1], NULL, 16) & 0x3f;
-            page3 = strtoul(argv[1], NULL, 16) & 0x3f;
-            page4 = strtoul(argv[1], NULL, 16) & 0x3f;
-        }
-    } else {
+    uint8_t bank, page = 0;
+    if (argc < 2) {
         printf_P(PSTR("usage: page <page1> [page2] [page3] [page4]\n"));
         return;
     }
-    mem_page(page1 | (page2 << 2) | (page3 << 4) | (page4 << 6));
+    for (bank = 0; bank < 4; bank++) {
+        if (bank + 1 < argc)
+            page = strtoul(argv[bank+1], NULL, 16) & 0xff;
+        else
+            page++;
+        mem_page(bank, page);
+    }
 }
 
 #endif
