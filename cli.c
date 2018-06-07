@@ -127,8 +127,9 @@ void cli_loadbin(int argc, char *argv[])
     uint8_t buf[256];
     uint16_t offset = 0;
     uint32_t len = 0x10000;
+    uint8_t flash = (strcmp_P(argv[0], PSTR("flash")) == 0);
     if (argc < 3) {
-        printf_P(PSTR("usage: loadbin <start addr> <filename> [offset] [length]\n"));
+        printf_P(PSTR("usage: %s <start addr> <filename> [offset] [length]\n"), argv[0]);
         return;
     }
     uint16_t start = strtoul(argv[1], NULL, 16) & 0xffff;
@@ -146,7 +147,12 @@ void cli_loadbin(int argc, char *argv[])
         while ((fr = f_read(&fil, buf, 256, &br)) == FR_OK) {
             if (br > len)
                 br = len;
-            write_mem(start, buf, br);
+#ifdef OUTBOUND_IORQ
+            if (flash)
+                flash_write(start, buf, br);
+            else
+#endif
+                write_mem(start, buf, br);
             if (br < 256)
                 break;
             start += br;
@@ -158,6 +164,26 @@ void cli_loadbin(int argc, char *argv[])
     if ((fr = f_close(&fil)) != FR_OK)
         printf_P(PSTR("error closing file: %S\n"), strlookup(fr_text, fr));
 }
+
+
+#ifdef OUTBOUND_IORQ
+/**
+ * Erase a flash sector or entire chip
+ */
+void cli_erase(int argc, char *argv[])
+{
+    if (argc < 2) {
+        printf_P(PSTR("usage: erase <addr> | erase all\n"));
+        return;
+    }
+    uint32_t addr;
+    if (strcmp_P(argv[1], PSTR("all")) == 0)
+        addr = 0x80000;
+    else
+        addr = strtoul(argv[1], NULL, 16);
+    flash_erase(addr);
+}
+#endif
 
 /**
  * Save an region of memory to a binary file on disk
@@ -718,7 +744,13 @@ const char cli_cmd_names[] PROGMEM =
     "disasm\0"
     "do\0"
     "dump\0"
+#ifdef OUTBOUND_IORQ
+    "erase\0"
+#endif
     "fill\0"
+#ifdef OUTBOUND_IORQ
+    "flash\0"
+#endif
     "help\0"
 #ifdef OUTBOUND_IORQ
     "in\0"
@@ -757,7 +789,13 @@ const char cli_cmd_help[] PROGMEM =
     "disassembles memory location\0"                // disasm
     "exeucte a batch file\0"                        // do
     "dump memory in hex and ascii\0"                // dump
+#ifdef OUTBOUND_IORQ
+    "erase flash ROM\0"                             // erase
+#endif
     "fill memory with byte\0"                       // fill
+#ifdef OUTBOUND_IORQ
+    "flash file to ROM\0"                           // flash
+#endif
     "list available commands\0"                     // help
 #ifdef OUTBOUND_IORQ
     "read a value from a port\0"                    // in
@@ -798,7 +836,13 @@ void * const cli_cmd_functions[] PROGMEM = {
     &cli_disasm,
     &cli_do,
     &cli_dump,
+#ifdef OUTBOUND_IORQ
+    &cli_erase,
+#endif
     &cli_fill,
+#ifdef OUTBOUND_IORQ
+    &cli_loadbin, // flash
+#endif
     &cli_help,
 #ifdef OUTBOUND_IORQ
     &cli_in,

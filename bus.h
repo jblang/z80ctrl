@@ -252,6 +252,8 @@ void io_out(uint8_t addr, uint8_t value);
 uint8_t io_in(uint8_t addr);
 void mem_page(uint8_t bank, uint8_t page);
 void mem_restore(void);
+void flash_write(uint32_t addr, uint8_t *buf, uint16_t len);
+void flash_erase(uint32_t addr);
 #endif
 
 #endif
