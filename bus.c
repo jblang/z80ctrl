@@ -78,8 +78,10 @@ uint8_t bus_master(void)
     uint8_t i = 255;
 
     BUSRQ_LO;           // request bus
+#ifdef IOACK_OUTPUT
     IOACK_LO;           // make sure not in WAIT state
     IOACK_HI;
+#endif
     // wait for BUSACK to go low
     while (GET_BUSACK)  {
         CLK_TOGGLE;
@@ -142,7 +144,9 @@ void bus_init(void)
 #ifdef BANK_OUTPUT
     BANK_OUTPUT;
 #endif
+#ifdef IOACK_OUTPUT
     IOACK_OUTPUT;
+#endif
     CLK_OUTPUT;
 
     IORQ_INPUT;
@@ -168,8 +172,13 @@ void bus_init(void)
     RESET_LO;
     clk_cycle(3);
     RESET_HI;
+#ifdef IOACK_OUTPUT    
     IOACK_LO;
     IOACK_HI;
+#else
+    BUSRQ_LO;
+    BUSRQ_HI;
+#endif
 
     // Make bidirectional signals inputs
     bus_slave();
@@ -232,7 +241,7 @@ void _write_mem(uint16_t addr, const uint8_t *buf, uint16_t len, uint8_t pgmspac
     bus_slave();
 }
 
-#ifdef OUTBOUND_IORQ
+#ifdef IORQ_OUTPUT
 
 /**
  * Output value to an IO register
@@ -248,8 +257,13 @@ void io_out_bare(uint8_t addr, uint8_t value)
     WR_HI;
     IORQ_HI;
     IORQ_INPUT;
+#ifdef IOACK_OUTPUT
     IOACK_LO;
     IOACK_HI;
+#else
+    BUSRQ_LO;
+    BUSRQ_HI;
+#endif
 }
 
 void io_out(uint8_t addr, uint8_t value)
@@ -273,8 +287,13 @@ uint8_t io_in_bare(uint8_t addr)
     RD_HI;
     IORQ_HI;
     IORQ_INPUT;
+#ifdef IOACK_OUTPUT
     IOACK_LO;
     IOACK_HI;
+#else
+    BUSRQ_LO;
+    BUSRQ_HI;
+#endif
     return value;
 }
 

@@ -147,7 +147,7 @@ void cli_loadbin(int argc, char *argv[])
         while ((fr = f_read(&fil, buf, 256, &br)) == FR_OK) {
             if (br > len)
                 br = len;
-#ifdef OUTBOUND_IORQ
+#ifdef IORQ_OUTPUT
             if (flash)
                 flash_write(start, buf, br);
             else
@@ -166,7 +166,7 @@ void cli_loadbin(int argc, char *argv[])
 }
 
 
-#ifdef OUTBOUND_IORQ
+#ifdef IORQ_OUTPUT
 /**
  * Erase a flash sector or entire chip
  */
@@ -535,7 +535,7 @@ void cli_poke(int argc, char *argv[])
     
 }
 
-#ifdef OUTBOUND_IORQ
+#ifdef IORQ_OUTPUT
 
 /**
  * Output value to an IO register
@@ -744,21 +744,21 @@ const char cli_cmd_names[] PROGMEM =
     "disasm\0"
     "do\0"
     "dump\0"
-#ifdef OUTBOUND_IORQ
+#ifdef IORQ_OUTPUT
     "erase\0"
 #endif
     "fill\0"
-#ifdef OUTBOUND_IORQ
+#ifdef IORQ_OUTPUT
     "flash\0"
 #endif
     "help\0"
-#ifdef OUTBOUND_IORQ
+#ifdef IORQ_OUTPUT
     "in\0"
 #endif
     "loadbin\0"
     "loadhex\0"
     "mount\0"
-#ifdef OUTBOUND_IORQ
+#ifdef IORQ_OUTPUT
     "out\0"
     "page\0"
 #endif
@@ -789,21 +789,21 @@ const char cli_cmd_help[] PROGMEM =
     "disassembles memory location\0"                // disasm
     "exeucte a batch file\0"                        // do
     "dump memory in hex and ascii\0"                // dump
-#ifdef OUTBOUND_IORQ
+#ifdef IORQ_OUTPUT
     "erase flash ROM\0"                             // erase
 #endif
     "fill memory with byte\0"                       // fill
-#ifdef OUTBOUND_IORQ
+#ifdef IORQ_OUTPUT
     "flash file to ROM\0"                           // flash
 #endif
     "list available commands\0"                     // help
-#ifdef OUTBOUND_IORQ
+#ifdef IORQ_OUTPUT
     "read a value from a port\0"                    // in
 #endif
     "load binary file to memory\0"                  // loadbin
     "load intel hex file to memory\0"               // loadhex
     "mount a disk image\0"                          // mount
-#ifdef OUTBOUND_IORQ
+#ifdef IORQ_OUTPUT
     "write a value to a port\0"                     // out
     "select active memory pages\0"                  // page
 #endif
@@ -836,21 +836,21 @@ void * const cli_cmd_functions[] PROGMEM = {
     &cli_disasm,
     &cli_do,
     &cli_dump,
-#ifdef OUTBOUND_IORQ
+#ifdef IORQ_OUTPUT
     &cli_erase,
 #endif
     &cli_fill,
-#ifdef OUTBOUND_IORQ
+#ifdef IORQ_OUTPUT
     &cli_loadbin, // flash
 #endif
     &cli_help,
-#ifdef OUTBOUND_IORQ
+#ifdef IORQ_OUTPUT
     &cli_in,
 #endif
     &cli_loadbin,
     &cli_loadhex,
     &cli_mount,
-#ifdef OUTBOUND_IORQ
+#ifdef IORQ_OUTPUT
     &cli_out,
     &cli_page,
 #endif

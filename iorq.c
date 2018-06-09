@@ -130,19 +130,20 @@ void iorq_dispatch(void)
             }
     }
     uint8_t ddr = DATA_DDR;
-    if (ddr || dma_function)
-        BUSRQ_LO;
+    BUSRQ_LO;
+#ifdef IOACK_OUTPUT
     IOACK_LO;
+#endif
     while (!GET_IORQ)
         CLK_TOGGLE;
+#ifdef IOACK_OUTPUT
     IOACK_HI;
+#endif
     if (dma_function) {
         dma_function();
         dma_function = NULL;
     }
-    if (ddr) {
-        DATA_INPUT;
-        BUSRQ_HI;
-    }
+    DATA_INPUT;
+    BUSRQ_HI;
     sei();
 }

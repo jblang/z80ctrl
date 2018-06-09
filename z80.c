@@ -57,11 +57,16 @@ void z80_reset(uint16_t addr)
     RESET_LO;
     clk_cycle(3);
     RESET_HI;
-#ifdef OUTBOUND_IORQ
+#ifdef IORQ_OUTPUT
     mem_restore();
 #endif
+#ifdef IOACK_OUTPUT
     IOACK_LO;
     IOACK_HI;
+#else
+    BUSRQ_LO;
+    BUSRQ_HI;
+#endif
 }
 
 /**
@@ -69,11 +74,13 @@ void z80_reset(uint16_t addr)
  */
 void z80_run(void)
 {
+    uint16_t count;
     clk_run();
-    while (GET_HALT) {
-        if (!GET_IORQ) {
+    for(;;) {
+        if (!GET_IORQ)
             iorq_dispatch();
-        }
+        if (++count == 0 && !GET_HALT)
+            break;
     }
     clk_stop();
     CLK_LO;
@@ -89,24 +96,29 @@ void z80_buslog(bus_stat status)
         status.addr,
         status.data,
         0x20 <= status.data && status.data <= 0x7e ? status.data : ' ',
-        
+#if (BOARD_REV < 3)
         !FLAG(status.xflags, MREQ) ? "memrq" :
+#else
+        !FLAG(status.flags, MREQ) ? "memrq" :
+#endif
         !FLAG(status.flags, IORQ) ? "iorq " : "     ",
 
         !FLAG(status.flags, RD) ? "rd  " :
         !FLAG(status.flags, WR) ? "wr  " :
-#if (BOARD_REV == 1 || BOARD_REV == 2)
         !FLAG(status.xflags, RFSH) ? "rfsh" : "    ",
+#if (BOARD_REV < 3)
         !FLAG(status.flags, M1) ? "m1" : "  ",
         !FLAG(status.xflags, BUSRQ) ? "busrq" : "     ",
-#else
-        !FLAG(status.xflags, MREQ) && FLAG(status.flags, RD) && FLAG(status.flags, WR) ? "rfsh" : "    ",
-        !FLAG(status.xflags, M1) ? "m1" : "  ",
-        !FLAG(status.flags, BUSRQ) ? "busrq" : "     ",
-#endif       
         !FLAG(status.xflags, BUSACK) ? "busack" : "      ",
         (!FLAG(status.flags, IORQ) && FLAG(status.flags, IOACK)) ? "wait" : "    ",
         !FLAG(status.flags, HALT) ? "halt" : "    ", 
+#else
+        !FLAG(status.xflags, M1) ? "m1" : "  ",
+        !FLAG(status.flags, BUSRQ) ? "busrq" : "     ",
+        !FLAG(status.flags, BUSACK) ? "busack" : "      ",
+        (!FLAG(status.flags, IORQ) && FLAG(status.flags, BUSRQ)) ? "wait" : "    ",
+        !FLAG(status.xflags, HALT) ? "halt" : "    ", 
+#endif    
         !FLAG(status.xflags, INTERRUPT) ? "int" : "   ",
         !FLAG(status.xflags, NMI) ? "nmi" : "   ",
         !FLAG(status.xflags, RESET) ? "reset" : "     ");
@@ -221,7 +233,7 @@ void z80_debug(uint32_t cycles)
 
     while (GET_HALT && (cycles == 0 || c < cycles)) {
         if ((ENABLED(watches, OPFETCH) || ENABLED(breaks, OPFETCH) || cycles)) {
-            if (!GET_M1 && !GET_RD && !GET_MREQ) {
+            if (!GET_RD && !GET_MREQ && !GET_M1) {
                 uint16_t addr = GET_ADDR;
                 if (INRANGE(breaks, OPFETCH, addr) && !cycles && !brkonce) {
                     printf_P(PSTR("opfetch break at %04X\n"), addr);
