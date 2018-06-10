@@ -41,6 +41,7 @@
 #include "sioemu.h"
 #include "diskio.h"
 #include "uart.h"
+#include "tms.h"
 
 /**
  * SD card filesystem
@@ -942,5 +943,6 @@ int main(void)
     bus_init();
 
     cli_exec(AUTOEXEC);
+    tms_init();
     cli_loop();
 }

@@ -129,7 +129,6 @@ void iorq_dispatch(void)
                 SET_DATA(0xFF);
             }
     }
-    uint8_t ddr = DATA_DDR;
     BUSRQ_LO;
 #ifdef IOACK_OUTPUT
     IOACK_LO;
