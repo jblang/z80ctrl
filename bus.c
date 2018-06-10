@@ -260,9 +260,6 @@ void io_out_bare(uint8_t addr, uint8_t value)
 #ifdef IOACK_OUTPUT
     IOACK_LO;
     IOACK_HI;
-#else
-    BUSRQ_LO;
-    BUSRQ_HI;
 #endif
 }
 
@@ -270,7 +267,7 @@ void io_out(uint8_t addr, uint8_t value)
 {
     if (!bus_master())
         return;
-    io_out(addr, value);
+    io_out_bare(addr, value);
     bus_slave();
 }   
 
@@ -290,9 +287,6 @@ uint8_t io_in_bare(uint8_t addr)
 #ifdef IOACK_OUTPUT
     IOACK_LO;
     IOACK_HI;
-#else
-    BUSRQ_LO;
-    BUSRQ_HI;
 #endif
     return value;
 }
