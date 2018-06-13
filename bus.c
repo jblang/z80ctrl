@@ -95,6 +95,9 @@ uint8_t bus_master(void)
     RD_HI;
     WR_HI;
     MREQ_OUTPUT;
+#ifdef IORQ_OUTPUT
+    IORQ_OUTPUT;
+#endif
     RD_OUTPUT;
     WR_OUTPUT;
     ADDR_OUTPUT;
@@ -108,6 +111,9 @@ uint8_t bus_master(void)
 void bus_slave(void)
 {
     MREQ_INPUT;
+#ifdef IORQ_INPUT
+    IORQ_INPUT;
+#endif
     RD_INPUT;
     WR_INPUT;
     ADDR_INPUT;
@@ -251,12 +257,11 @@ void io_out_bare(uint8_t addr, uint8_t value)
     SET_ADDRLO(addr);
     SET_DATA(value);
     DATA_OUTPUT;
-    IORQ_OUTPUT;
     IORQ_LO;
     WR_LO;
     WR_HI;
     IORQ_HI;
-    IORQ_INPUT;
+    DATA_INPUT;
 #ifdef IOACK_OUTPUT
     IOACK_LO;
     IOACK_HI;
@@ -277,13 +282,13 @@ void io_out(uint8_t addr, uint8_t value)
 uint8_t io_in_bare(uint8_t addr)
 {
     SET_ADDRLO(addr);
-    IORQ_OUTPUT;
+    DATA_INPUT;
     IORQ_LO;
     RD_LO;
+    _delay_us(2);
     uint8_t value = GET_DATA;
     RD_HI;
     IORQ_HI;
-    IORQ_INPUT;
 #ifdef IOACK_OUTPUT
     IOACK_LO;
     IOACK_HI;
