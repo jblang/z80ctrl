@@ -244,25 +244,29 @@ void cli_disasm(int argc, char *argv[])
  */
 void cli_dump(int argc, char *argv[])
 {
-    uint16_t start, end;
+    uint8_t tms = (strcmp_P(argv[0], PSTR("tmsdump")) == 0);
     if (argc < 2) {
         printf_P(PSTR("usage: dump <start> [end]\n"));
         return;
     }
-    start = strtoul(argv[1], NULL, 16) & 0xffff;
+    uint16_t start = strtoul(argv[1], NULL, 16) & 0xffff;
+    uint16_t end;
     if (argc < 3)
         end = start + 0xff;
     else
         end = strtoul(argv[2], NULL, 16) & 0xffff;
     uint8_t buf[16];
-    uint8_t j;
     uint8_t buflen = 16;
     uint32_t i = start;
+    uint8_t j;
 
     printf_P(PSTR("%04x-%04x\n"), start, end);
     while (i <= end) {
         printf_P(PSTR("%04X   "), i);
-        read_mem(i, buf, buflen);
+        if (tms)
+            tms_read(i, buf, buflen);
+        else
+            read_mem(i, buf, buflen);
         for (j = 0; j < buflen; j++) {
             printf_P(PSTR("%02X "), buf[j]);
             if (j % 4 == 3)
@@ -480,19 +484,34 @@ void cli_fill(int argc, char*argv[]) {
         printf_P(PSTR("usage: fill <start> <end> <value>\n"));
         return;
     }
+    uint8_t tms = (strcmp_P(argv[0], PSTR("tmsfill")) == 0);
     uint16_t start = strtoul(argv[1], NULL, 16) & 0xffff;
     uint16_t end = strtoul(argv[2], NULL, 16) & 0xffff;
-    uint8_t value = strtoul(argv[3], NULL, 16) & 0xff;
     uint8_t buf[256];
-    uint16_t i;
-    for (i = 0; i < 256; i++)
-        buf[i] = value;
+    enum {ASC = 256, DESC};
+    if (strcmp_P(argv[3], PSTR("asc")) == 0) {
+        for (uint16_t i = 0; i < 256; i++)
+            buf[i] = i;
+    } else if (strcmp_P(argv[3], PSTR("desc")) == 0) {
+        for (uint16_t i = 0; i < 256; i++)
+            buf[i] = 255 - i;
+    } else {
+        uint8_t value = strtoul(argv[3], NULL, 16) & 0xff;
+        for (uint16_t i = 0; i < 256; i++)
+            buf[i] = value;
+    }
+    
     for (;;) {
         if (end - start > 256) {
-            write_mem(start, buf, 256);
+            if (tms)
+                tms_write(start, buf, 256);
+            else
+                write_mem(start, buf, 256);
             start += 256;
         } else {
-            write_mem(start, buf, end - start + 1);
+            if (tms)
+                tms_write(start, buf, end - start + 1);
+                write_mem(start, buf, end - start + 1);
             break;
         }
     }
@@ -770,6 +789,8 @@ const char cli_cmd_names[] PROGMEM =
     "savehex\0"
     "s\0"
     "step\0"
+    "tmsdump\0"
+    "tmsfill\0"
     "unmount\0"
     "watch";
 
@@ -815,6 +836,8 @@ const char cli_cmd_help[] PROGMEM =
     "save intel hex file from memory\0"             // savehex
     "shorthand for step\0"                          // s
     "step processor N cycles\0"                     // step
+    "dump tms memory in hex and ascii\0"            // tmsdump
+    "fill tms memory with byte\0"                   // tmsfill
     "unmount a disk image\0"                        // unmount
     "set watch points";                             // watch
 
@@ -829,7 +852,7 @@ void * const cli_cmd_functions[] PROGMEM = {
     &cli_boot,
     &cli_bus,
     &cli_breakwatch,
-    &cli_debug,
+    &cli_debug, // c
     &cli_clkdiv,
     &cli_cls,
     &cli_debug,
@@ -860,8 +883,10 @@ void * const cli_cmd_functions[] PROGMEM = {
     &cli_reset,
     &cli_savebin,
     &cli_savehex,
+    &cli_step,  // s
     &cli_step,
-    &cli_step,
+    &cli_dump,  // tmsdump
+    &cli_fill,  // tmsfill
     &cli_unmount,
     &cli_breakwatch
 };
