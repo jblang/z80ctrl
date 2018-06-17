@@ -129,6 +129,7 @@ void cli_loadbin(int argc, char *argv[])
     uint16_t offset = 0;
     uint32_t len = 0x10000;
     uint8_t flash = (strcmp_P(argv[0], PSTR("flash")) == 0);
+    uint8_t tms = (strcmp_P(argv[0], PSTR("tmslbin")) == 0);
     if (argc < 3) {
         printf_P(PSTR("usage: %s <start addr> <filename> [offset] [length]\n"), argv[0]);
         return;
@@ -153,6 +154,9 @@ void cli_loadbin(int argc, char *argv[])
                 flash_write(start, buf, br);
             else
 #endif
+            if (tms)
+                tms_write(start, buf, br);
+            else
                 write_mem(start, buf, br);
             if (br < 256)
                 break;
@@ -791,6 +795,7 @@ const char cli_cmd_names[] PROGMEM =
     "step\0"
     "tmsdump\0"
     "tmsfill\0"
+    "tmslbin\0"
     "unmount\0"
     "watch";
 
@@ -838,6 +843,7 @@ const char cli_cmd_help[] PROGMEM =
     "step processor N cycles\0"                     // step
     "dump tms memory in hex and ascii\0"            // tmsdump
     "fill tms memory with byte\0"                   // tmsfill
+    "load binary file to tms memory\0"              // tmslbin
     "unmount a disk image\0"                        // unmount
     "set watch points";                             // watch
 
@@ -885,8 +891,9 @@ void * const cli_cmd_functions[] PROGMEM = {
     &cli_savehex,
     &cli_step,  // s
     &cli_step,
-    &cli_dump,  // tmsdump
-    &cli_fill,  // tmsfill
+    &cli_dump,      // tmsdump
+    &cli_fill,      // tmsfill
+    &cli_loadbin,   // tmslbin
     &cli_unmount,
     &cli_breakwatch
 };
