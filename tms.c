@@ -50,6 +50,7 @@ void tms_writereg(uint8_t reg, uint8_t data)
 void tms_configure(tms_conf c)
 {
     if (bus_master()) {
+        DATA_OUTPUT;
         tms_writereg(0, ((c.mode & 1) << 1) | c.extvid);
         tms_writereg(1, (c.ramsize << 7) | (c.blank << 6) | (c.intenable << 5) | 
             ((c.mode & 6)  << 2) | (c.spritesize << 1) | c.spritemag);
@@ -67,6 +68,7 @@ tms_stat tms_status(void)
 {
     tms_stat s;
     if (bus_master()) {
+        DATA_INPUT;
         uint8_t data = tms_readreg();
         s.interrupt = data >> 7;
         s.fifthsprite = (data >> 6) & 1;
@@ -80,6 +82,7 @@ tms_stat tms_status(void)
 void tms_clear(void)
 {
     if (bus_master()) {
+        DATA_OUTPUT;
         io_out_bare(TMS_REG, 0);
         _delay_us(TMS_WAIT);
         io_out_bare(TMS_REG, 0x40);
@@ -97,6 +100,7 @@ void _tms_write(uint16_t addr, const uint8_t *buf, uint16_t len, uint8_t pgmspac
     if (bus_master()) {
         addr &= 0x3fff;
         addr |= 0x4000;
+        DATA_OUTPUT;
         io_out_bare(TMS_REG, addr & 0xff);
         _delay_us(TMS_WAIT);
         io_out_bare(TMS_REG, addr >> 8);
@@ -115,11 +119,13 @@ void _tms_write(uint16_t addr, const uint8_t *buf, uint16_t len, uint8_t pgmspac
 void tms_read(uint16_t addr, uint8_t *buf, uint16_t len)
 {
     if (bus_master()) {
+        DATA_OUTPUT;
         addr &= 0x3fff;
         io_out_bare(TMS_REG, addr & 0xff);
         _delay_us(TMS_WAIT);
         io_out_bare(TMS_REG, addr >> 8);
         _delay_us(TMS_WAIT);
+        DATA_INPUT;
         for (uint16_t i = 0; i < len; i++) {
             buf[i] = io_in_bare(TMS_RAM);
             _delay_us(TMS_WAIT);

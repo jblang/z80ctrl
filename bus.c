@@ -197,7 +197,7 @@ void read_mem(uint16_t addr, uint8_t *buf, uint16_t len)
 {
     uint16_t i;
 
-    if(!bus_master())
+    if (!bus_master())
         return;
     DATA_INPUT;
     MREQ_LO;
@@ -222,7 +222,7 @@ void read_mem(uint16_t addr, uint8_t *buf, uint16_t len)
  */
 void _write_mem(uint16_t addr, const uint8_t *buf, uint16_t len, uint8_t pgmspace)
 {
-    if(!bus_master())
+    if (!bus_master())
         return;
     DATA_OUTPUT;
     MREQ_LO;
@@ -256,12 +256,10 @@ void io_out_bare(uint8_t addr, uint8_t value)
 {
     SET_ADDRLO(addr);
     SET_DATA(value);
-    DATA_OUTPUT;
     IORQ_LO;
     WR_LO;
     WR_HI;
     IORQ_HI;
-    DATA_INPUT;
 #ifdef IOACK_OUTPUT
     IOACK_LO;
     IOACK_HI;
@@ -272,6 +270,7 @@ void io_out(uint8_t addr, uint8_t value)
 {
     if (!bus_master())
         return;
+    DATA_OUTPUT;
     io_out_bare(addr, value);
     bus_slave();
 }   
@@ -282,7 +281,6 @@ void io_out(uint8_t addr, uint8_t value)
 uint8_t io_in_bare(uint8_t addr)
 {
     SET_ADDRLO(addr);
-    DATA_INPUT;
     IORQ_LO;
     RD_LO;
     _delay_us(2);
@@ -300,6 +298,7 @@ uint8_t io_in(uint8_t addr)
 {
     if (!bus_master())
         return 0;
+    DATA_INPUT;
     uint8_t value = io_in_bare(addr);
     bus_slave();
     return value;
@@ -324,8 +323,9 @@ void mem_page_bare(uint8_t bank, uint8_t page)
 void mem_page(uint8_t bank, uint8_t page)
 {
     mem_pages[bank & 3] = page;               // save pages so they can be restored after reset
-    if(!bus_master())
+    if (!bus_master())
         return;
+    DATA_OUTPUT;
     mem_page_bare(bank, page);
     bus_slave();
 }
@@ -356,13 +356,13 @@ void flash_cmd_prefix(void)
 
 void flash_write(uint32_t addr, uint8_t *buf, uint16_t len)
 {
-    if(!bus_master())
+    if (!bus_master())
         return;
+    DATA_OUTPUT;
     // first two banks must be physical pages 0 and 1
     mem_page_bare(0, 0);
     mem_page_bare(1, 1);
     mem_page_bare(2, PAGE(addr));
-    DATA_OUTPUT;
     MREQ_LO;
     for (uint16_t i = 0; i < len; i++) {
         // Send byte program command sequence
@@ -400,12 +400,12 @@ void flash_write(uint32_t addr, uint8_t *buf, uint16_t len)
  */
 void flash_erase(uint32_t addr)
 {
-    if(!bus_master())
+    if (!bus_master())
         return;
+    DATA_OUTPUT;
     // first two banks must be physical pages 0 and 1
     mem_page_bare(0, 0);
     mem_page_bare(1, 1);
-    DATA_OUTPUT;
     MREQ_LO;
     // Send erase command sequence
     flash_cmd_prefix();
