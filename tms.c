@@ -27,8 +27,8 @@
 #include "tmsfont.h"
 #include "bus.h"
 
-#define TMS_RAM 0x98
-#define TMS_REG 0x99
+#define TMS_RAM TMS_BASE
+#define TMS_REG TMS_BASE+1
 
 #define TMS_WAIT 8
 

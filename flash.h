@@ -20,52 +20,21 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef TMS_H
-#define TMS_H
+/**
+ * @file bus.h  Support for SST39SF0x0 flash
+ */
+
+#ifndef FLASH_H
+#define FLASH_H
 
 #include <stdint.h>
 #include "bus.h"
 
 #ifndef IORQ_OUTPUT
-#error "TMS9918 support requires board revision 3 or higher"
+#error "Flash support requires board revision 3 or higher"
 #endif
 
-#define TMS_GRAPHICS1MODE 0
-#define TMS_GRAPHICS2MODE 1
-#define TMS_MULTICOLORMODE 2
-#define TMS_TEXTMODE 4
-
-typedef struct {
-        uint8_t mode : 3;
-        uint8_t extvid : 1;
-        uint8_t ramsize : 1;
-        uint8_t blank : 1;
-        uint8_t intenable : 1;
-        uint8_t spritesize : 1;
-        uint8_t spritemag : 1;
-        uint8_t nametable : 4;
-        uint8_t colortable;
-        uint8_t patterngen : 3;
-        uint8_t spriteattr : 7;
-        uint8_t spritepat : 3;
-        uint8_t textcolor : 4;
-        uint8_t bgcolor : 4;
-} tms_conf;
-
-typedef struct {
-        uint8_t interrupt : 1;
-        uint8_t fifthsprite : 1;
-        uint8_t coincidence : 1;
-        uint8_t spriteno : 5;
-} tms_stat;
-
-void tms_configure(tms_conf c);
-tms_stat tms_status(void);
-void tms_read(uint16_t addr, uint8_t *buf, uint16_t len);
-void _tms_write(uint16_t addr, const uint8_t *buf, uint16_t len, uint8_t pgmspace);
-#define tms_write(addr, buf, len) _tms_write((addr), (buf), (len), 0)
-#define tms_write_P(addr, buf, len) _tms_write((addr), (buf), (len), 1)
-tms_conf tms_init();
-void tms_putchar(uint8_t c);
+void flash_erase(uint32_t addr);
+void flash_write(uint32_t addr, uint8_t *buf, uint16_t len);
 
 #endif

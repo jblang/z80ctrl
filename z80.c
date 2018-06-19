@@ -57,7 +57,7 @@ void z80_reset(uint16_t addr)
     RESET_LO;
     clk_cycle(3);
     RESET_HI;
-#ifdef IORQ_OUTPUT
+#ifdef PAGE_BASE
     mem_restore();
 #endif
 #ifdef IOACK_OUTPUT

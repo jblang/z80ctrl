@@ -41,7 +41,14 @@
 #include "sioemu.h"
 #include "diskio.h"
 #include "uart.h"
+
+#ifdef TMS_BASE
 #include "tms.h"
+#endif
+
+#ifdef SST_FLASH
+#include "flash.h"
+#endif
 
 /**
  * SD card filesystem
@@ -149,14 +156,16 @@ void cli_loadbin(int argc, char *argv[])
         while ((fr = f_read(&fil, buf, 256, &br)) == FR_OK) {
             if (br > len)
                 br = len;
-#ifdef IORQ_OUTPUT
+#ifdef SST_FLASH
             if (flash)
                 flash_write(start, buf, br);
             else
 #endif
+#ifdef TMS_BASE
             if (tms)
                 tms_write(start, buf, br);
             else
+#endif
                 write_mem(start, buf, br);
             if (br < 256)
                 break;
@@ -171,7 +180,7 @@ void cli_loadbin(int argc, char *argv[])
 }
 
 
-#ifdef IORQ_OUTPUT
+#ifdef SST_FLASH
 /**
  * Erase a flash sector or entire chip
  */
@@ -267,9 +276,11 @@ void cli_dump(int argc, char *argv[])
     printf_P(PSTR("%04x-%04x\n"), start, end);
     while (i <= end) {
         printf_P(PSTR("%04X   "), i);
+#ifdef TMS_BASE
         if (tms)
             tms_read(i, buf, buflen);
         else
+#endif
             read_mem(i, buf, buflen);
         for (j = 0; j < buflen; j++) {
             printf_P(PSTR("%02X "), buf[j]);
@@ -507,15 +518,19 @@ void cli_fill(int argc, char*argv[]) {
     
     for (;;) {
         if (end - start > 256) {
+#ifdef TMS_BASE
             if (tms)
                 tms_write(start, buf, 256);
             else
+#endif
                 write_mem(start, buf, 256);
             start += 256;
         } else {
+#ifdef TMS_BASE
             if (tms)
                 tms_write(start, buf, end - start + 1);
             else
+#endif
                 write_mem(start, buf, end - start + 1);
             break;
         }
@@ -588,6 +603,9 @@ void cli_in(int argc, char *argv[])
     uint8_t addr = strtoul(argv[1], NULL, 16) & 0xff;
     printf_P(PSTR("Read %02x from %02x\n"), io_in(addr), addr);
 }
+#endif
+
+#ifdef PAGE_BASE
 
 /**
  * Set the active pages in memory
@@ -607,7 +625,6 @@ void cli_page(int argc, char *argv[])
         mem_page(bank, page);
     }
 }
-
 #endif
 
 /**
@@ -769,11 +786,11 @@ const char cli_cmd_names[] PROGMEM =
     "disasm\0"
     "do\0"
     "dump\0"
-#ifdef IORQ_OUTPUT
+#ifdef SST_FLASH
     "erase\0"
 #endif
     "fill\0"
-#ifdef IORQ_OUTPUT
+#ifdef SST_FLASH
     "flash\0"
 #endif
     "help\0"
@@ -785,6 +802,8 @@ const char cli_cmd_names[] PROGMEM =
     "mount\0"
 #ifdef IORQ_OUTPUT
     "out\0"
+#endif
+#ifdef PAGE_BASE
     "page\0"
 #endif
     "poke\0"
@@ -794,9 +813,11 @@ const char cli_cmd_names[] PROGMEM =
     "savehex\0"
     "s\0"
     "step\0"
+#ifdef TMS_BASE
     "tmsdump\0"
     "tmsfill\0"
     "tmslbin\0"
+#endif
     "unmount\0"
     "watch";
 
@@ -817,11 +838,11 @@ const char cli_cmd_help[] PROGMEM =
     "disassembles memory location\0"                // disasm
     "exeucte a batch file\0"                        // do
     "dump memory in hex and ascii\0"                // dump
-#ifdef IORQ_OUTPUT
+#ifdef SST_FLASH
     "erase flash ROM\0"                             // erase
 #endif
     "fill memory with byte\0"                       // fill
-#ifdef IORQ_OUTPUT
+#ifdef SST_FLASH
     "flash file to ROM\0"                           // flash
 #endif
     "list available commands\0"                     // help
@@ -833,6 +854,8 @@ const char cli_cmd_help[] PROGMEM =
     "mount a disk image\0"                          // mount
 #ifdef IORQ_OUTPUT
     "write a value to a port\0"                     // out
+#endif
+#ifdef PAGE_BASE
     "select active memory pages\0"                  // page
 #endif
     "poke values into memory\0"                     // poke
@@ -842,9 +865,11 @@ const char cli_cmd_help[] PROGMEM =
     "save intel hex file from memory\0"             // savehex
     "shorthand for step\0"                          // s
     "step processor N cycles\0"                     // step
+#ifdef TMS_BASE
     "dump tms memory in hex and ascii\0"            // tmsdump
     "fill tms memory with byte\0"                   // tmsfill
     "load binary file to tms memory\0"              // tmslbin
+#endif
     "unmount a disk image\0"                        // unmount
     "set watch points";                             // watch
 
@@ -859,7 +884,7 @@ void * const cli_cmd_functions[] PROGMEM = {
     &cli_boot,
     &cli_bus,
     &cli_breakwatch,
-    &cli_debug, // c
+    &cli_debug,     // c
     &cli_clkdiv,
     &cli_cls,
     &cli_debug,
@@ -867,12 +892,12 @@ void * const cli_cmd_functions[] PROGMEM = {
     &cli_disasm,
     &cli_do,
     &cli_dump,
-#ifdef IORQ_OUTPUT
+#ifdef SST_FLASH
     &cli_erase,
 #endif
     &cli_fill,
-#ifdef IORQ_OUTPUT
-    &cli_loadbin, // flash
+#ifdef SST_FLASH
+    &cli_loadbin,   // flash
 #endif
     &cli_help,
 #ifdef IORQ_OUTPUT
@@ -883,6 +908,8 @@ void * const cli_cmd_functions[] PROGMEM = {
     &cli_mount,
 #ifdef IORQ_OUTPUT
     &cli_out,
+#endif
+#ifdef PAGE_BASE
     &cli_page,
 #endif
     &cli_poke,
@@ -890,11 +917,13 @@ void * const cli_cmd_functions[] PROGMEM = {
     &cli_reset,
     &cli_savebin,
     &cli_savehex,
-    &cli_step,  // s
+    &cli_step,      // s
     &cli_step,
+#ifdef TMS_BASE
     &cli_dump,      // tmsdump
     &cli_fill,      // tmsfill
     &cli_loadbin,   // tmslbin
+#endif
     &cli_unmount,
     &cli_breakwatch
 };
@@ -976,6 +1005,8 @@ int main(void)
     bus_init();
 
     cli_exec(AUTOEXEC);
+#ifdef TMS_BASE
     tms_init();
+#endif
     cli_loop();
 }
