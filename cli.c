@@ -515,6 +515,7 @@ void cli_fill(int argc, char*argv[]) {
         } else {
             if (tms)
                 tms_write(start, buf, end - start + 1);
+            else
                 write_mem(start, buf, end - start + 1);
             break;
         }
