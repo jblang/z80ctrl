@@ -143,8 +143,6 @@ void bus_init(void)
     iox_init();
 
     // Configure bus signal direction
-    INT_OUTPUT;
-    NMI_OUTPUT;
     RESET_OUTPUT;
     BUSRQ_OUTPUT;
 #ifdef BANK_OUTPUT
