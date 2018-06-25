@@ -145,9 +145,6 @@ void bus_init(void)
     // Configure bus signal direction
     RESET_OUTPUT;
     BUSRQ_OUTPUT;
-#ifdef BANK_OUTPUT
-    BANK_OUTPUT;
-#endif
 #ifdef IOACK_OUTPUT
     IOACK_OUTPUT;
 #endif
@@ -156,9 +153,7 @@ void bus_init(void)
     IORQ_INPUT;
     BUSACK_INPUT;
     M1_INPUT;
-#ifdef RFSH_INPUT
     RFSH_INPUT;
-#endif
     HALT_INPUT;
 
     // Pullup on halt so it can be used with a switch
@@ -168,9 +163,6 @@ void bus_init(void)
     INT_HI;
     NMI_HI;
     BUSRQ_HI;
-#ifdef SET_BANK
-    SET_BANK(0);
-#endif
 
     // Reset the processor
     RESET_LO;
