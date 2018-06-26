@@ -166,7 +166,7 @@ void cli_loadbin(int argc, char *argv[])
                 tms_write(start, buf, br);
             else
 #endif
-                write_mem(start, buf, br);
+                mem_write(start, buf, br);
             if (br < 256)
                 break;
             start += br;
@@ -220,7 +220,7 @@ void cli_savebin(int argc, char *argv[])
         while (start <= end) {
             if (end - start + 1 < len)
                 len = end - start + 1;
-            read_mem(start, buf, len);
+            mem_read(start, buf, len);
             if ((fr = f_write(&fil, buf, len, &bw)) != FR_OK) {
                 printf_P(PSTR("write error: %S\n"), strlookup(fr_text, fr));
                 break;
@@ -281,7 +281,7 @@ void cli_dump(int argc, char *argv[])
             tms_read(i, buf, buflen);
         else
 #endif
-            read_mem(i, buf, buflen);
+            mem_read(i, buf, buflen);
         for (j = 0; j < buflen; j++) {
             printf_P(PSTR("%02X "), buf[j]);
             if (j % 4 == 3)
@@ -479,7 +479,7 @@ int verify_mem(uint16_t start, uint16_t end, uint8_t *src, uint8_t log)
     while (i <= end) {
         if (end - i + 1 < buflen)
             buflen = end - i + 1;
-        read_mem(start, buf, buflen);
+        mem_read(start, buf, buflen);
         for (j = 0; j < buflen; i++, j++) {
             if (buf[j] != src[i]) {
                 if (log)
@@ -523,7 +523,7 @@ void cli_fill(int argc, char*argv[]) {
                 tms_write(start, buf, 256);
             else
 #endif
-                write_mem(start, buf, 256);
+                mem_write(start, buf, 256);
             start += 256;
         } else {
 #ifdef TMS_BASE
@@ -531,7 +531,7 @@ void cli_fill(int argc, char*argv[]) {
                 tms_write(start, buf, end - start + 1);
             else
 #endif
-                write_mem(start, buf, end - start + 1);
+                mem_write(start, buf, end - start + 1);
             break;
         }
     }
@@ -548,13 +548,13 @@ void cli_poke(int argc, char *argv[])
     uint16_t addr = strtoul(argv[1], NULL, 16) & 0xffff;
     if (argc == 3) {
         value = strtoul(argv[2], NULL, 16) & 0xff;
-        write_mem(addr, &value, 1);
+        mem_write(addr, &value, 1);
         return;
     }
     printf_P(PSTR("enter valid hex to replace; blank to leave unchanged; 'x' to exit.\n"));
     for (;;) {
         char buf[16];
-        read_mem(addr, &value, 1);
+        mem_read(addr, &value, 1);
         printf_P(PSTR("%04X=%02X : "), addr, value);
         if (fgets(buf, sizeof buf - 1, stdin) == NULL) {
             break;
@@ -567,7 +567,7 @@ void cli_poke(int argc, char *argv[])
             } else if (end == buf) {
                 break;
             } else {
-                write_mem(addr, &value, 1);
+                mem_write(addr, &value, 1);
                 addr++;
             }
         }

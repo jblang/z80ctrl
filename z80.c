@@ -52,7 +52,7 @@ void z80_reset(uint16_t addr)
 {
     uint8_t reset_vect[] = { 0xc3, (addr & 0xFF), (addr >> 8) };
     if (addr > 0x0002) {
-        write_mem(0x0000, reset_vect, 3);
+        mem_write(0x0000, reset_vect, 3);
     }
     RESET_LO;
     clk_cycle(3);

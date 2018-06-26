@@ -183,7 +183,7 @@ void bus_init(void)
 /**
  * Read specified number of bytes from external memory to a buffer
  */
-void read_mem(uint16_t addr, uint8_t *buf, uint16_t len)
+void mem_read(uint16_t addr, uint8_t *buf, uint16_t len)
 {
     uint16_t i;
 
@@ -210,7 +210,7 @@ void read_mem(uint16_t addr, uint8_t *buf, uint16_t len)
 /**
  *  Write specified number of bytes to external memory from a buffer
  */
-void _write_mem(uint16_t addr, const uint8_t *buf, uint16_t len, uint8_t pgmspace)
+void _mem_write(uint16_t addr, const uint8_t *buf, uint16_t len, uint8_t pgmspace)
 {
     if (!bus_master())
         return;

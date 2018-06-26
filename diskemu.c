@@ -191,7 +191,7 @@ int drive_bootload()
             sector = 8;
             end = 0x5c00;
             // SIMH BIOS expects the bootloader to be there even though we don't use it
-            write_mem_P(0xff00, simhboot_bin, simhboot_bin_len);
+            mem_write_P(0xff00, simhboot_bin, simhboot_bin_len);
         } else {
             // Other disks
             sector = 0;
@@ -206,7 +206,7 @@ int drive_bootload()
                 printf_P(PSTR("read error: %S\n"), strlookup(fr_text, fr));
                 return 0;
             }
-            write_mem(addr, buf+3, 0x80);
+            mem_write(addr, buf+3, 0x80);
             sector += 2;
             if (sector == NUMSECTORS)
                 sector = 1;
@@ -546,7 +546,7 @@ void hdsk_dma_read()
     } else if ((fr = f_read(&drives[dma_disk].fp, buf, SECTORSIZE, &br)) != FR_OK) {
         printf_P(PSTR("dma read error: %S\n"), strlookup(fr_text, fr));
     } else {
-        write_mem(dma_addr, buf+3, 0x80);
+        mem_write(dma_addr, buf+3, 0x80);
     }
 }
 
@@ -567,7 +567,7 @@ void drive_dma_write()
     if ((fr = f_lseek(&drives[dma_disk].fp, OFFSET(dma_track, dma_sector))) != FR_OK) {
         printf_P(PSTR("dma seek error: %S\n"), strlookup(fr_text, fr));
     } else {
-        read_mem(dma_addr, buf+3, 0x80);
+        mem_read(dma_addr, buf+3, 0x80);
         if ((fr = f_write(&drives[dma_disk].fp, buf, SECTORSIZE, &bw)) != FR_OK) {
             printf_P(PSTR("dma write error: %S\n"), strlookup(fr_text, fr));
         }        

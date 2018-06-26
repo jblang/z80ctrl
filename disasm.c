@@ -389,7 +389,7 @@ uint8_t instr_length = 0;   /**< length of the current construction */
 uint8_t disasm_next_byte()
 {
     if (disasm_index == 0)
-        read_mem(disasm_addr, disasm_buf, 256);
+        mem_read(disasm_addr, disasm_buf, 256);
     disasm_addr++;
     instr_bytes[instr_length] = disasm_buf[disasm_index++];
     return instr_bytes[instr_length++];
