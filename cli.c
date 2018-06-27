@@ -262,20 +262,21 @@ void cli_dump(int argc, char *argv[])
         printf_P(PSTR("usage: dump <start> [end]\n"));
         return;
     }
-    uint16_t start = strtoul(argv[1], NULL, 16) & 0xffff;
-    uint16_t end;
+    uint32_t start = strtoul(argv[1], NULL, 16);
+    uint32_t end;
     if (argc < 3)
-        end = start + 0xff;
+        end = start + 0xfful;
     else
-        end = strtoul(argv[2], NULL, 16) & 0xffff;
+        end = strtoul(argv[2], NULL, 16);
+    
     uint8_t buf[16];
     uint8_t buflen = 16;
     uint32_t i = start;
     uint8_t j;
 
-    printf_P(PSTR("%04x-%04x\n"), start, end);
+    printf_P(PSTR("%05lX-%05lX\n"), start, end);
     while (i <= end) {
-        printf_P(PSTR("%04X   "), i);
+        printf_P(PSTR("%05lX   "), base_addr + i);
 #ifdef TMS_BASE
         if (tms)
             tms_read(i, buf, buflen);
@@ -500,10 +501,9 @@ void cli_fill(int argc, char*argv[]) {
         return;
     }
     uint8_t tms = (strcmp_P(argv[0], PSTR("tmsfill")) == 0);
-    uint16_t start = strtoul(argv[1], NULL, 16) & 0xffff;
-    uint16_t end = strtoul(argv[2], NULL, 16) & 0xffff;
+    uint32_t start = strtoul(argv[1], NULL, 16) & 0xfffff;
+    uint32_t end = strtoul(argv[2], NULL, 16) & 0xfffff;
     uint8_t buf[256];
-    enum {ASC = 256, DESC};
     if (strcmp_P(argv[3], PSTR("asc")) == 0) {
         for (uint16_t i = 0; i < 256; i++)
             buf[i] = i;
@@ -608,22 +608,16 @@ void cli_in(int argc, char *argv[])
 #ifdef PAGE_BASE
 
 /**
- * Set the active pages in memory
+ * Set the base address in memory
  */
-void cli_page(int argc, char *argv[])
+void cli_base(int argc, char *argv[])
 {
-    uint8_t bank, page = 0;
-    if (argc < 2) {
-        printf_P(PSTR("usage: page <page1> [page2] [page3] [page4]\n"));
-        return;
+    if (argc == 2) {
+        base_addr = strtoul(argv[1], NULL, 16) & 0xFC000;
+        for (uint8_t i = 0; i < 4; i++)
+            mem_page(i, PAGE(base_addr) + i);
     }
-    for (bank = 0; bank < 4; bank++) {
-        if (bank + 1 < argc)
-            page = strtoul(argv[bank+1], NULL, 16) & 0xff;
-        else
-            page++;
-        mem_page(bank, page);
-    }
+    printf_P(PSTR("current base address is %05lX\n"), base_addr);
 }
 #endif
 
@@ -774,6 +768,9 @@ void cli_do(int argc, char *argv[])
  */
 const char cli_cmd_names[] PROGMEM = 
     "attach\0"
+#ifdef PAGE_BASE
+    "base\0"
+#endif
     "baud\0"
     "boot\0"
     "bus\0"
@@ -803,9 +800,6 @@ const char cli_cmd_names[] PROGMEM =
 #ifdef IORQ_OUTPUT
     "out\0"
 #endif
-#ifdef PAGE_BASE
-    "page\0"
-#endif
     "poke\0"
     "run\0"
     "reset\0"
@@ -826,6 +820,9 @@ const char cli_cmd_names[] PROGMEM =
  */
 const char cli_cmd_help[] PROGMEM =
     "attach virtual uart to physical uart\0"        // attach
+#ifdef PAGE_BASE
+    "set the base memory address\0"                 // base
+#endif
     "configure UART baud rate\0"                    // baud
     "boot from specified disk image\0"              // boot
     "display low-level bus status\0"                // bus
@@ -855,9 +852,6 @@ const char cli_cmd_help[] PROGMEM =
 #ifdef IORQ_OUTPUT
     "write a value to a port\0"                     // out
 #endif
-#ifdef PAGE_BASE
-    "select active memory pages\0"                  // page
-#endif
     "poke values into memory\0"                     // poke
     "execute code at address\0"                     // run
     "reset the processor, with optional vector\0"   // reset
@@ -880,6 +874,9 @@ void cli_help(int argc, char *argv[]);
  */
 void * const cli_cmd_functions[] PROGMEM = {
     &cli_attach,
+#ifdef PAGE_BASE
+    &cli_base,
+#endif
     &cli_baud,
     &cli_boot,
     &cli_bus,
@@ -908,9 +905,6 @@ void * const cli_cmd_functions[] PROGMEM = {
     &cli_mount,
 #ifdef IORQ_OUTPUT
     &cli_out,
-#endif
-#ifdef PAGE_BASE
-    &cli_page,
 #endif
     &cli_poke,
     &cli_run,

@@ -257,6 +257,7 @@ typedef struct {
 #define FLAG(b, f) ((b) & (1<<f))
 
 extern uint8_t clkdiv;
+extern uint32_t base_addr;
 
 void clk_cycle(uint8_t cycles);
 void clk_run(void);
@@ -266,8 +267,8 @@ void bus_slave(void);
 bus_stat bus_status(void);
 void bus_init(void);
 
-void mem_read(uint16_t addr, uint8_t * buf, uint16_t len);
-void _mem_write(uint16_t addr, const uint8_t *buf, uint16_t len, uint8_t pgmspace);
+void mem_read(uint32_t addr, uint8_t * buf, uint16_t len);
+void _mem_write(uint32_t addr, const uint8_t *buf, uint16_t len, uint8_t pgmspace);
 
 #define mem_write(addr, buf, len) _mem_write((addr), (buf), (len), 0);
 #define mem_write_P(addr, buf, len) _mem_write((addr), (buf), (len), 1);
@@ -284,7 +285,7 @@ uint8_t io_in(uint8_t addr);
 #error "Paging support requires board revision 3 or higher"
 #endif
 
-#define PAGE(addr) ((addr >> 14) & 0x3f)
+#define PAGE(addr) ((addr) >> 14)
 void mem_page_bare(uint8_t bank, uint8_t page);
 void mem_page(uint8_t bank, uint8_t page);
 void mem_restore(void);
