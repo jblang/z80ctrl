@@ -348,7 +348,6 @@ void mem_page_bare(uint8_t bank, uint8_t page)
  */
 void mem_page(uint8_t bank, uint8_t page)
 {
-    mem_pages[bank & 3] = page;               // save pages so they can be restored after reset
     if (!bus_master())
         return;
     DATA_OUTPUT;
@@ -356,12 +355,4 @@ void mem_page(uint8_t bank, uint8_t page)
     bus_slave();
 }
 
-/**
- * Restore previous paging configuration
- */
-void mem_restore(void)
-{
-    for (uint8_t i = 0; i < 4; i++)
-        mem_page(i, mem_pages[i]);
-}
 #endif

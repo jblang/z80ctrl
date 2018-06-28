@@ -80,7 +80,6 @@ void flash_write(uint32_t addr, uint8_t *buf, uint32_t len)
     MREQ_HI;
     DATA_INPUT;
     bus_slave();
-    mem_restore();
 }
 
 
@@ -124,5 +123,4 @@ void flash_erase(uint32_t addr)
     MREQ_HI;
     DATA_INPUT;
     bus_slave();
-    mem_restore();
 }

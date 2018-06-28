@@ -104,8 +104,8 @@ void cli_savehex(int argc, char *argv[])
         printf_P(PSTR("usage: savehex <start> <end> [file]\n"));
         return;
     }
-    uint16_t start = strtoul(argv[1], NULL, 16) & 0xffff;
-    uint16_t end = strtoul(argv[2], NULL, 16) & 0xffff;
+    uint32_t start = strtoul(argv[1], NULL, 16) & 0xfffff;
+    uint32_t end = strtoul(argv[2], NULL, 16) & 0xfffff;
     if (argc == 4) {
         if ((fr = f_open(&fil, argv[3], FA_WRITE | FA_CREATE_ALWAYS)) == FR_OK) {
             fdev_setup_stream(&file, fatfs_putchar, fatfs_getchar, _FDEV_SETUP_RW);
@@ -214,8 +214,8 @@ void cli_savebin(int argc, char *argv[])
         printf_P(PSTR("usage: savebin <start> <end> [file]\n"));
         return;
     }
-    uint16_t start = strtoul(argv[1], NULL, 16) & 0xffff;
-    uint16_t end = strtoul(argv[2], NULL, 16) & 0xffff;
+    uint32_t start = strtoul(argv[1], NULL, 16) & 0xfffff;
+    uint32_t end = strtoul(argv[2], NULL, 16) & 0xfffff;
     if ((fr = f_open(&fil, argv[3], FA_WRITE | FA_CREATE_ALWAYS)) == FR_OK) {
         while (start <= end) {
             if (end - start + 1 < len)
@@ -239,7 +239,7 @@ void cli_savebin(int argc, char *argv[])
  */
 void cli_disasm(int argc, char *argv[])
 {
-    uint16_t start, end;
+    uint32_t start, end;
     if (argc < 2) {
         printf_P(PSTR("usage: disasm <start> [end]\n"));
         return;
@@ -274,7 +274,6 @@ void cli_dump(int argc, char *argv[])
     uint32_t i = start;
     uint8_t j;
 
-    printf_P(PSTR("%05lX-%05lX\n"), start, end);
     while (i <= end) {
         printf_P(PSTR("%05lX   "), base_addr + i);
 #ifdef TMS_BASE
@@ -305,7 +304,7 @@ void cli_dump(int argc, char *argv[])
 void cli_run(int argc, char *argv[])
 {
     if (argc >= 2) {
-        uint16_t addr = strtoul(argv[1], NULL, 16) & 0xffff;
+        uint32_t addr = strtoul(argv[1], NULL, 16) & 0xfffff;
         z80_reset(addr);
     }
     z80_run();
@@ -316,9 +315,9 @@ void cli_run(int argc, char *argv[])
  */
 void cli_reset(int argc, char *argv[])
 {
-    uint16_t addr = 0;
+    uint32_t addr = 0;
     if (argc >= 2) {
-        addr = strtoul(argv[1], NULL, 16) & 0xffff;
+        addr = strtoul(argv[1], NULL, 16) & 0xfffff;
     }
     z80_reset(addr);
 }
@@ -329,7 +328,7 @@ void cli_reset(int argc, char *argv[])
 void cli_debug(int argc, char *argv[])
 {
     if (argc >= 2) {
-        uint16_t addr = strtoul(argv[1], NULL, 16) & 0xffff;
+        uint32_t addr = strtoul(argv[1], NULL, 16) & 0xfffff;
         z80_reset(addr);
     }
     z80_debug(0);
@@ -545,7 +544,7 @@ void cli_poke(int argc, char *argv[])
     uint8_t value;
     if (argc < 2)
         printf_P(PSTR("usage: poke <start> [value]\n"));
-    uint16_t addr = strtoul(argv[1], NULL, 16) & 0xffff;
+    uint32_t addr = strtoul(argv[1], NULL, 16);
     if (argc == 3) {
         value = strtoul(argv[2], NULL, 16) & 0xff;
         mem_write(addr, &value, 1);
@@ -555,7 +554,7 @@ void cli_poke(int argc, char *argv[])
     for (;;) {
         char buf[16];
         mem_read(addr, &value, 1);
-        printf_P(PSTR("%04X=%02X : "), addr, value);
+        printf_P(PSTR("%05lX=%02X : "), addr + base_addr, value);
         if (fgets(buf, sizeof buf - 1, stdin) == NULL) {
             break;
         } else {
@@ -612,11 +611,8 @@ void cli_in(int argc, char *argv[])
  */
 void cli_base(int argc, char *argv[])
 {
-    if (argc == 2) {
+    if (argc == 2)
         base_addr = strtoul(argv[1], NULL, 16) & 0xFC000;
-        for (uint8_t i = 0; i < 4; i++)
-            mem_page(i, PAGE(base_addr) + i);
-    }
     printf_P(PSTR("current base address is %05lX\n"), base_addr);
 }
 #endif

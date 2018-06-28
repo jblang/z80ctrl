@@ -97,10 +97,10 @@ const char *bit_ops[] = {"BIT", "RES", "SET"};
 /**
  * disassemble a single instruction
  */
-uint8_t disasm(uint16_t addr, uint8_t (*input)(), char *output)
+uint8_t disasm(uint8_t (*input)(), char *output)
 {
     uint8_t opcode = 0;
-    uint16_t prefix = 0;
+    uint8_t prefix = 0;
     uint8_t displ = 0;
     uint16_t operand = 0;
     uint8_t im = HL;
@@ -377,7 +377,7 @@ uint8_t disasm(uint16_t addr, uint8_t (*input)(), char *output)
 }
 
 uint8_t disasm_index = 0;   /**< index of next byte within 256 byte buffer */
-uint16_t disasm_addr = 0;   /**< address of next chunk to read from external RAM */
+uint32_t disasm_addr = 0;   /**< address of next chunk to read from external RAM */
 uint8_t *disasm_buf;        /**< pointer to disassembly buffer */
 
 uint8_t instr_bytes[8];     /**< bytes contained in the current instruction */
@@ -398,7 +398,7 @@ uint8_t disasm_next_byte()
 /**
  * Disassemble instructions from external memory to console
  */
-void disasm_mem(uint16_t start, uint16_t end)
+void disasm_mem(uint32_t start, uint32_t end)
 {
     char mnemonic[64];
     uint8_t buf[256];
@@ -410,10 +410,10 @@ void disasm_mem(uint16_t start, uint16_t end)
 
     while (start <= disasm_addr && disasm_addr <= end) {
         instr_length = 0;
-        printf_P(PSTR("%04x  "), disasm_addr);
-        disasm(disasm_addr, disasm_next_byte, mnemonic);
+        printf_P(PSTR("%05lX  "), disasm_addr + base_addr);
+        disasm(disasm_next_byte, mnemonic);
         for (i = 0; i < instr_length; i++) {
-            printf_P(PSTR("%02x "), instr_bytes[i]);
+            printf_P(PSTR("%02X "), instr_bytes[i]);
         }
         i = 5 - instr_length;
         while (i--)

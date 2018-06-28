@@ -46,7 +46,7 @@ extern const char debug_names[];
 #define ENABLED(ranges, type) ((ranges)[(type)].start <= (ranges)[(type)].end)
 
 void z80_page(uint32_t p);
-void z80_reset(uint16_t addr);
+void z80_reset(uint32_t addr);
 void z80_run(void);
 void z80_debug(uint32_t cycles);
 void z80_buslog(bus_stat status);

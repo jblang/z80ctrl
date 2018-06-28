@@ -288,7 +288,6 @@ uint8_t io_in(uint8_t addr);
 #define PAGE(addr) ((addr) >> 14)
 void mem_page_bare(uint8_t bank, uint8_t page);
 void mem_page(uint8_t bank, uint8_t page);
-void mem_restore(void);
 #endif
 
 #endif

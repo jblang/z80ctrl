@@ -48,9 +48,9 @@ range watches[] = {{0xffff, 0}, {0xffff, 0}, {0xffff, 0}, {0xffff, 0}, {0xffff, 
 /**
  * Reset the Z80 to a specified address
  */
-void z80_reset(uint16_t addr)
+void z80_reset(uint32_t addr)
 {
-    uint8_t reset_vect[] = { 0xc3, (addr & 0xFF), (addr >> 8) };
+    uint8_t reset_vect[] = { 0xC3, (addr & 0xFF), ((addr >> 8) & 0xFF) };
     if (addr > 0x0002) {
         mem_write(0x0000, reset_vect, 3);
     }
@@ -58,7 +58,8 @@ void z80_reset(uint16_t addr)
     clk_cycle(3);
     RESET_HI;
 #ifdef PAGE_BASE
-    mem_restore();
+    for (uint8_t i = 0; i < 4; i++)
+        mem_page(i, PAGE(addr + base_addr) + i);
 #endif
 #ifdef IOACK_OUTPUT
     IOACK_LO;
@@ -242,7 +243,7 @@ void z80_debug(uint32_t cycles)
                 }
                 brkonce = 0;
                 disasmbrk = 0;
-                disasm(addr, z80_read, mnemonic);
+                disasm(z80_read, mnemonic);
                 if (INRANGE(watches, OPFETCH, addr)) {
                     printf_P(PSTR("\t%04x\t%s\n"), addr, mnemonic);
                     uart_flush();
