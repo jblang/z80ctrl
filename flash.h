@@ -35,6 +35,6 @@
 #endif
 
 void flash_erase(uint32_t addr);
-void flash_write(uint32_t addr, uint8_t *buf, uint16_t len);
+void flash_write(uint32_t addr, uint8_t *buf, uint32_t len);
 
 #endif

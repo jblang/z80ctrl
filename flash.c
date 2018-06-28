@@ -43,7 +43,7 @@ void flash_cmd_prefix(void)
         WR_HI;
 }
 
-void flash_write(uint32_t addr, uint8_t *buf, uint16_t len)
+void flash_write(uint32_t addr, uint8_t *buf, uint32_t len)
 {
     if (!bus_master())
         return;
@@ -53,7 +53,7 @@ void flash_write(uint32_t addr, uint8_t *buf, uint16_t len)
     mem_page_bare(1, 1);
     mem_page_bare(2, PAGE(addr));
     MREQ_LO;
-    for (uint16_t i = 0; i < len; i++) {
+    for (uint32_t i = 0; i < len; i++) {
         // Send byte program command sequence
         flash_cmd_prefix();
         SET_ADDR(0x5555);

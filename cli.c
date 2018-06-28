@@ -133,20 +133,20 @@ void cli_loadbin(int argc, char *argv[])
     FRESULT fr;
     UINT br;
     uint8_t buf[256];
-    uint16_t offset = 0;
-    uint32_t len = 0x10000;
+    uint32_t offset = 0;
+    uint32_t len = 0x100000;
     uint8_t flash = (strcmp_P(argv[0], PSTR("flash")) == 0);
     uint8_t tms = (strcmp_P(argv[0], PSTR("tmslbin")) == 0);
     if (argc < 3) {
         printf_P(PSTR("usage: %s <start addr> <filename> [offset] [length]\n"), argv[0]);
         return;
     }
-    uint16_t start = strtoul(argv[1], NULL, 16) & 0xffff;
+    uint32_t start = strtoul(argv[1], NULL, 16);
     char *filename = argv[2];
     if (argc >= 4)
-        offset = strtoul(argv[3], NULL, 16) & 0xffff;
+        offset = strtoul(argv[3], NULL, 16);
     if (argc >= 5)
-        len = strtoul(argv[4], NULL, 16) & 0xffff;
+        len = strtoul(argv[4], NULL, 16);
     if ((fr = f_open(&fil, filename, FA_READ)) != FR_OK) {
         printf_P(PSTR("error opening file: %S\n"), strlookup(fr_text, fr));
         return;
