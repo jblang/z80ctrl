@@ -2,7 +2,7 @@
 #BOARD_REV=3
 
 # Base address for RomWBW-style paging; comment out to disable support
-#PAGE_BASE=0x28
+#PAGE_BASE=0x78
 
 # Uncomment to enable support for SST39F0x0 flash chips on RomWBW boards
 #SST_FLASH=1
