@@ -33,7 +33,6 @@
 #include "ff.h"
 #include "bus.h"
 #include "z80.h"
-#include "cli.h"
 #include "ihex.h"
 #include "util.h"
 #include "disasm.h"
