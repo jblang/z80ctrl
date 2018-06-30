@@ -37,6 +37,7 @@ OBJS=	cli.o \
 	ihex.o \
 	disasm.o \
 	util.o \
+	xmodem.o \
 	$(FF_OBJS)
 
 ifdef BOARD_REV
