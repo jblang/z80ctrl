@@ -55,12 +55,10 @@
 int _inbyte(unsigned short timeout) // msec timeout
 {
         unsigned short c;
-        int delay = timeout << 4;
-
         while (uart_testrx(0) == 0) {
                 _delay_ms(1);
                 if (timeout) {
-                        if (--delay == 0) return -2;
+                        if (--timeout == 0) return -2;
                 }
         }
 
