@@ -41,6 +41,7 @@
 #include "sioemu.h"
 #include "diskio.h"
 #include "uart.h"
+#include "xmodem.h"
 
 #ifdef TMS_BASE
 #include "tms.h"
@@ -232,6 +233,53 @@ void cli_savebin(int argc, char *argv[])
     } else {
         printf_P(PSTR("error opening file: %S\n"), strlookup(fr_text, fr));
     }        
+}
+
+/**
+ * Receive a file via xmodem
+ */
+void cli_xmrx(int argc, char *argv[])
+{
+    FRESULT fr;
+    FILE file;
+    FIL fil;
+    UINT bw;
+    if (argc < 2) {
+        printf_P(PSTR("usage: xmrx <file>\n"));
+        return;
+    }
+    char *filename =  argv[1];
+    if ((fr = f_open(&fil, filename, FA_WRITE | FA_CREATE_ALWAYS)) == FR_OK) {
+        xm_receive(&fil);
+        if ((fr = f_close(&fil)) != FR_OK)
+            printf_P(PSTR("error closing file: %s\n"), strlookup(fr_text, fr));
+    } else {
+        printf_P(PSTR("error opening file: %S\n"), strlookup(fr_text, fr));
+    }        
+}
+
+/**
+ * Transmit a file via xmodem
+ */
+void cli_xmtx(int argc, char *argv[])
+{
+    FIL fil;
+    FILE file;
+    FRESULT fr;
+    UINT br;
+    if (argc < 2) {
+        printf_P(PSTR("usage: %s <file>\n"), argv[0]);
+        return;
+    }
+    char *filename = argv[1];
+    if ((fr = f_open(&fil, filename, FA_READ)) != FR_OK) {
+        printf_P(PSTR("error opening file: %S\n"), strlookup(fr_text, fr));
+        return;
+    } else {
+        xm_transmit(&fil);
+    }
+    if ((fr = f_close(&fil)) != FR_OK)
+        printf_P(PSTR("error closing file: %S\n"), strlookup(fr_text, fr));
 }
 
 /**
@@ -809,7 +857,9 @@ const char cli_cmd_names[] PROGMEM =
     "tmslbin\0"
 #endif
     "unmount\0"
-    "watch";
+    "watch\0"
+    "xmrx\0"
+    "xmtx";
 
 /**
  * Lookup table of help text for monitor commands
@@ -861,7 +911,9 @@ const char cli_cmd_help[] PROGMEM =
     "load binary file to tms memory\0"              // tmslbin
 #endif
     "unmount a disk image\0"                        // unmount
-    "set watch points";                             // watch
+    "set watch points\0"                            // watch
+    "receive a file via xmodem\0"                   // xmrx
+    "send a file via xmodem";                       // xmtx
 
 void cli_help(int argc, char *argv[]);
 
@@ -915,7 +967,9 @@ void * const cli_cmd_functions[] PROGMEM = {
     &cli_loadbin,   // tmslbin
 #endif
     &cli_unmount,
-    &cli_breakwatch
+    &cli_breakwatch,
+    &cli_xmrx,
+    &cli_xmtx
 };
 
 #define NUM_CMDS (sizeof(cli_cmd_functions)/sizeof(void *))
