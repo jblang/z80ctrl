@@ -1052,8 +1052,5 @@ int main(void)
     bus_init();
 
     cli_exec(AUTOEXEC);
-#ifdef TMS_BASE
-    tms_init();
-#endif
     cli_loop();
 }
