@@ -590,11 +590,13 @@ void cli_poke(int argc, char *argv[])
 {
     uint8_t value;
     if (argc < 2)
-        printf_P(PSTR("usage: poke <start> [value]\n"));
+        printf_P(PSTR("usage: poke <start> [value...]\n"));
     uint32_t addr = strtoul(argv[1], NULL, 16);
-    if (argc == 3) {
-        value = strtoul(argv[2], NULL, 16) & 0xff;
-        mem_write(addr, &value, 1);
+    if (argc >= 3) {
+        for (uint8_t i = 2; i < argc; i++) {
+            value = strtoul(argv[i], NULL, 16) & 0xff;
+            mem_write(addr++, &value, 1);
+        }
         return;
     }
     printf_P(PSTR("enter valid hex to replace; blank to leave unchanged; 'x' to exit.\n"));
@@ -629,12 +631,14 @@ void cli_poke(int argc, char *argv[])
 void cli_out(int argc, char *argv[])
 {
     if (argc < 2) {
-        printf_P(PSTR("usage: out <addr> <value>\n"));
+        printf_P(PSTR("usage: out <addr> <value> [value...]\n"));
         return;
     }
     uint8_t addr = strtoul(argv[1], NULL, 16) & 0xff;
-    uint8_t value = strtoul(argv[2], NULL, 16) & 0xff;
-    io_out(addr, value);
+    for (uint8_t i = 2; i < argc; i++) {
+        uint8_t value = strtoul(argv[i], NULL, 16) & 0xff;
+        io_out(addr, value);
+    }
 }
 
 /**
@@ -765,8 +769,8 @@ void cli_cls(int argc, char *argv[])
 void cli_dispatch(char *buf);
 
 #define WHITESPACE " \t\r\n"
-#define MAXBUF 80
-#define MAXARGS 8
+#define MAXBUF 1024
+#define MAXARGS 256
 #define AUTOEXEC "autoexec.z8c"
 
 /**
