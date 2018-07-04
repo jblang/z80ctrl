@@ -135,6 +135,44 @@ bus_stat bus_status()
 }
 
 /**
+ * Log the bus status
+ */
+void bus_log(bus_stat status)
+{
+    printf_P(
+        PSTR("\t%04x %02x %c    %s %s    %s %s %s %s %s %s %s %s\n"),
+        status.addr,
+        status.data,
+        0x20 <= status.data && status.data <= 0x7e ? status.data : ' ',
+#if (BOARD_REV < 3)
+        !FLAG(status.xflags, MREQ) ? "memrq" :
+#else
+        !FLAG(status.flags, MREQ) ? "memrq" :
+#endif
+        !FLAG(status.flags, IORQ) ? "iorq " : "     ",
+
+        !FLAG(status.flags, RD) ? "rd  " :
+        !FLAG(status.flags, WR) ? "wr  " :
+        !FLAG(status.xflags, RFSH) ? "rfsh" : "    ",
+#if (BOARD_REV < 3)
+        !FLAG(status.flags, M1) ? "m1" : "  ",
+        !FLAG(status.xflags, BUSRQ) ? "busrq" : "     ",
+        !FLAG(status.xflags, BUSACK) ? "busack" : "      ",
+        (!FLAG(status.flags, IORQ) && FLAG(status.flags, IOACK)) ? "wait" : "    ",
+        !FLAG(status.flags, HALT) ? "halt" : "    ", 
+#else
+        !FLAG(status.xflags, M1) ? "m1" : "  ",
+        !FLAG(status.flags, BUSRQ) ? "busrq" : "     ",
+        !FLAG(status.flags, BUSACK) ? "busack" : "      ",
+        (!FLAG(status.flags, IORQ) && FLAG(status.flags, BUSRQ)) ? "wait" : "    ",
+        !FLAG(status.xflags, HALT) ? "halt" : "    ", 
+#endif    
+        !FLAG(status.xflags, INTERRUPT) ? "int" : "   ",
+        !FLAG(status.xflags, NMI) ? "nmi" : "   ",
+        !FLAG(status.xflags, RESET) ? "reset" : "     ");
+}
+
+/**
  * Initialize the bus
  */
 void bus_init(void)

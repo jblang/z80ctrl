@@ -46,7 +46,7 @@ void (*dma_function)(void) = NULL;
 /**
  * Handle Z80 IO request
  */
-void iorq_dispatch(void)
+void iorq_dispatch(uint8_t logged)
 {
     cli();
     switch (GET_ADDRLO) {
@@ -128,6 +128,10 @@ void iorq_dispatch(void)
             if (!GET_RD) {
                 SET_DATA(0xFF);
             }
+    }
+    if (logged) {
+        bus_stat status = bus_status();
+        bus_log(status);
     }
     BUSRQ_LO;
 #ifdef IOACK_OUTPUT

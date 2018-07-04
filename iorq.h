@@ -24,10 +24,12 @@
  * @file iorq.c I/O request handler
  */
 
- #ifndef IORQ_H
- #define IORQ_H
+#ifndef IORQ_H
+#define IORQ_H
 
-void iorq_dispatch(void); 
+#include <stdint.h>
+
+void iorq_dispatch(uint8_t logged); 
 
 extern void (*dma_function)(void);
 

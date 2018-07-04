@@ -687,7 +687,7 @@ void cli_boot(int argc, char*argv[])
  */
 void cli_bus(int argc, char *argv[]) 
 {
-    z80_buslog(bus_status());
+    bus_log(bus_status());
 }
 
 /**

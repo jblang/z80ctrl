@@ -265,6 +265,7 @@ void clk_stop(void);
 uint8_t bus_master(void);
 void bus_slave(void);
 bus_stat bus_status(void);
+void bus_log(bus_stat status);
 void bus_init(void);
 
 void mem_read(uint32_t addr, uint8_t * buf, uint16_t len);

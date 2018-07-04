@@ -79,54 +79,12 @@ void z80_run(void)
     clk_run();
     for(;;) {
         if (!GET_IORQ)
-            iorq_dispatch();
+            iorq_dispatch(0);
         if (++count == 0 && !GET_HALT)
             break;
     }
     clk_stop();
     CLK_LO;
-}
-
-/**
- * Log the bus status
- */
-void z80_buslog(bus_stat status)
-{
-    printf_P(
-        PSTR("\t%04x %02x %c    %s %s    %s %s %s %s %s %s %s %s\n"),
-        status.addr,
-        status.data,
-        0x20 <= status.data && status.data <= 0x7e ? status.data : ' ',
-#if (BOARD_REV < 3)
-        !FLAG(status.xflags, MREQ) ? "memrq" :
-#else
-        !FLAG(status.flags, MREQ) ? "memrq" :
-#endif
-        !FLAG(status.flags, IORQ) ? "iorq " : "     ",
-
-        !FLAG(status.flags, RD) ? "rd  " :
-        !FLAG(status.flags, WR) ? "wr  " :
-        !FLAG(status.xflags, RFSH) ? "rfsh" : "    ",
-#if (BOARD_REV < 3)
-        !FLAG(status.flags, M1) ? "m1" : "  ",
-        !FLAG(status.xflags, BUSRQ) ? "busrq" : "     ",
-        !FLAG(status.xflags, BUSACK) ? "busack" : "      ",
-        (!FLAG(status.flags, IORQ) && FLAG(status.flags, IOACK)) ? "wait" : "    ",
-        !FLAG(status.flags, HALT) ? "halt" : "    ", 
-#else
-        !FLAG(status.xflags, M1) ? "m1" : "  ",
-        !FLAG(status.flags, BUSRQ) ? "busrq" : "     ",
-        !FLAG(status.flags, BUSACK) ? "busack" : "      ",
-        (!FLAG(status.flags, IORQ) && FLAG(status.flags, BUSRQ)) ? "wait" : "    ",
-        !FLAG(status.xflags, HALT) ? "halt" : "    ", 
-#endif    
-        !FLAG(status.xflags, INTERRUPT) ? "int" : "   ",
-        !FLAG(status.xflags, NMI) ? "nmi" : "   ",
-        !FLAG(status.xflags, RESET) ? "reset" : "     ");
-
-        // wait until output is fully transmitted to avoid
-        // interfering with z80_uart status for running program
-        uart_flush();
 }
 
 /**
@@ -139,72 +97,70 @@ uint8_t z80_tick()
     uint8_t lastwr = GET_WR;
 
     uint8_t logged = 0;
-    uint8_t brk = 0;
 
     CLK_LO;
     CLK_HI;
 
-    if (GET_IORQ && (ENABLED(watches, MEMRD) || ENABLED(breaks, MEMRD) || 
+    if (!GET_MREQ && (ENABLED(watches, MEMRD) || ENABLED(breaks, MEMRD) || 
                      ENABLED(watches, MEMWR) || ENABLED(breaks, MEMWR))) {
         if (lastrd && !GET_RD) {
             bus_stat status = bus_status();
-            if (!FLAG(status.xflags, MREQ)) {
-                if (logged = INRANGE(watches, MEMRD, status.addr))
-                    z80_buslog(status);
-                if (INRANGE(breaks, MEMRD, status.addr)) {
-                    printf_P(PSTR("memrd break at %04X\n"), status.addr);
-                    uart_flush();
-                    brk = 1;
-                }
+            if (logged = INRANGE(watches, MEMRD, status.addr)) {
+                bus_log(status);
+                uart_flush();
+            }
+            if (INRANGE(breaks, MEMRD, status.addr)) {
+                printf_P(PSTR("memrd break at %04X\n"), status.addr);
+                uart_flush();
+                return 1;
             }
         } else if (lastwr && !GET_WR) {
             bus_stat status = bus_status();
-            if (!FLAG(status.xflags, MREQ)) {
-                if (logged = INRANGE(watches, MEMWR, status.addr))
-                    z80_buslog(status);
-                if (INRANGE(breaks, MEMWR, status.addr)) {
-                    printf_P(PSTR("memwr break at %04X\n"), status.addr);
-                    uart_flush();
-                    brk = 1;
-                };
+            if (logged = INRANGE(watches, MEMWR, status.addr)) {
+                bus_log(status);
+                uart_flush();
             }
+            if (INRANGE(breaks, MEMWR, status.addr)) {
+                printf_P(PSTR("memwr break at %04X\n"), status.addr);
+                uart_flush();
+                return 1;
+            };
         }
     } 
     
     if (!GET_IORQ) {
         if (lastrd && !GET_RD) {
-            if (logged = INRANGE(watches, IORD, GET_ADDRLO)) {
-                bus_stat status = bus_status();
-                z80_buslog(status);
-            }
+            logged = INRANGE(watches, IORD, GET_ADDRLO);
             if (INRANGE(breaks, IORD, GET_ADDRLO)) {
                 printf_P(PSTR("iord break at %02X\n"), GET_ADDRLO);
                 uart_flush();
-                brk = 1;
+                return 1;
             }
         } else if (lastwr && !GET_WR) {
-            if (logged = INRANGE(watches, IOWR, GET_ADDRLO)) {
-                bus_stat status = bus_status();
-                z80_buslog(status);
-            }
+            logged = INRANGE(watches, IOWR, GET_ADDRLO);
             if (INRANGE(breaks, IOWR, GET_ADDRLO)) {
                 printf_P(PSTR("iowr break at %02X\n"), GET_ADDRLO);
                 uart_flush();
-                brk = 1;
+                return 1;
             }
         }
     }
 
     if (ENABLED(watches, BUS) && !logged) {
         bus_stat status = bus_status();
-        if (INRANGE(watches, BUS, status.addr))
-            z80_buslog(status);
+        if (INRANGE(watches, BUS, status.addr)) {
+            bus_log(status);
+            uart_flush();
+        }
     }
 
-    if (!GET_IORQ)
-        iorq_dispatch();
+    if (!GET_IORQ) {
+        iorq_dispatch(logged);
+        if (logged)
+            uart_flush();
+    }
         
-    return brk;
+    return 0;
 }
 
 uint8_t disasmbrk = 0;
