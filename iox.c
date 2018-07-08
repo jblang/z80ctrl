@@ -30,8 +30,11 @@
 void iox_init(void)
 {
     spi_init();
-    iox_write(GPPUA0, 0xFF);
-    iox_write(GPPUB0, 0xFF);
+    // Enable pullups
+    iox_write(0, GPPUA0, 0xFF);
+    iox_write(0, GPPUB0, 0xFF);
+    // Enable individually addressable chips
+    iox_write(0, IOCON0, (1 << HAEN));
 }
 
 void iox_begin(uint8_t mode, uint8_t addr)
@@ -46,18 +49,18 @@ void iox_end(void)
     AUX2_SEL;
 }
 
-uint8_t iox_read(uint8_t addr)
+uint8_t iox_read(uint8_t chipaddr, uint8_t regaddr)
 {
     uint8_t data;
-    iox_begin(READ, addr);
+    iox_begin(READ | chipaddr, regaddr);
     data = spi_exchange(0);
     iox_end();
     return data;
 }
 
-void iox_write(uint8_t addr, uint8_t data)
+void iox_write(uint8_t chipaddr, uint8_t regaddr, uint8_t data)
 {
-    iox_begin(WRITE, addr);
+    iox_begin(WRITE | chipaddr, regaddr);
     spi_exchange(data);
     iox_end();
 }

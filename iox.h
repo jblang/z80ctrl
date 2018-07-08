@@ -79,6 +79,8 @@
 #define INTCC 0
 #define INTPOL 1
 #define ODR 2
+#define HAEN 3
+#define DISSLW 4
 #define SEQOP 5
 #define MIRROR 6
 #define BANK 7
@@ -90,7 +92,7 @@
 void iox_init(void);
 void iox_begin(uint8_t mode, uint8_t addr);
 void iox_end(void);
-uint8_t iox_read(uint8_t addr);
-void iox_write(uint8_t addr, uint8_t data);
+uint8_t iox_read(uint8_t chipaddr, uint8_t regaddr);
+void iox_write(uint8_t chipaddr, uint8_t regaddr, uint8_t data);
 
 #endif

@@ -42,6 +42,7 @@ void (*dma_function)(void) = NULL;
  */
 #define SIMH_DEV 0xFE
 #define SENSE_SW 0xFF
+#define COLECO_JOYSTICK1 0xFC
 
 /**
  * Handle Z80 IO request
@@ -122,6 +123,12 @@ void iorq_dispatch(uint8_t logged)
                 DATA_OUTPUT;
             } else if (!GET_WR) {
                 drive_dma_command(GET_DATA);
+            }
+            break;
+        case COLECO_JOYSTICK1:
+            if (!GET_RD) {
+                SET_DATA(iox_read(1, GPIOB0));
+                DATA_OUTPUT;
             }
             break;
         default:
