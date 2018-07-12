@@ -132,14 +132,14 @@ uint8_t z80_tick()
         if (lastrd && !GET_RD) {
             logged = INRANGE(watches, IORD, GET_ADDRLO);
             if (INRANGE(breaks, IORD, GET_ADDRLO)) {
-                printf_P(PSTR("iord break at %02X\n"), GET_ADDRLO);
+                printf_P(PSTR("iord break at %02x\n"), GET_ADDRLO);
                 uart_flush();
                 return 1;
             }
         } else if (lastwr && !GET_WR) {
             logged = INRANGE(watches, IOWR, GET_ADDRLO);
             if (INRANGE(breaks, IOWR, GET_ADDRLO)) {
-                printf_P(PSTR("iowr break at %02X\n"), GET_ADDRLO);
+                printf_P(PSTR("iowr break at %02x\n"), GET_ADDRLO);
                 uart_flush();
                 return 1;
             }
@@ -193,7 +193,7 @@ void z80_debug(uint32_t cycles)
             if (!GET_RD && !GET_MREQ && !GET_M1) {
                 uint16_t addr = GET_ADDR;
                 if (INRANGE(breaks, OPFETCH, addr) && !cycles && !brkonce) {
-                    printf_P(PSTR("opfetch break at %04X\n"), addr);
+                    printf_P(PSTR("opfetch break at %04x\n"), addr);
                     brkonce = 1;
                     break;
                 }
