@@ -29,6 +29,9 @@
 #include "bus.h"
 #include "diskemu.h"
 #include "sioemu.h"
+#ifdef COLECO_CONTROL
+#include "segactrl.h"
+#endif
 
 #include <avr/interrupt.h>
 
@@ -42,7 +45,6 @@ void (*dma_function)(void) = NULL;
  */
 #define SIMH_DEV 0xFE
 #define SENSE_SW 0xFF
-#define COLECO_JOYSTICK1 0xFC
 
 /**
  * Handle Z80 IO request
@@ -63,7 +65,7 @@ void iorq_dispatch(uint8_t logged)
                 DATA_OUTPUT;
             }
             break;
-        case SIOA_CONTROL:
+        /*case SIOA_CONTROL:
             if (!GET_RD) {
                 SET_DATA(ZSIO_STATUS(0));
                 DATA_OUTPUT;
@@ -74,9 +76,9 @@ void iorq_dispatch(uint8_t logged)
                 SET_DATA(ZSIO_STATUS(1));
                 DATA_OUTPUT;
             }
-            break;
+            break;*/
         case SIO0_DATA:
-        case SIOA_DATA:
+        //case SIOA_DATA:
             if (!GET_RD) {
                 SET_DATA(uart_getc(z80_uart[0]));
                 DATA_OUTPUT;
@@ -85,7 +87,7 @@ void iorq_dispatch(uint8_t logged)
             }
             break;
         case SIO1_DATA:
-        case SIOB_DATA:
+        //case SIOB_DATA:
             if (!GET_RD) {
                 SET_DATA(uart_getc(z80_uart[1]));
                 DATA_OUTPUT;
@@ -125,12 +127,30 @@ void iorq_dispatch(uint8_t logged)
                 drive_dma_command(GET_DATA);
             }
             break;
-        case COLECO_JOYSTICK1:
+#ifdef COLECO_CONTROL
+        case COLECO_KEYSEL:
+            if (!GET_WR) {
+                coleco_mode(COLECO_KEYPAD);
+            }
+            break;
+        case COLECO_JOYSEL:
+            if (!GET_WR) {
+                coleco_mode(COLECO_JOYSTICK);
+            }
+            break;
+        case COLECO_JOYPORT1:
             if (!GET_RD) {
-                SET_DATA(iox_read(1, GPIOB0));
+                SET_DATA(coleco_read());
                 DATA_OUTPUT;
             }
             break;
+        case COLECO_JOYPORT2:
+            if (!GET_RD) {
+                SET_DATA(0x7F);
+                DATA_OUTPUT;
+            }
+            break;
+#endif
         default:
             if (!GET_RD) {
                 SET_DATA(0xFF);

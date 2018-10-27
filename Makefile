@@ -7,6 +7,9 @@
 # Uncomment to enable support for SST39F0x0 flash chips on RomWBW boards
 #SST_FLASH=1
 
+# Uncomment to enable Colecovision controller emulation
+# COLECO_CONTROL=1
+
 # Base address TMS9918A chip; comment out to disable support
 #TMS_BASE=0x98
 
@@ -16,7 +19,7 @@ F_CPU=20000000L
 
 # Programmer options
 PROGRAMMER=arduino
-PORT=/dev/ttyS9
+PORT=/dev/ttyS6
 BAUD=115200
 
 CC=avr-gcc
@@ -53,6 +56,10 @@ ifdef TMS_BASE
 endif
 ifdef PAGE_BASE
 	FEATURE_DEFINES += -DPAGE_BASE=$(PAGE_BASE)
+endif
+ifdef COLECO_CONTROL
+	FEATURE_DEFINES += -DCOLECO_CONTROL
+	OBJS += segactrl.o
 endif
 
 CFLAGS=-std=c99 -Os $(FEATURE_DEFINES) -DF_CPU=$(F_CPU) -mmcu=$(MCU) -I.

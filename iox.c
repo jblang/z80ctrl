@@ -30,9 +30,6 @@
 void iox_init(void)
 {
     spi_init();
-    // Enable pullups
-    iox_write(0, GPPUA0, 0xFF);
-    iox_write(0, GPPUB0, 0xFF);
     // Enable individually addressable chips
     iox_write(0, IOCON0, (1 << HAEN));
 }
