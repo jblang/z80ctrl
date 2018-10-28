@@ -761,6 +761,22 @@ void cli_baud(int argc, char *argv[]) {
 }
 
 /**
+ * Enable or disable halt
+ */
+void cli_halt(int argc, char *argv[]) {
+    if (argc == 2) {
+        if (strcmp_P(argv[1], PSTR("on")) == 0)
+            do_halt = 1;
+        else if (strcmp_P(argv[1], PSTR("off")) == 0)
+            do_halt = 0;
+    }
+    if (do_halt)
+        printf("halt is enabled\n");
+    else
+        printf("halt is disabled\n");
+}
+
+/**
  * Clear the screen
  */
 void cli_cls(int argc, char *argv[])
@@ -875,6 +891,7 @@ const char cli_cmd_names[] PROGMEM =
 #ifdef SST_FLASH
     "flash\0"
 #endif
+    "halt\0"
     "help\0"
 #ifdef IORQ_OUTPUT
     "in\0"
@@ -932,6 +949,7 @@ const char cli_cmd_help[] PROGMEM =
 #ifdef SST_FLASH
     "flash file to ROM\0"                           // flash
 #endif
+    "enable or disable halt\0"                      // halt
     "list available commands\0"                     // help
 #ifdef IORQ_OUTPUT
     "read a value from a port\0"                    // in
@@ -991,6 +1009,7 @@ void * const cli_cmd_functions[] PROGMEM = {
 #ifdef SST_FLASH
     &cli_loadbin,   // flash
 #endif
+    &cli_halt,
     &cli_help,
 #ifdef IORQ_OUTPUT
     &cli_in,

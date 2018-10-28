@@ -46,6 +46,11 @@ range breaks[] = {{0xffff, 0}, {0xffff, 0}, {0xffff, 0}, {0xffff, 0}, {0xffff, 0
 range watches[] = {{0xffff, 0}, {0xffff, 0}, {0xffff, 0}, {0xffff, 0}, {0xffff, 0}, {0xffff, 0}};
 
 /**
+ * Whether to stop when the halt signal occurs
+ */
+uint8_t do_halt = 1;
+
+/**
  * Reset the Z80 to a specified address
  */
 void z80_reset(uint32_t addr)
@@ -80,7 +85,7 @@ void z80_run(void)
     for(;;) {
         if (!GET_IORQ)
             iorq_dispatch(0);
-        if (++count == 0 && !GET_HALT)
+        if (++count == 0 && !GET_HALT && do_halt)
             break;
     }
     clk_stop();
