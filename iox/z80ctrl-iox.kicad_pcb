@@ -2,7 +2,7 @@
 
   (general
     (thickness 1.6)
-    (drawings 14)
+    (drawings 13)
     (tracks 666)
     (zones 0)
     (modules 26)
@@ -2328,9 +2328,6 @@
   (gr_line (start 248.7708 103.505) (end 169.164 103.505) (angle 90) (layer Edge.Cuts) (width 0.15))
   (gr_line (start 155.32608 143.01978) (end 156.8958 143.01978) (angle 90) (layer F.SilkS) (width 0.2))
   (gr_line (start 169.164 103.505) (end 154.1526 118.5164) (angle 90) (layer Edge.Cuts) (width 0.15))
-  (gr_text "microSD Pololu sdc02a" (at 182.3085 136.0805) (layer F.SilkS)
-    (effects (font (size 1 1) (thickness 0.15)))
-  )
   (gr_line (start 156.8958 143.01978) (end 156.8958 153.13152) (angle 90) (layer F.SilkS) (width 0.2))
   (gr_line (start 154.14498 153.13152) (end 154.14498 144.20088) (angle 90) (layer F.SilkS) (width 0.2))
   (gr_text "Pin 1" (at 155.68168 146.60118 90) (layer F.SilkS)
