@@ -49,7 +49,6 @@ F 3 "" H 1800 5450 50  0001 C CNN
 	1    1800 5450
 	-1   0    0    -1  
 $EndComp
-NoConn ~ 2000 6850
 NoConn ~ 2000 6750
 NoConn ~ 2000 6650
 NoConn ~ 2000 6550
@@ -1216,8 +1215,6 @@ Text Label 8850 2100 0    60   ~ 0
 ~EXTCS1~
 Wire Wire Line
 	9200 2100 8850 2100
-NoConn ~ 6150 1250
-NoConn ~ 6150 4150
 NoConn ~ -1600 4350
 Text Label 6400 2350 2    60   ~ 0
 MOSI
@@ -1551,4 +1548,29 @@ Wire Wire Line
 Connection ~ 1600 2250
 Wire Wire Line
 	1600 2250 1600 2350
+$Comp
+L Connector_Generic:Conn_01x02 J11
+U 1 1 5BF3089F
+P 1400 6850
+F 0 "J11" H 1320 6525 50  0000 C CNN
+F 1 "Conn_01x02" H 1320 6616 50  0000 C CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical" H 1400 6850 50  0001 C CNN
+F 3 "~" H 1400 6850 50  0001 C CNN
+	1    1400 6850
+	-1   0    0    1   
+$EndComp
+Wire Wire Line
+	1600 6850 2000 6850
+Text Label 1900 6750 2    50   ~ 0
+~AVRRST~
+Wire Wire Line
+	1600 6750 1900 6750
+Text Label 6450 1250 2    50   ~ 0
+~AVRRST~
+Wire Wire Line
+	6150 1250 6450 1250
+Text Label 6450 4150 2    50   ~ 0
+~AVRRST~
+Wire Wire Line
+	6150 4150 6450 4150
 $EndSCHEMATC
