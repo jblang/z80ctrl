@@ -1,17 +1,17 @@
 # Hardware revision (Important: must be set to correct value)
-#BOARD_REV=3
+BOARD_REV=3
 
 # Base address for RomWBW-style paging; comment out to disable support
-#PAGE_BASE=0x78
+PAGE_BASE=0x78
 
 # Uncomment to enable support for SST39F0x0 flash chips on RomWBW boards
-#SST_FLASH=1
+SST_FLASH=1
 
 # Uncomment to enable Colecovision controller emulation
 # COLECO_CONTROL=1
 
 # Base address TMS9918A chip; comment out to disable support
-#TMS_BASE=0x98
+TMS_BASE=0x98
 
 # MCU type and frequency
 MCU=atmega1284p
@@ -32,6 +32,7 @@ OBJS=	cli.o \
 	uart.o \
 	spi.o \
 	iox.o \
+	rtc.o \
 	bus.o \
 	z80.o \
 	iorq.o \

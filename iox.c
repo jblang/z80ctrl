@@ -61,3 +61,23 @@ void iox_write(uint8_t chipaddr, uint8_t regaddr, uint8_t data)
     spi_exchange(data);
     iox_end();
 }
+
+void iox_extcs_init(uint8_t addr)
+{
+    iox_write(addr, IODIRB0, iox_read(addr, IODIRB0) & 0x0F);
+    iox_write(addr, GPIOB0, iox_read(addr, GPIOB0) & 0xF0);
+}
+
+void iox_extcs_lo(uint8_t c)
+{
+    uint8_t addr = (c / 4) * 2 + 1;
+    uint8_t pin = (c % 4) + 4;
+    iox_write(addr, GPIOB0, iox_read(addr, GPIOA0) & ~(1 << pin));
+}
+
+void iox_extcs_hi(uint8_t c)
+{
+    uint8_t addr = (c / 4) * 2 + 1;
+    uint8_t pin = (c % 4) + 4;
+    iox_write(addr, GPIOB0, iox_read(addr, GPIOA0) | (1 << pin));
+}

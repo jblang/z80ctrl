@@ -41,13 +41,13 @@
 #include "diskio.h"
 #include "uart.h"
 #include "xmodem.h"
+#include "rtc.h"
 #ifdef COLECO_CONTROL
 #include "segactrl.h"
 #endif
 #ifdef TMS_BASE
 #include "tms.h"
 #endif
-
 #ifdef SST_FLASH
 #include "flash.h"
 #endif
@@ -657,6 +657,38 @@ void cli_in(int argc, char *argv[])
 }
 #endif
 
+void cli_ioxread(int argc, char *argv[])
+{
+    if (argc != 3){ 
+        printf_P(PSTR("usage: ioxread <addr> <reg>\n"));
+        return;
+    }
+    uint8_t addr = strtoul(argv[1], NULL, 16) & 0x7;
+    if (addr < 1 || addr > 7) {
+        printf_P(PSTR("invalid address. must be between 1 and 7\n"));
+        return;
+    }
+    uint8_t reg = strtoul(argv[2], NULL, 16) & 0x1F;
+    uint8_t value = iox_read(addr, reg);
+    printf_P(PSTR("Read %02x from io expander %x register %02x\n"), value, addr, reg);
+}
+
+void cli_ioxwrite(int argc, char *argv[])
+{
+    if (argc != 4){ 
+        printf_P(PSTR("usage: ioxwrite <addr> <reg> <value>\n"));
+        return;
+    }
+    uint8_t addr = strtoul(argv[1], NULL, 16) & 0x7;
+    if (addr < 1 || addr > 7) {
+        printf_P(PSTR("invalid address. must be between 1 and 7\n"));
+        return;
+    }
+    uint8_t reg = strtoul(argv[2], NULL, 16) & 0x1F;
+    uint8_t value = strtoul(argv[3], NULL, 16);
+    iox_write(addr, reg, value);
+}
+
 #ifdef PAGE_BASE
 
 /**
@@ -717,6 +749,29 @@ void cli_unmount(int argc, char *argv[])
     }
     uint8_t drv = strtoul(argv[1], NULL, 10);
     drive_unmount(drv);
+}
+
+/**
+ * Display or set the date on the RTC
+ */
+void cli_date(int argc, char *argv[])
+{
+    if (argc < 8) {
+        rtc_date_t date = rtc_get_date();
+        printf_P(PSTR("The time is %d:%02d:%02d on %d/%d/%02d\n"), date.hour, date.min, date.sec, date.month, date.day, date.year);
+        printf_P(PSTR("usage: date <yy mm dd wd hh mm ss>\n"));
+        return;
+    }
+
+    rtc_date_t date;
+    date.year = strtoul(argv[1], NULL, 10);
+    date.month = strtoul(argv[2], NULL, 10);
+    date.day = strtoul(argv[3], NULL, 10);
+    date.weekday = strtoul(argv[4], NULL, 10);
+    date.hour = strtoul(argv[5], NULL, 10);
+    date.min = strtoul(argv[6], NULL, 10);
+    date.sec = strtoul(argv[7], NULL, 10);
+    rtc_set_date(date);
 }
 
 /**
@@ -879,6 +934,7 @@ const char cli_cmd_names[] PROGMEM =
     "c\0"
     "clkdiv\0"
     "cls\0"
+    "date\0"
     "debug\0"
     "dir\0"
     "disasm\0"
@@ -895,6 +951,8 @@ const char cli_cmd_names[] PROGMEM =
     "help\0"
 #ifdef IORQ_OUTPUT
     "in\0"
+    "ioxread\0"
+    "ioxwrite\0"
 #endif
     "loadbin\0"
     "loadhex\0"
@@ -937,6 +995,7 @@ const char cli_cmd_help[] PROGMEM =
     "shorthand to continue debugging\0"             // c
     "set Z80 clock divider\0"                       // clkdiv
     "clear screen\0"                                // cls
+    "display or set the date on the rtc\0"          // date
     "debug code at address\0"                       // debug
     "shows directory listing\0"                     // dir
     "disassembles memory location\0"                // disasm
@@ -954,6 +1013,8 @@ const char cli_cmd_help[] PROGMEM =
 #ifdef IORQ_OUTPUT
     "read a value from a port\0"                    // in
 #endif
+    "read a value from an io expander\0"            // ioxread
+    "write a value to an io expander\0"             // ioxwrite
     "load binary file to memory\0"                  // loadbin
     "load intel hex file to memory\0"               // loadhex
     "mount a disk image\0"                          // mount
@@ -997,6 +1058,7 @@ void * const cli_cmd_functions[] PROGMEM = {
     &cli_debug,     // c
     &cli_clkdiv,
     &cli_cls,
+    &cli_date,
     &cli_debug,
     &cli_dir,
     &cli_disasm,
@@ -1014,6 +1076,8 @@ void * const cli_cmd_functions[] PROGMEM = {
 #ifdef IORQ_OUTPUT
     &cli_in,
 #endif
+    &cli_ioxread,
+    &cli_ioxwrite,
     &cli_loadbin,
     &cli_loadhex,
     &cli_mount,
@@ -1116,6 +1180,7 @@ int main(void)
         printf_P(PSTR("error mounting drive: %S\n"), strlookup(fr_text, fr));
 
     bus_init();
+    iox_extcs_init(1);
 
 #ifdef COLECO_CONTROL
     sega_init();

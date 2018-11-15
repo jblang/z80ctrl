@@ -56,9 +56,13 @@
 #define AUX1_SEL SPI_PORT = SPI_PORT & ~CSADDRMASK | (AUX1_ADDR << CSADDR)
 #define AUX2_SEL SPI_PORT = SPI_PORT & ~CSADDRMASK | (AUX2_ADDR << CSADDR)
 
+#define SPI_SLOW SPCR |= ((1 << SPR1) | (1 << SPR0));
+#define SPI_FAST SPCR &= ~((1 << SPR1) | (1 << SPR0))
+
+#define SPI_PHASE0 SPCR &= ~(1 << CPHA)
+#define SPI_PHASE1 SPCR |= (1 << CPHA)
+
 void spi_init();
-void spi_slow();
-void spi_fast();
 uint8_t spi_exchange(uint8_t val);
 
 #endif

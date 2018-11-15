@@ -95,4 +95,8 @@ void iox_end(void);
 uint8_t iox_read(uint8_t chipaddr, uint8_t regaddr);
 void iox_write(uint8_t chipaddr, uint8_t regaddr, uint8_t data);
 
+void iox_extcs_init(uint8_t addr);
+void iox_extcs_lo(uint8_t c);
+void iox_extcs_hi(uint8_t c);
+
 #endif
