@@ -53,6 +53,8 @@ The board also includes a DS1306+ SPI RTC.  The RTC is connected to the AUXCS1 l
 | Y1 | 32 kHz Crystal (Citizen CFS-20632768DZFB or similar) |
 | BT1 | CR1216 battery holder (Keystone 3001 or similar) |
 
+**Important**: Make a solder bump on the GND pad of the battery holder **before** you solder BT1 in place. The battery won't make good contact with the pad otherwise, and it will be hard to add after the fact.
+
 The configuration of this board is quite flexible and many components are optional:
 
 - The RTC (U4) may be omitted, and if multiple boards are installed in your RC2014, only one of them should include an RTC to prevent conetnion.  If the RTC is omitted, BT1 and Y1 can also be omitted.  

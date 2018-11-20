@@ -60,8 +60,8 @@
 #define RTC_1224 6
 #define RTC_AMPM 5
 
-#define RTC_SEL iox_extcs_lo(0)
-#define RTC_DESEL iox_extcs_hi(0)
+#define RTC_SEL AUX1_SEL
+#define RTC_DESEL AUX2_SEL
 
 typedef struct {
     uint8_t year;
