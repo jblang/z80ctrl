@@ -1164,8 +1164,11 @@ void cli_loop(void)
 {
     char buf[MAXBUF];
     printf_P(PSTR(
-        "z80ctrl 0.9 by J.B. Langston\n\n"
-        "type help to list available commands\n"));
+        "z80ctrl by J.B. Langston "
+#ifdef GITVERSION
+        "(" GITVERSION ")"
+#endif
+        "\n\ntype help to list available commands\n"));
     for (;;) {
         printf_P(PSTR("z80ctrl>"));
         if (fgets(buf, sizeof buf - 1, stdin) != NULL) {

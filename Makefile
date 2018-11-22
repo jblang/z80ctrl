@@ -1,5 +1,5 @@
 # Hardware revision (Important: must be set to correct value)
-# BOARD_REV=3
+BOARD_REV=3
 
 # Base address for RomWBW-style paging; comment out to disable support
 # PAGE_BASE=0x78
@@ -15,6 +15,9 @@
 
 # Base address TMS9918A chip; comment out to disable support
 # TMS_BASE=0x98
+
+# Current git hash
+GITVERSION:= $(shell git log -1 --pretty='%h')
 
 # MCU type and frequency
 MCU=atmega1284p
@@ -69,7 +72,7 @@ ifdef DS1306_RTC
 	OBJS += rtc.o
 endif
 
-CFLAGS=-std=c99 -Os $(FEATURE_DEFINES) -DF_CPU=$(F_CPU) -mmcu=$(MCU) -I.
+CFLAGS=-std=c99 -Os $(FEATURE_DEFINES) -DF_CPU=$(F_CPU) -DGITVERSION="\"${GITVERSION}\"" -mmcu=$(MCU) -I.
 
 $(BIN).hex: $(BIN).elf
 	$(OBJCOPY) -j .text -j .data -O ihex $< $@
