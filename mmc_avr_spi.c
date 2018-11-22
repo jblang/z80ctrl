@@ -17,6 +17,9 @@
 #include "diskio.h"
 #include "mmc_avr.h"
 #include "spi.h"
+#ifdef DS1306_RTC
+#include "rtc.h"
+#endif
 
 /* Peripheral controls (Platform dependent) */
 #define CS_LOW()		SD_SEL	/* Set MMC_CS = low */
@@ -85,9 +88,23 @@ void start_timer(void)
     sei();
 }
 
-DWORD get_fattime (void) {
+DWORD get_fattime (void)
+{
+#ifdef DS1306_RTC
+	rtc_date_t date = rtc_get_date();
+
+	/* Pack date and time into a DWORD variable */
+	return	  ((DWORD)(date.year + 2000 - 1980) << 25)
+			| ((DWORD)date.month << 21)
+			| ((DWORD)date.day << 16)
+			| ((DWORD)date.hour << 11)
+			| ((DWORD)date.min << 5)
+			| ((DWORD)date.sec >> 1);
+#else
     return 0;
+#endif
 }
+
 
 /*-----------------------------------------------------------------------*/
 /* Power Control  (Platform dependent)                                   */
