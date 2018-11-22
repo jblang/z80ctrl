@@ -1,17 +1,20 @@
 # Hardware revision (Important: must be set to correct value)
-BOARD_REV=3
+# BOARD_REV=3
 
 # Base address for RomWBW-style paging; comment out to disable support
-PAGE_BASE=0x78
+# PAGE_BASE=0x78
 
 # Uncomment to enable support for SST39F0x0 flash chips on RomWBW boards
-SST_FLASH=1
+# SST_FLASH=1
+
+# Uncomment to enable DS1306 RTC support
+# DS1306_RTC=1
 
 # Uncomment to enable Colecovision controller emulation
 # COLECO_CONTROL=1
 
 # Base address TMS9918A chip; comment out to disable support
-TMS_BASE=0x98
+# TMS_BASE=0x98
 
 # MCU type and frequency
 MCU=atmega1284p
@@ -32,7 +35,6 @@ OBJS=	cli.o \
 	uart.o \
 	spi.o \
 	iox.o \
-	rtc.o \
 	bus.o \
 	z80.o \
 	iorq.o \
@@ -61,6 +63,10 @@ endif
 ifdef COLECO_CONTROL
 	FEATURE_DEFINES += -DCOLECO_CONTROL
 	OBJS += segactrl.o
+endif
+ifdef DS1306_RTC
+	FEATURE_DEFINES += -DDS1306_RTC
+	OBJS += rtc.o
 endif
 
 CFLAGS=-std=c99 -Os $(FEATURE_DEFINES) -DF_CPU=$(F_CPU) -mmcu=$(MCU) -I.

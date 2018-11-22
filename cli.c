@@ -41,7 +41,9 @@
 #include "diskio.h"
 #include "uart.h"
 #include "xmodem.h"
+#ifdef DS1306_RTC
 #include "rtc.h"
+#endif
 #ifdef COLECO_CONTROL
 #include "segactrl.h"
 #endif
@@ -754,6 +756,7 @@ void cli_unmount(int argc, char *argv[])
 /**
  * Display or set the date on the RTC
  */
+#ifdef DS1306_RTC
 void cli_date(int argc, char *argv[])
 {
     if (argc < 8) {
@@ -773,6 +776,7 @@ void cli_date(int argc, char *argv[])
     date.sec = strtoul(argv[7], NULL, 10);
     rtc_set_date(date);
 }
+#endif
 
 /**
  * Attach a virtual UART to a physical one
@@ -934,7 +938,9 @@ const char cli_cmd_names[] PROGMEM =
     "c\0"
     "clkdiv\0"
     "cls\0"
+#ifdef DS1306_RTC
     "date\0"
+#endif
     "debug\0"
     "dir\0"
     "disasm\0"
@@ -995,7 +1001,9 @@ const char cli_cmd_help[] PROGMEM =
     "shorthand to continue debugging\0"             // c
     "set Z80 clock divider\0"                       // clkdiv
     "clear screen\0"                                // cls
+#ifdef DS1306_RTC
     "display or set the date on the rtc\0"          // date
+#endif
     "debug code at address\0"                       // debug
     "shows directory listing\0"                     // dir
     "disassembles memory location\0"                // disasm
@@ -1058,7 +1066,9 @@ void * const cli_cmd_functions[] PROGMEM = {
     &cli_debug,     // c
     &cli_clkdiv,
     &cli_cls,
+#ifdef DS1306_RTC
     &cli_date,
+#endif
     &cli_debug,
     &cli_dir,
     &cli_disasm,
