@@ -81,10 +81,10 @@ rtc_date_t rtc_get_date()
     date.month = (data[RTC_MONTH] >> 4) * 10 + (data[RTC_MONTH] & 0xF);
     date.day = (data[RTC_DAY] >> 4) * 10 + (data[RTC_DAY] & 0xF);
     date.weekday = data[RTC_WEEKDAY];
-    if ((data[RTC_HOUR] & RTC_1224)) {
+    if ((data[RTC_HOUR] & (1 << RTC_1224))) {
         // 12-hour mode
         date.hour = ((data[RTC_HOUR] >> 4) & 1) * 10 + (data[RTC_HOUR] & 0xF);
-        if ((data[RTC_HOUR] & RTC_AMPM)) // PM
+        if ((data[RTC_HOUR] & (1 << RTC_AMPM))) // PM
             date.hour += 12;
     } else {
         // 24-hour mode
