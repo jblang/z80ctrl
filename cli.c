@@ -404,10 +404,12 @@ void cli_clkdiv(int argc, char *argv[])
     uint8_t tmp = 0;
     if (argc >= 2)
         tmp = strtoul(argv[1], NULL, 10);
-    if (tmp > 0)
+    if (tmp > 1)
         clkdiv = tmp;
     else
-        printf_P(PSTR("current clkdiv=%d\nusage: clkdiv <divider>\n"), clkdiv);
+        printf_P(PSTR("usage: clkdiv <divider>; minimum divider is 2\n"));
+    uint16_t freq = F_CPU / clkdiv / 1000;
+    printf_P(PSTR("current speed is %u.%03u MHz (clkdiv=%d)\n"), freq/1000, freq-(freq/1000)*1000, clkdiv);
 }
 
 /**
