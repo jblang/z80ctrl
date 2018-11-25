@@ -369,6 +369,40 @@ uint8_t io_in(uint8_t addr)
     return value;
 }
 
+void sn76489_mute()
+{
+    #ifdef SN76489_PORT
+    if (!bus_master())
+        return;
+    uint8_t oldclkdiv = clkdiv;
+    clkdiv = 4;
+    clk_run();
+    DATA_OUTPUT;
+    SET_ADDRLO(SN76489_PORT);
+    IORQ_LO;
+    SET_DATA(0x9F);
+    WR_LO;
+    _delay_us(10);
+    WR_HI;
+    SET_DATA(0xBF);
+    WR_LO;
+    _delay_us(10);
+    WR_HI;
+    SET_DATA(0xDF);
+    WR_LO;
+    _delay_us(10);
+    WR_HI;
+    SET_DATA(0xFF);
+    WR_LO;
+    _delay_us(10);
+    WR_HI;
+    IORQ_HI;
+    clk_stop();
+    clkdiv = oldclkdiv;
+    bus_slave();
+    #endif
+}
+
 #endif
 
 #ifdef PAGE_BASE

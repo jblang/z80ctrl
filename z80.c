@@ -55,6 +55,7 @@ uint8_t do_halt = 1;
  */
 void z80_reset(uint32_t addr)
 {
+    sn76489_mute();
     uint8_t reset_vect[] = { 0xC3, (addr & 0xFF), ((addr >> 8) & 0xFF) };
     if (addr > 0x0002) {
         mem_write(0x0000, reset_vect, 3);
