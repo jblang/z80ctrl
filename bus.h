@@ -196,10 +196,12 @@
 #define RFSH_INPUT iox_write(0, CTRLX_IODIR, iox_read(0, CTRLX_IODIR) | (1 << RFSH))
 #define GET_RFSH (iox_read(0, CTRLX_GPIO) & (1 << RFSH))
 
-#define RESET_OUTPUT iox_write(0, CTRLX_IODIR, iox_read(0, CTRLX_IODIR) & ~(1 << RESET))
+// Reset behaves like an open drain. It is only an output when it is low.
+#define RESET_INPUT iox_write(0, CTRLX_IODIR, iox_read(0, CTRLX_IODIR) | (1 << RESET))
+#define RESET_PULLUP iox_write(0, CTRLX_GPPU, iox_read(0, CTRLX_GPPU) | (1 << RESET))
 #define GET_RESET (iox_read(0, CTRLX_GPIO) & (1 << RESET))
-#define RESET_LO iox_write(0, CTRLX_GPIO, iox_read(0, CTRLX_GPIO) & ~(1 << RESET))
-#define RESET_HI iox_write(0, CTRLX_GPIO, iox_read(0, CTRLX_GPIO) | (1 << RESET))
+#define RESET_LO (iox_write(0, CTRLX_GPIO, iox_read(0, CTRLX_GPIO) & ~(1 << RESET)), iox_write(0, CTRLX_IODIR, iox_read(0, CTRLX_IODIR) & ~(1 << RESET)))
+#define RESET_HI (iox_write(0, CTRLX_IODIR, iox_read(0, CTRLX_IODIR) | (1 << RESET)), iox_write(0, CTRLX_GPIO, iox_read(0, CTRLX_GPIO) | (1 << RESET)))
 
 #define INT_OUTPUT iox_write(0, CTRLX_IODIR, iox_read(0, CTRLX_IODIR) & ~(1 << INTERRUPT))
 #define GET_INT (iox_read(0, CTRLX_GPIO) & (1 << INTERRUPT))

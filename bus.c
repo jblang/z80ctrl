@@ -181,7 +181,8 @@ void bus_init(void)
     iox_init();
 
     // Configure bus signal direction
-    RESET_OUTPUT;
+    RESET_INPUT;
+    RESET_PULLUP;
     BUSRQ_OUTPUT;
 #ifdef IOACK_OUTPUT
     IOACK_OUTPUT;
