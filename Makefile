@@ -1,20 +1,26 @@
 # Hardware revision (Important: must be set to correct value)
-BOARD_REV=3
+#BOARD_REV=3
 
 # Base address for RomWBW-style paging; comment out to disable support
-# PAGE_BASE=0x78
+#PAGE_BASE=0x78
 
 # Uncomment to enable support for SST39F0x0 flash chips on RomWBW boards
-# SST_FLASH=1
+#SST_FLASH=1
 
 # Uncomment to enable DS1306 RTC support
-# DS1306_RTC=1
+#DS1306_RTC=1
 
 # Uncomment to enable Colecovision controller emulation
 # COLECO_CONTROL=1
 
 # Base address TMS9918A chip; comment out to disable support
-# TMS_BASE=0x98
+#TMS_BASE=0xBE
+
+# Port assigned to SN76489 sound chip
+#SN76489_PORT=0xFF
+
+# Base port on which to expose SPI I/O Expanders to Z80
+#IOX_BASE=0x00
 
 # Current git hash
 GITVERSION:= $(shell git log -1 --pretty='%h')
@@ -60,6 +66,9 @@ ifdef TMS_BASE
  	FEATURE_DEFINES += -DTMS_BASE=$(TMS_BASE)
 	OBJS += tms.o
 endif
+ifdef SN76489_PORT
+ 	FEATURE_DEFINES += -DSN76489_PORT=$(SN76489_PORT)
+endif
 ifdef PAGE_BASE
 	FEATURE_DEFINES += -DPAGE_BASE=$(PAGE_BASE)
 endif
@@ -70,6 +79,9 @@ endif
 ifdef DS1306_RTC
 	FEATURE_DEFINES += -DDS1306_RTC
 	OBJS += rtc.o
+endif
+ifdef IOX_BASE
+	FEATURE_DEFINES += -DIOX_BASE=$(IOX_BASE)
 endif
 
 CFLAGS=-std=c99 -Os $(FEATURE_DEFINES) -DF_CPU=$(F_CPU) -DGITVERSION="\"${GITVERSION}\"" -mmcu=$(MCU) -I.

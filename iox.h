@@ -89,11 +89,22 @@
 #define WRITE 0
 #define READ 1
 
+#ifdef IOX_BASE
+#define IOX_ADDRPORT IOX_BASE
+#define IOX_REGPORT IOX_BASE+1
+#define IOX_DATAPORT IOX_BASE+2
+#endif
+
 void iox_init(void);
 void iox_begin(uint8_t mode, uint8_t addr);
 void iox_end(void);
 uint8_t iox_read(uint8_t chipaddr, uint8_t regaddr);
 void iox_write(uint8_t chipaddr, uint8_t regaddr, uint8_t data);
+
+void iox_defaddr(uint8_t chipaddr);
+void iox_defreg(uint8_t regaddr);
+void iox_writedef(uint8_t data);
+uint8_t iox_readdef();
 
 void iox_extcs_init(uint8_t addr);
 void iox_extcs_lo(uint8_t c);

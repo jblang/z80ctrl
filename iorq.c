@@ -27,6 +27,7 @@
 #include "iorq.h"
 #include "uart.h"
 #include "bus.h"
+#include "iox.h"
 #include "diskemu.h"
 #include "sioemu.h"
 #ifdef COLECO_CONTROL
@@ -53,6 +54,25 @@ void iorq_dispatch(uint8_t logged)
 {
     cli();
     switch (GET_ADDRLO) {
+#ifdef IOX_BASE
+        case IOX_ADDRPORT:
+            if (!GET_WR) {
+                iox_defaddr(GET_DATA);
+            }
+            break;
+        case IOX_REGPORT:
+            if (!GET_WR) {
+                iox_defreg(GET_DATA);
+            }
+            break;
+        case IOX_DATAPORT:
+            if (!GET_WR) {
+                iox_writedef(GET_DATA);
+            } else if (!GET_RD) {
+                SET_DATA(iox_readdef());
+            }
+            break;
+#endif
         case SIO0_STATUS:
             if (!GET_RD) {
                 SET_DATA(ACIA_STATUS(0));
