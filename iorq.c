@@ -28,6 +28,7 @@
 #include "uart.h"
 #include "bus.h"
 #include "iox.h"
+#include "rtc.h"
 #include "diskemu.h"
 #include "sioemu.h"
 #ifdef COLECO_CONTROL
@@ -70,6 +71,22 @@ void iorq_dispatch(uint8_t logged)
                 iox_writedef(GET_DATA);
             } else if (!GET_RD) {
                 SET_DATA(iox_readdef());
+                DATA_OUTPUT;
+            }
+            break;
+#endif
+#ifdef RTC_BASE
+        case RTC_REGPORT:
+            if (!GET_WR) {
+                rtc_defreg(GET_DATA);
+            }
+            break;
+        case RTC_DATAPORT:
+            if (!GET_WR) {
+                rtc_writedef(GET_DATA);
+            } else if (!GET_RD) {
+                SET_DATA(rtc_readdef());
+                DATA_OUTPUT;
             }
             break;
 #endif

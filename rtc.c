@@ -27,6 +27,8 @@
 #include "rtc.h"
 #include "spi.h"
 
+static uint8_t rtc_def_regaddr = 0;
+
 void rtc_begin()
 {
     SPI_SLOW;
@@ -107,4 +109,19 @@ void rtc_set_date(rtc_date_t date)
     data[RTC_MIN] = ((date.min / 10) << 4) | (date.min % 10);
     data[RTC_SEC] = ((date.sec / 10) << 4) | (date.sec % 10);
     rtc_write(RTC_SEC, RTC_YEAR, data);
+}
+
+void rtc_defreg(uint8_t regaddr)
+{
+    rtc_def_regaddr = regaddr;
+}
+
+void rtc_writedef(uint8_t data)
+{
+    rtc_write1(rtc_def_regaddr, data);
+}
+
+uint8_t rtc_readdef()
+{
+    return rtc_read1(rtc_def_regaddr);
 }

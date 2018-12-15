@@ -63,6 +63,11 @@
 #define RTC_SEL AUX1_SEL
 #define RTC_DESEL AUX2_SEL
 
+#ifdef RTC_BASE
+#define RTC_REGPORT RTC_BASE
+#define RTC_DATAPORT RTC_BASE+1
+#endif
+
 typedef struct {
     uint8_t year;
     uint8_t month;
@@ -81,5 +86,9 @@ void rtc_write1(uint8_t reg, uint8_t value);
 
 rtc_date_t rtc_get_date();
 void rtc_set_date(rtc_date_t date);
+
+void rtc_defreg(uint8_t regaddr);
+uint8_t rtc_readdef();
+void rtc_writedef(uint8_t data);
 
 #endif

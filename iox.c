@@ -27,8 +27,8 @@
 #include "iox.h"
 #include "spi.h"
 
-static uint8_t def_chipaddr = 1;
-static uint8_t def_regaddr = 0;
+static uint8_t iox_def_chipaddr = 1;
+static uint8_t iox_def_regaddr = 0;
 
 void iox_init(void)
 {
@@ -88,20 +88,20 @@ void iox_extcs_hi(uint8_t c)
 void iox_defaddr(uint8_t chipaddr)
 {
     if (chipaddr > 0 && chipaddr < 8)
-        def_chipaddr = chipaddr;
+        iox_def_chipaddr = chipaddr;
 }
 
 void iox_defreg(uint8_t regaddr)
 {
-    def_regaddr = regaddr;
+    iox_def_regaddr = regaddr;
 }
 
 void iox_writedef(uint8_t data)
 {
-    iox_write(def_chipaddr, def_regaddr, data);
+    iox_write(iox_def_chipaddr, iox_def_regaddr, data);
 }
 
 uint8_t iox_readdef()
 {
-    return iox_read(def_chipaddr, def_regaddr);
+    return iox_read(iox_def_chipaddr, iox_def_regaddr);
 }

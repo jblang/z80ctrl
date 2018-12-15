@@ -10,8 +10,11 @@
 # Uncomment to enable DS1306 RTC support
 #DS1306_RTC=1
 
+# Base address on which to expose RTC to Z80
+#RTC_BASE=0x04
+
 # Uncomment to enable Colecovision controller emulation
-# COLECO_CONTROL=1
+#COLECO_CONTROL=1
 
 # Base address TMS9918A chip; comment out to disable support
 #TMS_BASE=0xBE
@@ -19,7 +22,7 @@
 # Port assigned to SN76489 sound chip
 #SN76489_PORT=0xFF
 
-# Base port on which to expose SPI I/O Expanders to Z80
+# Base port on which to expose I/O Expanders to Z80
 #IOX_BASE=0x00
 
 # Current git hash
@@ -82,6 +85,9 @@ ifdef DS1306_RTC
 endif
 ifdef IOX_BASE
 	FEATURE_DEFINES += -DIOX_BASE=$(IOX_BASE)
+endif
+ifdef RTC_BASE
+	FEATURE_DEFINES += -DRTC_BASE=$(RTC_BASE)
 endif
 
 CFLAGS=-std=c99 -Os $(FEATURE_DEFINES) -DF_CPU=$(F_CPU) -DGITVERSION="\"${GITVERSION}\"" -mmcu=$(MCU) -I.
