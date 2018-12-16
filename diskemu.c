@@ -449,7 +449,7 @@ uint8_t drive_read(void)
     }
 }
 
-/*  The hard disk port is 0xfd. It understands the following commands.
+/*  The hard disk port is defined in diskemu.h. It understands the following commands.
     1.  Reset
         ld  b,32
         ld  a,HDSK_RESET
@@ -521,7 +521,7 @@ uint8_t dpb[] = {
 #define CMDLEN 6
 
 uint8_t hdsk_command;
-uint8_t drive_dma_resultdex;
+uint8_t drive_dma_index;
 uint8_t dma_disk;
 uint8_t dma_sector;
 uint16_t dma_track;
@@ -580,19 +580,19 @@ void drive_dma_write()
 uint8_t drive_dma_result() 
 {
     uint8_t result = CPM_ERROR;
-    if ((drive_dma_resultdex == CMDLEN) && ((hdsk_command == HDSK_READ) || (hdsk_command == HDSK_WRITE))) {
+    if ((drive_dma_index == CMDLEN) && ((hdsk_command == HDSK_READ) || (hdsk_command == HDSK_WRITE))) {
         if (hdsk_command == HDSK_READ)
             dma_function = &hdsk_dma_read;
         else
             dma_function = &drive_dma_write;
         hdsk_command = HDSK_NONE;
-        drive_dma_resultdex = 0;
+        drive_dma_index = 0;
         result = CPM_OK;
     } else if (hdsk_command == HDSK_PARAM) {
-        result = dpb[drive_dma_resultdex++];
-        if (drive_dma_resultdex >= DPBLEN) {
+        result = dpb[drive_dma_index++];
+        if (drive_dma_index >= DPBLEN) {
             hdsk_command = HDSK_NONE;
-            drive_dma_resultdex = 0;
+            drive_dma_index = 0;
         }
     }
     return result;
@@ -604,40 +604,40 @@ uint8_t drive_dma_result()
 void drive_dma_command(uint8_t data) 
 {
     if (hdsk_command == HDSK_PARAM) {
-        drive_dma_resultdex = 0;
+        drive_dma_index = 0;
     } else if (hdsk_command == HDSK_READ || hdsk_command == HDSK_WRITE) {
-        if (drive_dma_resultdex < CMDLEN) {
-            switch(drive_dma_resultdex) {
+        if (drive_dma_index < CMDLEN) {
+            switch(drive_dma_index) {
                 case 0:
                     dma_disk = data;
-                    drive_dma_resultdex++;
+                    drive_dma_index++;
                     break;
                 case 1:
                     dma_sector = data;
-                    drive_dma_resultdex++;
+                    drive_dma_index++;
                     break;
                 case 2:
                     dma_track = data;
-                    drive_dma_resultdex++;
+                    drive_dma_index++;
                     break;
                 case 3:
                     dma_track += (data << 8);
-                    drive_dma_resultdex++;
+                    drive_dma_index++;
                     break;
                 case 4:
                     dma_addr = data;
-                    drive_dma_resultdex++;
+                    drive_dma_index++;
                     break;
                 case 5:
                     dma_addr += (data << 8);
-                    drive_dma_resultdex++;
+                    drive_dma_index++;
                     break;
                 default:
                     hdsk_command = HDSK_NONE;
-                    drive_dma_resultdex = 0;
+                    drive_dma_index = 0;
             }        } else {
             hdsk_command = HDSK_NONE;
-            drive_dma_resultdex = 0;
+            drive_dma_index = 0;
         }
     } else {
         if ((HDSK_RESET <= data) && (data <= HDSK_PARAM)) {
@@ -645,6 +645,6 @@ void drive_dma_command(uint8_t data)
         } else {
             hdsk_command = HDSK_RESET;
         }
-        drive_dma_resultdex = 0;
+        drive_dma_index = 0;
     }
 }
