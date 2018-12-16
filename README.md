@@ -1,7 +1,5 @@
 # z80ctrl
 
-![z80ctrl photo](board.jpg)
-
 z80ctrl is an AVR-based bootloader, debugger, and I/O device for a Z80 retrocomputer with the following features:
 
 - Runs CP/M software including WordStar, Zork, Ladder, Turbo Pascal and more!
