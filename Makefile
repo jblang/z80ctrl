@@ -1,29 +1,26 @@
 # Hardware revision (Important: must be set to correct value)
-#BOARD_REV=3
+# BOARD_REV=3
 
 # Base address for RomWBW-style paging; comment out to disable support
-#PAGE_BASE=0x78
+# PAGE_BASE=0x78
 
 # Uncomment to enable support for SST39F0x0 flash chips on RomWBW boards
-#SST_FLASH=1
+# SST_FLASH=1
 
 # Uncomment to enable DS1306 RTC support
-#DS1306_RTC=1
-
-# Base address on which to expose RTC to Z80
-#RTC_BASE=0x04
+# DS1306_RTC=1
 
 # Uncomment to enable Colecovision controller emulation
 #COLECO_CONTROL=1
 
 # Base address TMS9918A chip; comment out to disable support
-#TMS_BASE=0xBE
+# TMS_BASE=0xBE
 
 # Port assigned to SN76489 sound chip
-#SN76489_PORT=0xFF
+# SN76489_PORT=0xFF
 
-# Base port on which to expose I/O Expanders to Z80
-#IOX_BASE=0x00
+# Base port on which to expose I/O expander card to Z80
+# IOX_BASE=0x00
 
 # Current git hash
 GITVERSION:= $(shell git log -1 --pretty='%h')

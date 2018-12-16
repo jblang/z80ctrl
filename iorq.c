@@ -48,6 +48,18 @@ void (*dma_function)(void) = NULL;
 #define SIMH_DEV 0xFE
 #define SENSE_SW 0xFF
 
+#ifdef IOX_BASE
+#define IOX_DEVPORT IOX_BASE
+#define IOX_REGPORT IOX_BASE+1
+#define IOX_VALPORT IOX_BASE+2
+#define IOX_RTC 0
+#define IOX_GPIO_MIN 1
+#define IOX_GPIO_MAX 7
+
+static uint8_t iox_dev = 0;
+static uint8_t iox_reg = 0;
+#endif
+
 /**
  * Handle Z80 IO request
  */
@@ -56,36 +68,27 @@ void iorq_dispatch(uint8_t logged)
     cli();
     switch (GET_ADDRLO) {
 #ifdef IOX_BASE
-        case IOX_ADDRPORT:
+        case IOX_DEVPORT:
             if (!GET_WR) {
-                iox_defaddr(GET_DATA);
+                iox_dev = GET_DATA;
             }
             break;
         case IOX_REGPORT:
             if (!GET_WR) {
-                iox_defreg(GET_DATA);
+                iox_reg = GET_DATA;
             }
             break;
-        case IOX_DATAPORT:
+        case IOX_VALPORT:
             if (!GET_WR) {
-                iox_writedef(GET_DATA);
+                if (iox_dev == IOX_RTC)
+                    rtc_write1(iox_reg, GET_DATA);
+                else if (iox_dev >= IOX_GPIO_MIN && iox_dev <= IOX_GPIO_MAX)
+                    iox_write(iox_dev, iox_reg, GET_DATA);
             } else if (!GET_RD) {
-                SET_DATA(iox_readdef());
-                DATA_OUTPUT;
-            }
-            break;
-#endif
-#ifdef RTC_BASE
-        case RTC_REGPORT:
-            if (!GET_WR) {
-                rtc_defreg(GET_DATA);
-            }
-            break;
-        case RTC_DATAPORT:
-            if (!GET_WR) {
-                rtc_writedef(GET_DATA);
-            } else if (!GET_RD) {
-                SET_DATA(rtc_readdef());
+                if (iox_dev == IOX_RTC)
+                    SET_DATA(rtc_read1(iox_reg));
+                else if (iox_dev >= IOX_GPIO_MIN && iox_dev <= IOX_GPIO_MAX)
+                    SET_DATA(iox_read(iox_dev, iox_reg));
                 DATA_OUTPUT;
             }
             break;
