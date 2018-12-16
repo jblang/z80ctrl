@@ -31,7 +31,7 @@
 #define DRIVE_STATUS 0x8
 #define DRIVE_CONTROL 0x9
 #define DRIVE_DATA 0xA
-#define DRIVE_DMA 0xFD
+#define DRIVE_DMA 0xB
 
 int drive_bootload();
 void drive_unmount(uint8_t drv);
