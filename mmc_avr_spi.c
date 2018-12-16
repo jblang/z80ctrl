@@ -17,15 +17,21 @@
 #include "diskio.h"
 #include "mmc_avr.h"
 #include "spi.h"
+#include "iox.h"
 #ifdef DS1306_RTC
 #include "rtc.h"
 #endif
 
+#define SD_IODIR IODIRB0    // Direction register handling SD CD/EN lines
+#define SD_GPPU GPPUB0      // Pullup register handling SD CD/EN lines
+#define SD_GPIO GPIOB0      // GPIO register handling SD CD/EN lines
+#define SD_IOXADDR 0        // IO expander address handling SD CD/EN lines
+#define SD_EN 0             // SD power enable pin on IO expnader
+#define SD_CD 6             // SD chip detect pin on IO expander
+
 /* Peripheral controls (Platform dependent) */
-#define CS_LOW()		SD_SEL	/* Set MMC_CS = low */
+#define CS_LOW()		SD_SEL	    /* Set MMC_CS = low */
 #define	CS_HIGH()		AUX2_SEL	/* Set MMC_CS = high */
-#define MMC_CD			1		/* Test if card detected.   yes:true, no:false, default:true */
-#define MMC_WP			0		/* Test if write protected. yes:true, no:false, default:false */
 #define	FCLK_SLOW()		SPI_SLOW	/* Set SPI clock for initialization (100-400kHz) */
 #define	FCLK_FAST()		SPI_FAST	/* Set SPI clock for read/write (20MHz max) */
 
@@ -105,6 +111,42 @@ DWORD get_fattime (void)
 #endif
 }
 
+/*-----------------------------------------------------------------------*/
+/* Initialize SD control lines on IO expander                            */
+/*-----------------------------------------------------------------------*/
+static
+void init_cden()
+{
+    iox_init();
+    // Enable pull up on card detect line
+    iox_write(SD_IOXADDR, SD_GPPU, iox_read(SD_IOXADDR, SD_GPPU) | (1 << SD_CD));
+
+    // Set SD enable high and make it an output
+    iox_write(SD_IOXADDR, SD_GPIO, iox_read(SD_IOXADDR, SD_GPIO) | (1 << SD_EN));
+    iox_write(SD_IOXADDR, SD_IODIR, iox_read(SD_IOXADDR, SD_IODIR) & ~(1 << SD_EN));
+}
+
+
+/*-----------------------------------------------------------------------*/
+/* Check if SD card is present                                           */
+/*-----------------------------------------------------------------------*/
+static
+void check_card()
+{
+    // Originally this was checked during the timer interrupt, but because
+    // reading the CS line requires using the SPI bus, doing so could 
+    // interfere with other SPI transactions in progress when the interrupt
+    // occurred. So instead, this function should be called before every 
+    // MMC read/write/ioctl call.
+    BYTE s = Stat;
+    if (iox_read(SD_IOXADDR, SD_GPIO) & (1 << SD_CD)) {			/* Card inserted */
+        s &= ~STA_NODISK;
+    } else {				/* Socket empty */
+        s |= (STA_NODISK | STA_NOINIT);
+    }
+    Stat = s;				/* Update MMC status */
+}
+
 
 /*-----------------------------------------------------------------------*/
 /* Power Control  (Platform dependent)                                   */
@@ -115,13 +157,16 @@ DWORD get_fattime (void)
 static
 void power_on (void)
 {
-    spi_init();
+    // Set SDEN low to turn off voltage regulator
+    iox_write(SD_IOXADDR, SD_GPIO, iox_read(SD_IOXADDR, SD_GPIO) | (1 << SD_EN));
 }
 
 
 static
 void power_off (void)
 {
+    // Set SDEN high to turn on voltage regulator
+    iox_write(SD_IOXADDR, SD_GPIO, iox_read(SD_IOXADDR, SD_GPIO) & ~(1 << SD_EN));
 }
 
 
@@ -340,7 +385,6 @@ BYTE send_cmd (		/* Returns R1 resp (bit7==1:Send failed) */
 }
 
 
-
 /*--------------------------------------------------------------------------
 
    Public Functions
@@ -355,6 +399,9 @@ BYTE send_cmd (		/* Returns R1 resp (bit7==1:Send failed) */
 DSTATUS mmc_disk_initialize (void)
 {
     BYTE n, cmd, ty, ocr[4];
+
+    init_cden();
+    check_card();
 
     start_timer();
 
@@ -410,6 +457,7 @@ DSTATUS mmc_disk_initialize (void)
 
 DSTATUS mmc_disk_status (void)
 {
+    check_card();
     return Stat;
 }
 
@@ -427,8 +475,9 @@ DRESULT mmc_disk_read (
 {
     BYTE cmd;
 
-
     if (!count) return RES_PARERR;
+    
+    check_card();
     if (Stat & STA_NOINIT) return RES_NOTRDY;
 
     if (!(CardType & CT_BLOCK)) sector *= 512;	/* Convert to byte address if needed */
@@ -460,6 +509,8 @@ DRESULT mmc_disk_write (
 )
 {
     if (!count) return RES_PARERR;
+
+    check_card();
     if (Stat & STA_NOINIT) return RES_NOTRDY;
     if (Stat & STA_PROTECT) return RES_WRPRT;
 
@@ -507,6 +558,7 @@ DRESULT mmc_disk_ioctl (
     UINT dc;
 #endif
 
+    check_card();
     if (Stat & STA_NOINIT) return RES_NOTRDY;
 
     res = RES_ERROR;
@@ -661,26 +713,10 @@ DRESULT mmc_disk_ioctl (
 
 void mmc_disk_timerproc (void)
 {
-    BYTE n, s;
-
+    BYTE n;
 
     n = Timer1;				/* 100Hz decrement timer */
     if (n) Timer1 = --n;
     n = Timer2;
     if (n) Timer2 = --n;
-
-    s = Stat;
-
-    if (MMC_WP) {			/* Write protected */
-        s |= STA_PROTECT;
-    } else {				/* Write enabled */
-        s &= ~STA_PROTECT;
-    }
-    if (MMC_CD) {			/* Card inserted */
-        s &= ~STA_NODISK;
-    } else {				/* Socket empty */
-        s |= (STA_NODISK | STA_NOINIT);
-    }
-    Stat = s;				/* Update MMC status */
 }
-
