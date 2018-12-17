@@ -117,7 +117,7 @@ void cli_savehex(int argc, char *argv[])
             if (save_ihex(start, end, &file) == EOF)
                 printf_P(PSTR("error writing file"));
             if ((fr = f_close(&fil)) != FR_OK)
-                printf_P(PSTR("error closing file: %s\n"), strlookup(fr_text, fr));
+                printf_P(PSTR("error closing file: %S\n"), strlookup(fr_text, fr));
         } else {
             printf_P(PSTR("error opening file: %S\n"), strlookup(fr_text, fr));
         }        
@@ -232,7 +232,7 @@ void cli_savebin(int argc, char *argv[])
             start += len;
         }
         if ((fr = f_close(&fil)) != FR_OK)
-            printf_P(PSTR("error closing file: %s\n"), strlookup(fr_text, fr));
+            printf_P(PSTR("error closing file: %S\n"), strlookup(fr_text, fr));
     } else {
         printf_P(PSTR("error opening file: %S\n"), strlookup(fr_text, fr));
     }        
@@ -255,7 +255,7 @@ void cli_xmrx(int argc, char *argv[])
     if ((fr = f_open(&fil, filename, FA_WRITE | FA_CREATE_ALWAYS)) == FR_OK) {
         xm_receive(&fil);
         if ((fr = f_close(&fil)) != FR_OK)
-            printf_P(PSTR("error closing file: %s\n"), strlookup(fr_text, fr));
+            printf_P(PSTR("error closing file: %S\n"), strlookup(fr_text, fr));
     } else {
         printf_P(PSTR("error opening file: %S\n"), strlookup(fr_text, fr));
     }        
