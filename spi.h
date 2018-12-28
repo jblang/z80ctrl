@@ -39,13 +39,8 @@
 #define MOSI 5
 
 #define IOX_ADDR 0
-#if (BOARD_REV < 3)
-#define SD_ADDR 2
-#define AUX1_ADDR 1
-#else
 #define SD_ADDR 1
 #define AUX1_ADDR 2
-#endif
 #define AUX2_ADDR 3
 
 #define CSADDR 3

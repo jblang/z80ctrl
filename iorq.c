@@ -201,14 +201,8 @@ void iorq_dispatch(uint8_t logged)
         bus_log(status);
     }
     BUSRQ_LO;
-#ifdef IOACK_OUTPUT
-    IOACK_LO;
-#endif
     while (!GET_IORQ)
         CLK_TOGGLE;
-#ifdef IOACK_OUTPUT
-    IOACK_HI;
-#endif
     if (dma_function) {
         dma_function();
         dma_function = NULL;

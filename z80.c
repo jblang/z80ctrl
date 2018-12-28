@@ -67,13 +67,8 @@ void z80_reset(uint32_t addr)
     for (uint8_t i = 0; i < 4; i++)
         mem_page(i, PAGE(addr + base_addr) + i);
 #endif
-#ifdef IOACK_OUTPUT
-    IOACK_LO;
-    IOACK_HI;
-#else
     BUSRQ_LO;
     BUSRQ_HI;
-#endif
 }
 
 /**

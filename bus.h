@@ -34,7 +34,7 @@
  * Ensure board revision is set to a supported value
  */
 
-#if (BOARD_REV < 1 || BOARD_REV > 3)
+#if (BOARD_REV < 3 || BOARD_REV > 4)
 #error "Unsupported board revision. Set BOARD_REV in your Makefile to match your board revision."
 #endif
 
@@ -79,31 +79,12 @@
  * PORTB flags
  */
 
-#define IORQ 1
-#if (BOARD_REV < 3)
-#define IOACK 0
-#define M1 2
-#else
 #define BUSRQ 0
+#define IORQ 1
 #define MREQ 2
-#endif
 
 #define IORQ_INPUT DDRB &= ~(1 << IORQ)
 #define GET_IORQ (PINB & (1 << IORQ))
-
-#if (BOARD_REV < 3)
-
-#define GET_BFLAGS (PINB & ((1<<IOACK) | (1<<IORQ) | (1<<M1)))
-
-#define IOACK_OUTPUT DDRB |= (1 << IOACK)
-#define GET_IOACK (PINB & (1 << IOACK))
-#define IOACK_HI PORTB |= (1 << IOACK)
-#define IOACK_LO PORTB &= ~(1 << IOACK)
-
-#define M1_INPUT DDRB &= ~(1 << M1)
-#define GET_M1 (PINB & (1 << M1))
-
-#else
 
 #define GET_BFLAGS (PINB & ((1<<BUSRQ) | (1<<IORQ) | (1<<MREQ)))
 
@@ -122,8 +103,6 @@
 #define IORQ_HI PORTB |= (1 << IORQ)
 #define IORQ_LO PORTB &= ~(1 << IORQ)
 
-#endif
-
 /**
  * PORTD Flags
  */
@@ -131,11 +110,7 @@
 #define RD 4
 #define WR 5
 #define CLK 6
-#if (BOARD_REV < 3)
-#define HALT 7
-#else
 #define BUSACK 7
-#endif
 
 #define RD_INPUT DDRD &= ~(1 << RD)
 #define RD_OUTPUT DDRD |= (1 << RD)
@@ -155,22 +130,10 @@
 #define CLK_LO PORTD &= ~(1 << CLK)
 #define CLK_TOGGLE PIND |= (1 << CLK)
 
-#if (BOARD_REV < 3)
-
-#define GET_DFLAGS (PIND & ((1<<RD) | (1<<WR) | (1<<CLK) | (1<<HALT)))
-
-#define HALT_INPUT DDRD &= ~(1 << HALT)
-#define HALT_PULLUP PORTD |= (1 << HALT)
-#define GET_HALT (PIND & (1 << HALT))
-
-#else
-
 #define GET_DFLAGS (PIND & ((1<<RD) | (1<<WR) | (1<<CLK) | (1<<BUSACK)))
 
 #define BUSACK_INPUT DDRD &= ~(1 << BUSACK)
 #define GET_BUSACK (PIND & (1 << BUSACK))
-
-#endif
 
 /**
  * IOX GPIOB flags
@@ -183,14 +146,8 @@
 #define RFSH 1
 #define RESET 2
 #define INTERRUPT 3
-#if (BOARD_REV < 3)
-#define BUSACK 4
-#define MREQ 5
-#define BUSRQ 6
-#else
 #define M1 4
 #define HALT 5
-#endif
 #define NMI 7
 
 #define RFSH_INPUT iox_write(0, CTRLX_IODIR, iox_read(0, CTRLX_IODIR) | (1 << RFSH))
@@ -208,27 +165,6 @@
 #define INT_LO iox_write(0, CTRLX_GPIO, iox_read(0, CTRLX_GPIO) & ~(1 << INTERRUPT))
 #define INT_HI iox_write(0, CTRLX_GPIO, iox_read(0, CTRLX_GPIO) | (1 << INTERRUPT))
 
-#if (BOARD_REV < 3)
-
-#define GET_XFLAGS (iox_read(0, CTRLX_GPIO) & ((1<<RFSH) | (1<<RESET) | (1<<INTERRUPT) | \
-                                        (1<<BUSACK) | (1<<MREQ) | (1<<BUSRQ) | (1<<NMI)))
-
-#define BUSACK_INPUT iox_write(0, CTRLX_IODIR, iox_read(0, CTRLX_IODIR) | (1 << BUSACK))
-#define GET_BUSACK (iox_read(0, CTRLX_GPIO) & (1 << BUSACK))
-
-#define MREQ_INPUT iox_write(0, CTRLX_IODIR, iox_read(0, CTRLX_IODIR) | (1 << MREQ))
-#define MREQ_OUTPUT iox_write(0, CTRLX_IODIR, iox_read(0, CTRLX_IODIR) & ~(1 << MREQ))
-#define GET_MREQ (iox_read(0, CTRLX_GPIO) & (1 << MREQ))
-#define MREQ_LO iox_write(0, CTRLX_GPIO, iox_read(0, CTRLX_GPIO) & ~(1 << MREQ))
-#define MREQ_HI iox_write(0, CTRLX_GPIO, iox_read(0, CTRLX_GPIO) | (1 << MREQ))
-
-#define BUSRQ_OUTPUT iox_write(0, CTRLX_IODIR, iox_read(0, CTRLX_IODIR) & ~(1 << BUSRQ))
-#define GET_BUSRQ (iox_read(0, CTRLX_GPIO) & (1 << BUSRQ))
-#define BUSRQ_LO iox_write(0, CTRLX_GPIO, iox_read(0, CTRLX_GPIO) & ~(1 << BUSRQ))
-#define BUSRQ_HI iox_write(0, CTRLX_GPIO, iox_read(0, CTRLX_GPIO) | (1 << BUSRQ))
-
-#else
-
 #define GET_XFLAGS (iox_read(0, CTRLX_GPIO) & ((1<<RFSH) | (1<<RESET) | (1<<INTERRUPT) | \
                                         (1<<M1) | (1<<HALT) | (1<<NMI)))
 
@@ -238,8 +174,6 @@
 #define HALT_INPUT iox_write(0, CTRLX_IODIR, iox_read(0, CTRLX_IODIR) | (1 << HALT))
 #define HALT_PULLUP iox_write(0, CTRLX_GPPU, iox_read(0, CTRLX_GPPU) | (1 << HALT))
 #define GET_HALT (iox_read(0, CTRLX_GPIO) & (1 << HALT))
-
-#endif
 
 #define NMI_OUTPUT iox_write(0, CTRLX_IODIR, iox_read(0, CTRLX_IODIR) & ~(1 << NMI))
 #define GET_NMI (iox_read(0, CTRLX_GPIO) & (1 << NMI))
@@ -276,18 +210,14 @@ void _mem_write(uint32_t addr, const uint8_t *buf, uint16_t len, uint8_t pgmspac
 #define mem_write(addr, buf, len) _mem_write((addr), (buf), (len), 0);
 #define mem_write_P(addr, buf, len) _mem_write((addr), (buf), (len), 1);
 
-#ifdef IORQ_OUTPUT
 void io_out_bare(uint8_t addr, uint8_t value);
 void io_out(uint8_t addr, uint8_t value);
 uint8_t io_in_bare(uint8_t addr);
 uint8_t io_in(uint8_t addr);
-#endif
+
+void sn76489_mute(void);
 
 #ifdef PAGE_BASE
-#ifndef IORQ_OUTPUT
-#error "Paging support requires board revision 3 or higher"
-#endif
-
 #define PAGE(addr) ((addr) >> 14)
 void mem_page_bare(uint8_t bank, uint8_t page);
 void mem_page(uint8_t bank, uint8_t page);

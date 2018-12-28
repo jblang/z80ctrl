@@ -78,10 +78,6 @@ uint8_t bus_master(void)
     uint8_t i = 255;
 
     BUSRQ_LO;           // request bus
-#ifdef IOACK_OUTPUT
-    IOACK_LO;           // make sure not in WAIT state
-    IOACK_HI;
-#endif
     // wait for BUSACK to go low
     while (GET_BUSACK)  {
         CLK_TOGGLE;
@@ -95,9 +91,7 @@ uint8_t bus_master(void)
     RD_HI;
     WR_HI;
     MREQ_OUTPUT;
-#ifdef IORQ_OUTPUT
     IORQ_OUTPUT;
-#endif
     RD_OUTPUT;
     WR_OUTPUT;
     ADDR_OUTPUT;
@@ -111,9 +105,7 @@ uint8_t bus_master(void)
 void bus_slave(void)
 {
     MREQ_INPUT;
-#ifdef IORQ_INPUT
     IORQ_INPUT;
-#endif
     RD_INPUT;
     WR_INPUT;
     ADDR_INPUT;
@@ -144,29 +136,16 @@ void bus_log(bus_stat status)
         status.addr,
         status.data,
         0x20 <= status.data && status.data <= 0x7e ? status.data : ' ',
-#if (BOARD_REV < 3)
-        !FLAG(status.xflags, MREQ) ? "memrq" :
-#else
         !FLAG(status.flags, MREQ) ? "memrq" :
-#endif
         !FLAG(status.flags, IORQ) ? "iorq " : "     ",
-
         !FLAG(status.flags, RD) ? "rd  " :
         !FLAG(status.flags, WR) ? "wr  " :
         !FLAG(status.xflags, RFSH) ? "rfsh" : "    ",
-#if (BOARD_REV < 3)
-        !FLAG(status.flags, M1) ? "m1" : "  ",
-        !FLAG(status.xflags, BUSRQ) ? "busrq" : "     ",
-        !FLAG(status.xflags, BUSACK) ? "busack" : "      ",
-        (!FLAG(status.flags, IORQ) && FLAG(status.flags, IOACK)) ? "wait" : "    ",
-        !FLAG(status.flags, HALT) ? "halt" : "    ", 
-#else
         !FLAG(status.xflags, M1) ? "m1" : "  ",
         !FLAG(status.flags, BUSRQ) ? "busrq" : "     ",
         !FLAG(status.flags, BUSACK) ? "busack" : "      ",
         (!FLAG(status.flags, IORQ) && FLAG(status.flags, BUSRQ)) ? "wait" : "    ",
         !FLAG(status.xflags, HALT) ? "halt" : "    ", 
-#endif    
         !FLAG(status.xflags, INTERRUPT) ? "int" : "   ",
         !FLAG(status.xflags, NMI) ? "nmi" : "   ",
         !FLAG(status.xflags, RESET) ? "reset" : "     ");
@@ -184,9 +163,6 @@ void bus_init(void)
     RESET_INPUT;
     RESET_PULLUP;
     BUSRQ_OUTPUT;
-#ifdef IOACK_OUTPUT
-    IOACK_OUTPUT;
-#endif
     CLK_OUTPUT;
 
     IORQ_INPUT;
@@ -207,13 +183,8 @@ void bus_init(void)
     RESET_LO;
     clk_cycle(3);
     RESET_HI;
-#ifdef IOACK_OUTPUT    
-    IOACK_LO;
-    IOACK_HI;
-#else
     BUSRQ_LO;
     BUSRQ_HI;
-#endif
 
     // Make bidirectional signals inputs
     bus_slave();
@@ -312,8 +283,6 @@ void _mem_write(uint32_t addr, const uint8_t *buf, uint16_t len, uint8_t pgmspac
     bus_slave();
 }
 
-#ifdef IORQ_OUTPUT
-
 /**
  * Output value to an IO register
  */
@@ -325,10 +294,6 @@ void io_out_bare(uint8_t addr, uint8_t value)
     WR_LO;
     WR_HI;
     IORQ_HI;
-#ifdef IOACK_OUTPUT
-    IOACK_LO;
-    IOACK_HI;
-#endif
 }
 
 void io_out(uint8_t addr, uint8_t value)
@@ -352,10 +317,6 @@ uint8_t io_in_bare(uint8_t addr)
     uint8_t value = GET_DATA;
     RD_HI;
     IORQ_HI;
-#ifdef IOACK_OUTPUT
-    IOACK_LO;
-    IOACK_HI;
-#endif
     return value;
 }
 
@@ -402,8 +363,6 @@ void sn76489_mute()
     bus_slave();
     #endif
 }
-
-#endif
 
 #ifdef PAGE_BASE
 #define PAGE_ENABLE (PAGE_BASE + 4)     // enable paging

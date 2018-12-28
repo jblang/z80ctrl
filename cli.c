@@ -629,8 +629,6 @@ void cli_poke(int argc, char *argv[])
     
 }
 
-#ifdef IORQ_OUTPUT
-
 /**
  * Output value to an IO register
  */
@@ -659,7 +657,6 @@ void cli_in(int argc, char *argv[])
     uint8_t addr = strtoul(argv[1], NULL, 16) & 0xff;
     printf_P(PSTR("Read %02x from %02x\n"), io_in(addr), addr);
 }
-#endif
 
 void cli_ioxread(int argc, char *argv[])
 {
@@ -957,17 +954,13 @@ const char cli_cmd_names[] PROGMEM =
 #endif
     "halt\0"
     "help\0"
-#ifdef IORQ_OUTPUT
     "in\0"
     "ioxread\0"
     "ioxwrite\0"
-#endif
     "loadbin\0"
     "loadhex\0"
     "mount\0"
-#ifdef IORQ_OUTPUT
     "out\0"
-#endif
     "poke\0"
     "run\0"
     "reset\0"
@@ -1020,17 +1013,13 @@ const char cli_cmd_help[] PROGMEM =
 #endif
     "enable or disable halt\0"                      // halt
     "list available commands\0"                     // help
-#ifdef IORQ_OUTPUT
     "read a value from a port\0"                    // in
-#endif
     "read a value from an io expander\0"            // ioxread
     "write a value to an io expander\0"             // ioxwrite
     "load binary file to memory\0"                  // loadbin
     "load intel hex file to memory\0"               // loadhex
     "mount a disk image\0"                          // mount
-#ifdef IORQ_OUTPUT
     "write a value to a port\0"                     // out
-#endif
     "poke values into memory\0"                     // poke
     "execute code at address\0"                     // run
     "reset the processor, with optional vector\0"   // reset
@@ -1085,17 +1074,13 @@ void * const cli_cmd_functions[] PROGMEM = {
 #endif
     &cli_halt,
     &cli_help,
-#ifdef IORQ_OUTPUT
     &cli_in,
-#endif
     &cli_ioxread,
     &cli_ioxwrite,
     &cli_loadbin,
     &cli_loadhex,
     &cli_mount,
-#ifdef IORQ_OUTPUT
     &cli_out,
-#endif
     &cli_poke,
     &cli_run,
     &cli_reset,
