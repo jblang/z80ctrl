@@ -31,9 +31,6 @@
 #include "rtc.h"
 #include "diskemu.h"
 #include "sioemu.h"
-#ifdef COLECO_CONTROL
-#include "segactrl.h"
-#endif
 
 #include <avr/interrupt.h>
 
@@ -167,30 +164,6 @@ void iorq_dispatch(uint8_t logged)
                 drive_dma_command(GET_DATA);
             }
             break;
-#ifdef COLECO_CONTROL
-        case COLECO_KEYSEL:
-            if (!GET_WR) {
-                coleco_mode(COLECO_KEYPAD);
-            }
-            break;
-        case COLECO_JOYSEL:
-            if (!GET_WR) {
-                coleco_mode(COLECO_JOYSTICK);
-            }
-            break;
-        case COLECO_JOYPORT1:
-            if (!GET_RD) {
-                SET_DATA(coleco_read());
-                DATA_OUTPUT;
-            }
-            break;
-        case COLECO_JOYPORT2:
-            if (!GET_RD) {
-                SET_DATA(0x7F);
-                DATA_OUTPUT;
-            }
-            break;
-#endif
         default:
             if (!GET_RD) {
                 SET_DATA(0xFF);

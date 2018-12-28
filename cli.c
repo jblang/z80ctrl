@@ -44,9 +44,6 @@
 #ifdef DS1306_RTC
 #include "rtc.h"
 #endif
-#ifdef COLECO_CONTROL
-#include "segactrl.h"
-#endif
 #ifdef TMS_BASE
 #include "tms.h"
 #endif
@@ -842,42 +839,6 @@ void cli_cls(int argc, char *argv[])
     printf_P(PSTR("\e[0m\e[;H\e[2J"));
 }
 
-/**
- * Report Sega controller status
- */
-#ifdef COLECO_CONTROL
-void cli_sega(int argc, char *argv[])
-{
-    button_t buttons = sega_read();
-    if (buttons.genesis6)
-        putchar('6');
-    else if (buttons.genesis3)
-        putchar('3');
-    else
-        putchar('1');
-    putchar(buttons.up ? 'U' : ' ');
-    putchar(buttons.down ? 'D' : ' ');
-    putchar(buttons.left ? 'L' : ' ');
-    putchar(buttons.right ? 'R' : ' ');
-    if (buttons.genesis3) {
-        putchar(buttons.a ? 'A' : ' ');
-        putchar(buttons.b ? 'B' : ' ');
-        putchar(buttons.c ? 'C' : ' ');
-        putchar(buttons.start ? 'S' : ' ');
-    } else {
-        putchar(buttons.b ? 'B' : ' ');
-    }
-    if (buttons.genesis6) {
-        putchar(buttons.x ? 'X' : ' ');
-        putchar(buttons.y ? 'Y' : ' ');
-        putchar(buttons.z ? 'Z' : ' ');
-        putchar(buttons.mode ? 'M' : ' ');
-    }
-    putchar('\r');
-    putchar('\n');
-}
-#endif
-
 void cli_dispatch(char *buf);
 
 #define WHITESPACE " \t\r\n"
@@ -966,9 +927,6 @@ const char cli_cmd_names[] PROGMEM =
     "reset\0"
     "savebin\0"
     "savehex\0"
-#ifdef COLECO_CONTROL
-    "sega\0"
-#endif
     "s\0"
     "step\0"
 #ifdef TMS_BASE
@@ -1025,9 +983,6 @@ const char cli_cmd_help[] PROGMEM =
     "reset the processor, with optional vector\0"   // reset
     "save binary file from memory\0"                // savebin
     "save intel hex file from memory\0"             // savehex
-#ifdef COLECO_CONTROL
-    "report sega controller status\0"               // sega
-#endif    
     "shorthand for step\0"                          // s
     "step processor N cycles\0"                     // step
 #ifdef TMS_BASE
@@ -1086,9 +1041,6 @@ void * const cli_cmd_functions[] PROGMEM = {
     &cli_reset,
     &cli_savebin,
     &cli_savehex,
-#ifdef COLECO_CONTROL
-    &cli_sega,
-#endif
     &cli_step,      // s
     &cli_step,
 #ifdef TMS_BASE
@@ -1181,10 +1133,6 @@ int main(void)
 
     bus_init();
     iox_extcs_init(1);
-
-#ifdef COLECO_CONTROL
-    sega_init();
-#endif
 
     cli_exec(AUTOEXEC);
     cli_loop();

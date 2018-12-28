@@ -10,9 +10,6 @@
 # Uncomment to enable DS1306 RTC support
 # DS1306_RTC=1
 
-# Uncomment to enable Colecovision controller emulation
-#COLECO_CONTROL=1
-
 # Base address TMS9918A chip; comment out to disable support
 # TMS_BASE=0xBE
 
@@ -71,10 +68,6 @@ ifdef SN76489_PORT
 endif
 ifdef PAGE_BASE
 	FEATURE_DEFINES += -DPAGE_BASE=$(PAGE_BASE)
-endif
-ifdef COLECO_CONTROL
-	FEATURE_DEFINES += -DCOLECO_CONTROL
-	OBJS += segactrl.o
 endif
 ifdef DS1306_RTC
 	FEATURE_DEFINES += -DDS1306_RTC
