@@ -31,16 +31,11 @@
 #define SIO0_DATA 0x11
 #define SIO1_STATUS 0x12
 #define SIO1_DATA 0x13
-#define SIOA_CONTROL 0x80
-#define SIOA_DATA 0x81
-#define SIOB_CONTROL 0x82
-#define SIOB_DATA 0x83
 
 /**
  * Utility macros to generate SIO status register values
  */
 #define ACIA_STATUS(u) ((((uart_testtx(z80_uart[(u)]) == 0) << 1) & 0x2) | ((uart_testrx(z80_uart[(u)]) > 0) & 0x1))
-#define ZSIO_STATUS(u) ((1 << 3) | (1  << 5) | (((uart_testtx(z80_uart[(u)]) == 0) << 2) & 0x4) | ((uart_testrx(z80_uart[(u)]) > 0) & 0x1))
 
 extern uint8_t z80_uart[];
 

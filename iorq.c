@@ -102,20 +102,7 @@ void iorq_dispatch(uint8_t logged)
                 DATA_OUTPUT;
             }
             break;
-        /*case SIOA_CONTROL:
-            if (!GET_RD) {
-                SET_DATA(ZSIO_STATUS(0));
-                DATA_OUTPUT;
-            }
-            break;
-        case SIOB_CONTROL:
-            if (!GET_RD) {
-                SET_DATA(ZSIO_STATUS(1));
-                DATA_OUTPUT;
-            }
-            break;*/
         case SIO0_DATA:
-        //case SIOA_DATA:
             if (!GET_RD) {
                 SET_DATA(uart_getc(z80_uart[0]));
                 DATA_OUTPUT;
@@ -124,7 +111,6 @@ void iorq_dispatch(uint8_t logged)
             }
             break;
         case SIO1_DATA:
-        //case SIOB_DATA:
             if (!GET_RD) {
                 SET_DATA(uart_getc(z80_uart[1]));
                 DATA_OUTPUT;
