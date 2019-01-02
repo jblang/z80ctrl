@@ -117,7 +117,7 @@ lcdconfig:
         db lcdreset1                    ; reset sequence from datasheet
         db lcdreset2
         db lcdfunction | lcd4bit | lcd2line | lcd5x8font
-        db lcdenable | lcddisplay | lcdblink
+        db lcdenable | lcddisplay
         db lcdclear
 lcdconfiglen: equ $ - lcdconfig
 
@@ -196,9 +196,9 @@ lcdhexbyte:
         pop     af                      ; restore the full byte
 lcdhexnibble:
         and     $0f                     ; mask off the top nybble
-        add     $90                     ; convert number to ASCII
+        add     a, $90                  ; convert number to ASCII
         daa
-        adc     $40
+        adc     a, $40
         daa
         call    lcdchrout               ; print it
         ret
@@ -243,27 +243,20 @@ lcdwrite:
         xor     a
         call    ioxwrite
         ld      e, gpioa
-        pop     af
-        push    af                      ; get upper nybble
-        srl     a
-        srl     a
-        srl     a
-        srl     a
-        or	c
-        call	ioxwrite
-        set     lcden, a                ; clock in upper nybble
-        call    ioxwrite
-        res     lcden, a
-        call    ioxwrite
-        pop     af                      ; get lower nybble
+        pop     af                      ; restore value to send
         push    af
-        and     $f                    	; clock in lower nybble
-        or	c
-        call	ioxwrite
-        set     lcden, a
-        call    ioxwrite
-        res     lcden, a
-        call    ioxwrite
+        rrca                            ; shift upper nybble into lower
+        rrca
+        rrca
+        rrca
+        and     $f                      ; mask off the upper nybble
+        or	c                       ; add in the register select bit
+        call    lcdclockout             ; clock out to LCD
+        pop     af                      ; restore value to send
+        push    af
+        and     $f                    	; mask off the upper nybble
+        or	c                       ; add in the register select
+        call    lcdclockout             ; clock out to LCD
 lcdwait:
         ld      c, lcdinstreg           ; wait for write to finish
         call	lcdread
@@ -272,6 +265,14 @@ lcdwait:
         pop     af
         pop     bc
         pop     de
+        ret
+
+lcdclockout:
+        call	ioxwrite                ; set up value
+        set     lcden, a                ; set enable high
+        call    ioxwrite
+        res     lcden, a                ; set enable low; value is now latched
+        call    ioxwrite
         ret
 
 ; read from LCD
@@ -286,30 +287,28 @@ lcdread:
         call    ioxwrite
         ld      e, gpioa
         ld      a, c
-        set     lcdrw, a                ; clock in upper nybble
-        call	ioxwrite
-        set     lcden, a
-        call    ioxwrite
-        call    ioxread
-        res     lcden, a
-        call    ioxwrite
-        add     a, a                    ; move to upper nybble and save in b
+        call    lcdclockin              ; clock in upper nybble
+        add     a, a                    ; move it to the upper nybble
         add     a, a
         add     a, a
         add     a, a
-        ld      b, a
-        ld      a, c                    ; clock in lower nybble
-        set     lcdrw, a
-        call	ioxwrite
-        set     lcden, a
-        call    ioxwrite
-        call    ioxread
-        res     lcden, a
-        call    ioxwrite
-        and     $0f                     ; combine with upper nybble
-        or      b
+        ld      b, a                    ; save for later
+        ld      a, c
+        call    lcdclockin              ; clock in lower nybble                                        
+        and     $0f                     ; clear upper nybble
+        or      b                       ; combine with upper nybble
         pop     de
         pop     bc
+        ret
+
+lcdclockin:
+        set     lcdrw, a                ; R/W high to indicate read
+        call	ioxwrite
+        set     lcden, a                ; set enable high
+        call    ioxwrite
+        call    ioxread                 ; value is now available to read
+        res     lcden, a                ; set enable low
+        call    ioxwrite
         ret
 
 ; read from the IO expander
