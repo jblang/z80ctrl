@@ -32,6 +32,7 @@
 void uart_init(uint8_t uart, uint16_t ubrr);     /* Perform UART startup initialization. */
 uint16_t uart_testrx(uint8_t uart);		/* Check number of bytes in UART Rx FIFO */
 uint16_t uart_testtx(uint8_t uart);		/* Check number of bytes in UART Rx FIFO */
+uint8_t uart_peek (uint8_t uart);
 uint8_t uart_getc(uint8_t uart);		/* Get a byte from UART Rx FIFO */
 void uart_putc(uint8_t uart, uint8_t d);	/* Put a byte into UART Tx FIFO */
 void uart_flush(void);                          /* flush uart transmit buffers */

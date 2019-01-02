@@ -31,8 +31,11 @@
 #include "rtc.h"
 #include "diskemu.h"
 #include "sioemu.h"
+#include "msxkey.h"
 
 #include <avr/interrupt.h>
+#include <avr/pgmspace.h>
+#include <stdio.h>
 
 /**
  * Function pointer of to DMA transfer function to be run after IORQ is acknowledged
@@ -56,6 +59,7 @@ void (*dma_function)(void) = NULL;
 static uint8_t iox_dev = 0;
 static uint8_t iox_reg = 0;
 #endif
+
 
 /**
  * Handle Z80 IO request
@@ -149,6 +153,17 @@ void iorq_dispatch(uint8_t logged)
             } else if (!GET_WR) {
                 drive_dma_command(GET_DATA);
             }
+            break;
+        case MSX_KEY_COL:
+            if (!GET_RD) {
+                SET_DATA(msx_scanrow());
+                DATA_OUTPUT;
+            }
+            break;
+        case MSX_KEY_ROW:
+            if (!GET_WR) {
+                msx_setrow(GET_DATA);
+            } 
             break;
         default:
             if (!GET_RD) {

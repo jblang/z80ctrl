@@ -102,6 +102,21 @@ uint8_t uart_getc (uint8_t uart)
 	return d;
 }
 
+uint8_t uart_peek (uint8_t uart)
+{
+	uint8_t d, i;
+    uart &= 1;
+
+    // Non-blocking
+    if (RxFifo[uart].ct == 0)
+        return 0;
+
+	i = RxFifo[uart].ri;
+	d = RxFifo[uart].buff[i];
+
+	return d;
+}
+
 /* Put a character to transmit */
 
 uint16_t uart_testtx (uint8_t uart)

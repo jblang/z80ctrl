@@ -19,6 +19,9 @@
 # Base port on which to expose I/O expander card to Z80
 # IOX_BASE=0x00
 
+# Base port for MSX keyboard
+# MSX_KEY_BASE = 0xA9
+
 # Current git hash
 GITVERSION:= $(shell git log -1 --pretty='%h')
 
@@ -79,7 +82,10 @@ endif
 ifdef RTC_BASE
 	FEATURE_DEFINES += -DRTC_BASE=$(RTC_BASE)
 endif
-
+ifdef MSX_KEY_BASE
+	FEATURE_DEFINES += -DMSX_KEY_BASE=$(MSX_KEY_BASE)
+	OBJS += msxkey.o
+endif
 CFLAGS=-std=c99 -Os $(FEATURE_DEFINES) -DF_CPU=$(F_CPU) -DGITVERSION="\"${GITVERSION}\"" -mmcu=$(MCU) -I.
 
 $(BIN).hex: $(BIN).elf
