@@ -1,5 +1,7 @@
 # z80ctrl
 
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/sVV1PYWX18A/0.jpg)](https://www.youtube.com/watch?v=sVV1PYWX18A)
+
 z80ctrl is an AVR-based bootloader, debugger, and I/O device for a Z80 retrocomputer with the following features:
 
 - Runs CP/M software including WordStar, Zork, Ladder, Turbo Pascal and more!
@@ -11,8 +13,6 @@ z80ctrl is an AVR-based bootloader, debugger, and I/O device for a Z80 retrocomp
 - Single-step debugging, breakpoints, and watchpoints to trace Z80 bus activity in real-time
 - Flexible MIT-licensed firmware can be the basis of your own SBC or breadboard computer
 - Expandable SPI bus allows bridging other SPI peripherals to the Z80
-
-I have made a [series of videos](https://www.youtube.com/watch?v=M8EIAxMpA-o&list=PLwP_dSEH4Oi_jAljWQ1H-TBiBL34LqYYm) demonstrating the design and features of the system.
 
 ## Documentation
 
