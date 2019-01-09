@@ -31,7 +31,9 @@
 #include "rtc.h"
 #include "diskemu.h"
 #include "sioemu.h"
+#ifdef MSX_KEY_BASE
 #include "msxkey.h"
+#endif
 
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
@@ -154,6 +156,7 @@ void iorq_dispatch(uint8_t logged)
                 drive_dma_command(GET_DATA);
             }
             break;
+#ifdef MSX_KEY_BASE
         case MSX_KEY_COL:
             if (!GET_RD) {
                 SET_DATA(msx_scanrow());
@@ -165,6 +168,7 @@ void iorq_dispatch(uint8_t logged)
                 msx_setrow(GET_DATA);
             } 
             break;
+#endif
         default:
             if (!GET_RD) {
                 SET_DATA(0xFF);
