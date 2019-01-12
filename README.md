@@ -1,7 +1,5 @@
 # z80ctrl
 
-[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/sVV1PYWX18A/0.jpg)](https://www.youtube.com/watch?v=sVV1PYWX18A)
-
 z80ctrl is an AVR-based bootloader, debugger, and I/O device for a Z80 retrocomputer with the following features:
 
 - Runs CP/M software including WordStar, Zork, Ladder, Turbo Pascal and more!
@@ -14,6 +12,8 @@ z80ctrl is an AVR-based bootloader, debugger, and I/O device for a Z80 retrocomp
 - Flexible MIT-licensed firmware can be the basis of your own SBC or breadboard computer
 - Expandable SPI bus allows bridging other SPI peripherals to the Z80
 
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/sVV1PYWX18A/0.jpg)](https://www.youtube.com/watch?v=sVV1PYWX18A)
+
 ## Documentation
 
 Much of the information that was previously here has been moved to separate wiki pages:
@@ -25,7 +25,7 @@ Much of the information that was previously here has been moved to separate wiki
 - [Planned Features](https://github.com/jblang/z80ctrl/wiki/Planned-Features)
 - [Hardware Design Notes](https://github.com/jblang/z80ctrl/wiki/Hardware-Design-Notes)
 - [Software Design Notes](https://github.com/jblang/z80ctrl/wiki/Software-Design-Notes)
-- [Breadboard Instructions](https://github.com/jblang/z80ctrl/wiki/Breadboard-Instructions)
+- [IO Expander Board](https://github.com/jblang/z80ctrl/wiki/IO-Expander-Board)
 - Check the [Wiki Index](https://github.com/jblang/z80ctrl/wiki) for other topics.
 
 
@@ -33,10 +33,7 @@ Much of the information that was previously here has been moved to separate wiki
 
 - [Hackaday Project Page](https://hackaday.io/project/158338-z80ctrl)
 - [YouTube Playlist](https://www.youtube.com/watch?v=M8EIAxMpA-o&list=PLwP_dSEH4Oi_jAljWQ1H-TBiBL34LqYYm)
-- [OSH Park Shared Project (REV3)](https://oshpark.com/shared_projects/9QTa9yfi)
-- [Current Google Groups Thread](https://groups.google.com/d/topic/rc2014-z80/yc8g_ugiseo/discussion) (use this thread or the Hackaday Project Page to ask for help)
-- [Older Google Groups Thread](https://groups.google.com/d/topic/rc2014-z80/wi8MCKlJdlo/discussion) (please reply to the current thread instead)
-- [Even Older Google Groups Thread](https://groups.google.com/d/topic/rc2014-z80/EukbCJAxxIY/discussion)
+- [RC2014 Google Group](https://groups.google.com/forum/#!forum/rc2014-z80). Search for z80ctrl to find previous discussion threads.
 
 
 ## License
