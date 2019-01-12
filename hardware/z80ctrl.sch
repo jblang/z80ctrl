@@ -7,7 +7,7 @@ encoding utf-8
 Sheet 1 1
 Title "z80ctrl board"
 Date "2018-05-10"
-Rev "REV2"
+Rev "REV4"
 Comp "J.B. Langston"
 Comment1 "https://github.com/jblang/z80ctrl"
 Comment2 ""
