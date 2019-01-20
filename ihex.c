@@ -63,7 +63,7 @@ const char ihex_rc_text[] PROGMEM = {
     "invalid record format\0"
     "insufficient bytes\0"
     "checksum mismatch\0"
-    "unsupported_record type"
+    "unsupported record type"
 };
 
 /**
@@ -113,7 +113,7 @@ ihex_rec ihex_to_bin(char *ihex, uint8_t *bin)
     int i;
 
     if (strlen(ihex) < 11) {
-        record.rc == IHEX_FORMAT;
+        record.rc = IHEX_FORMAT;
         return record;
     }
     if (ihex[0] != ':') {
