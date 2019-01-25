@@ -78,16 +78,17 @@ uint8_t bus_master(void)
     uint8_t i = 255;
 
     BUSRQ_LO;           // request bus
-    // wait for BUSACK to go low
+    // Clock the Z80 until it releases control of the bus
     while (GET_BUSACK)  {
         CLK_TOGGLE;
         if (i-- == 0) {
-            printf_P(PSTR("bus request timed out\n"));
+            printf_P(PSTR("bus master request timed out\n"));
             BUSRQ_HI;
             return 0;
         }
     }
     MREQ_HI;
+    IORQ_HI;
     RD_HI;
     WR_HI;
     MREQ_OUTPUT;
@@ -104,13 +105,26 @@ uint8_t bus_master(void)
  */
 void bus_slave(void)
 {
+    uint8_t i = 255;
+
     MREQ_INPUT;
     IORQ_INPUT;
     RD_INPUT;
     WR_INPUT;
     ADDR_INPUT;
     DATA_INPUT;
+    SET_DATA(0); // Disable pullups on data and address lines
+    SET_ADDRLO(0);
     BUSRQ_HI;
+
+    // Clock the Z80 until it takes back control of the bus
+    while (!GET_BUSACK)  {
+        CLK_TOGGLE;
+        if (i-- == 0) {
+            printf_P(PSTR("bus master release timed out\n"));
+            return;
+        }
+    }
 }
 
 /**
