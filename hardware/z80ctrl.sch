@@ -7,7 +7,7 @@ encoding utf-8
 Sheet 1 1
 Title "z80ctrl board"
 Date "2018-05-10"
-Rev "REV4"
+Rev "REV5"
 Comp "J.B. Langston"
 Comment1 "https://github.com/jblang/z80ctrl"
 Comment2 ""
@@ -175,12 +175,12 @@ $EndComp
 $Comp
 L power:GND #PWR06
 U 1 1 5A66A903
-P 10700 2450
-F 0 "#PWR06" H 10700 2200 50  0001 C CNN
-F 1 "GND" H 10700 2300 50  0000 C CNN
-F 2 "" H 10700 2450 50  0001 C CNN
-F 3 "" H 10700 2450 50  0001 C CNN
-	1    10700 2450
+P 10700 2700
+F 0 "#PWR06" H 10700 2450 50  0001 C CNN
+F 1 "GND" H 10700 2550 50  0000 C CNN
+F 2 "" H 10700 2700 50  0001 C CNN
+F 3 "" H 10700 2700 50  0001 C CNN
+	1    10700 2700
 	1    0    0    -1  
 $EndComp
 $Comp
@@ -487,12 +487,12 @@ $EndComp
 $Comp
 L power:GND #PWR025
 U 1 1 5A66B6E0
-P 8150 3300
-F 0 "#PWR025" H 8150 3050 50  0001 C CNN
-F 1 "GND" H 8150 3150 50  0000 C CNN
-F 2 "" H 8150 3300 50  0001 C CNN
-F 3 "" H 8150 3300 50  0001 C CNN
-	1    8150 3300
+P 8050 3800
+F 0 "#PWR025" H 8050 3550 50  0001 C CNN
+F 1 "GND" H 8050 3650 50  0000 C CNN
+F 2 "" H 8050 3800 50  0001 C CNN
+F 3 "" H 8050 3800 50  0001 C CNN
+	1    8050 3800
 	1    0    0    -1  
 $EndComp
 $Comp
@@ -671,8 +671,6 @@ Wire Wire Line
 	8600 3250 8650 3250
 Wire Wire Line
 	6050 950  6050 1500
-Wire Wire Line
-	8200 3250 8150 3250
 Wire Wire Line
 	4600 1450 4600 1400
 Connection ~ 4600 1800
@@ -1059,8 +1057,6 @@ Wire Wire Line
 	8100 2900 8350 2900
 Wire Wire Line
 	6550 5100 7550 5100
-Wire Wire Line
-	8150 3300 8150 3250
 Wire Wire Line
 	8650 2900 9000 2900
 Wire Wire Line
@@ -1651,4 +1647,50 @@ F 3 "" H 3050 7600 50  0001 C CNN
 $EndComp
 Wire Wire Line
 	3050 7600 3100 7600
+$Comp
+L Device:Jumper JP3
+U 1 1 5C4DA6A5
+P 8350 3700
+F 0 "JP3" H 8350 3850 50  0000 C CNN
+F 1 "HALT" H 8350 3620 50  0000 C CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical" H 8350 3700 50  0001 C CNN
+F 3 "" H 8350 3700 50  0001 C CNN
+F 4 "A-197" H 8350 3700 60  0001 C CNN "TaydaPN"
+F 5 "952-2262-nd" H 8350 3700 60  0001 C CNN "DigikeyPN"
+	1    8350 3700
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	8650 3700 8650 3250
+Connection ~ 8650 3250
+Wire Wire Line
+	8050 3700 8050 3250
+Wire Wire Line
+	8050 3250 8200 3250
+Wire Wire Line
+	8050 3800 8050 3700
+Connection ~ 8050 3700
+$Comp
+L Device:Jumper JP4
+U 1 1 5C53C082
+P 10300 2650
+F 0 "JP4" H 10300 2800 50  0000 C CNN
+F 1 "RESET" H 10300 2570 50  0000 C CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical" H 10300 2650 50  0001 C CNN
+F 3 "" H 10300 2650 50  0001 C CNN
+F 4 "A-197" H 10300 2650 60  0001 C CNN "TaydaPN"
+F 5 "952-2262-nd" H 10300 2650 60  0001 C CNN "DigikeyPN"
+	1    10300 2650
+	1    0    0    -1  
+$EndComp
+Connection ~ 10000 2400
+Wire Wire Line
+	10700 2450 10700 2650
+Wire Wire Line
+	10600 2650 10700 2650
+Connection ~ 10700 2650
+Wire Wire Line
+	10700 2650 10700 2700
+Wire Wire Line
+	10000 2400 10000 2650
 $EndSCHEMATC
