@@ -114,11 +114,11 @@ mainloop:
 
 ; LCD configuration table
 lcdconfig:
-        db lcdreset1                    ; reset sequence from datasheet
-        db lcdreset2
-        db lcdfunction | lcd4bit | lcd2line | lcd5x8font
-        db lcdenable | lcddisplay
-        db lcdclear
+        defb lcdreset1                    ; reset sequence from datasheet
+        defb lcdreset2
+        defb lcdfunction | lcd4bit | lcd2line | lcd5x8font
+        defb lcdenable | lcddisplay
+        defb lcdclear
 lcdconfiglen: equ $ - lcdconfig
 
 ; print the time on the LCD

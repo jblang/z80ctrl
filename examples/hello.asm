@@ -49,4 +49,4 @@ rdylp:	in a, (uarts)
         out (uartd), a
 	ret
 
-msg:    db "hello, world", cr, lf, 0
+msg:    defb "hello, world", cr, lf, 0
