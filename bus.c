@@ -209,11 +209,9 @@ uint32_t base_addr = 0;
 /**
  * Read specified number of bytes from external memory to a buffer
  */
-void mem_read(uint32_t addr, uint8_t *buf, uint16_t len)
+void mem_read_bare(uint32_t addr, uint8_t *buf, uint16_t len)
 {
     addr += base_addr & 0xFC000;
-    if (!bus_master())
-        return;
 #ifdef PAGE_BASE
     DATA_OUTPUT;
     mem_page_bare(0, PAGE(addr & 0xF0000));
@@ -227,6 +225,7 @@ void mem_read(uint32_t addr, uint8_t *buf, uint16_t len)
     SET_ADDR(addr & 0xFFFF);
     for (uint16_t i = 0; i < len; i++) {
         buf[i] = GET_DATA;
+        //bus_log(bus_status());
         addr++;
 #ifdef PAGE_BASE
         if ((addr & 0xFFFF) == 0) {
@@ -248,17 +247,22 @@ void mem_read(uint32_t addr, uint8_t *buf, uint16_t len)
     }
     RD_HI;
     MREQ_HI;
+}
+
+void mem_read(uint32_t addr, uint8_t *buf, uint16_t len)
+{
+    if (!bus_master())
+        return;
+    mem_read_bare(addr, buf, len);
     bus_slave();
 }
 
 /**
  *  Write specified number of bytes to external memory from a buffer
  */
-void _mem_write(uint32_t addr, const uint8_t *buf, uint16_t len, uint8_t pgmspace)
+void _mem_write_bare(uint32_t addr, const uint8_t *buf, uint16_t len, uint8_t pgmspace)
 {
     addr += base_addr & 0xFC000;
-    if (!bus_master())
-        return;
     DATA_OUTPUT;
 #ifdef PAGE_BASE
     mem_page_bare(0, PAGE(addr & 0xF0000));
@@ -274,6 +278,7 @@ void _mem_write(uint32_t addr, const uint8_t *buf, uint16_t len, uint8_t pgmspac
         else
             SET_DATA(buf[i]);
         WR_LO;
+        //bus_log(bus_status());
         WR_HI;
         addr++;
 #ifdef PAGE_BASE
@@ -294,6 +299,13 @@ void _mem_write(uint32_t addr, const uint8_t *buf, uint16_t len, uint8_t pgmspac
     }
     MREQ_HI;
     DATA_INPUT;
+}
+
+void _mem_write(uint32_t addr, const uint8_t *buf, uint16_t len, uint8_t pgmspace)
+{
+    if (!bus_master())
+        return;
+    _mem_write_bare(addr, buf, len, pgmspace);
     bus_slave();
 }
 

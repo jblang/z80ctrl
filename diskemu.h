@@ -43,7 +43,7 @@ uint8_t drive_sector(void);
 void drive_write(uint8_t data);
 uint8_t drive_read(void);
 
-uint8_t drive_dma_result();
+uint8_t drive_dma_status();
 void drive_dma_command(uint8_t data);
 
 #endif

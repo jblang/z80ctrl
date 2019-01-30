@@ -150,7 +150,7 @@ void iorq_dispatch(uint8_t logged)
             break;
         case DRIVE_DMA:
             if (!GET_RD) { 
-                SET_DATA(drive_dma_result());
+                SET_DATA(drive_dma_status());
                 DATA_OUTPUT;
             } else if (!GET_WR) {
                 drive_dma_command(GET_DATA);
@@ -182,8 +182,10 @@ void iorq_dispatch(uint8_t logged)
     while (!GET_IORQ)
         CLK_TOGGLE;
     if (dma_function) {
-        dma_function();
+        if (bus_master())
+            dma_function();
         dma_function = NULL;
+        bus_slave();
     }
     DATA_INPUT;
     BUSRQ_HI;
