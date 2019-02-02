@@ -83,7 +83,7 @@
 #define IORQ 1
 #define MREQ 2
 
-#define BMASK (1 << BUSRQ) | (1 << IORQ) | (1 << MREQ)
+#define BMASK ((1 << BUSRQ) | (1 << IORQ) | (1 << MREQ))
 
 #define IORQ_INPUT DDRB &= ~(1 << IORQ)
 #define GET_IORQ (PINB & (1 << IORQ))
@@ -112,7 +112,7 @@
 #define CLK 6
 #define BUSACK 7
 
-#define DMASK (1 << RD) | (1 << WR) | (1 << CLK) | (1 << BUSACK)
+#define DMASK ((1 << RD) | (1 << WR) | (1 << CLK) | (1 << BUSACK))
 
 #define RD_INPUT DDRD &= ~(1 << RD)
 #define RD_OUTPUT DDRD |= (1 << RD)
@@ -149,6 +149,8 @@
 #define M1 4
 #define HALT 5
 #define NMI 7
+
+#define XMASK ((1 << RFSH) | (1 << RESET) | (1 << INTERRUPT) | (1 << M1) | (1 << HALT) | (1 << NMI))
 
 #define RFSH_INPUT iox_write(0, CTRLX_IODIR, iox_read(0, CTRLX_IODIR) | (1 << RFSH))
 #define GET_RFSH (iox_read(0, CTRLX_GPIO) & (1 << RFSH))
