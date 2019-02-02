@@ -26,6 +26,7 @@
 
 #include <stdint.h>
 #include <avr/pgmspace.h>
+#include <avr/interrupt.h>
 #include <stdio.h>
 
 #include "util.h"
@@ -70,4 +71,69 @@ int fatfs_getchar(FILE * stream)
         return c;
     else
         return EOF;
+}
+
+
+void config_timer(uint8_t timer, uint8_t prescaler)
+{
+    switch (timer) {
+        case 0:
+            TIMSK0 = 0;
+            TCCR0A = 0;
+            TCCR0B = prescaler & 7;
+            break;
+        case 1:
+            TIMSK1 = 0;
+            TCCR1A = 0;
+            TCCR1B = prescaler & 7;
+            break;
+        case 2:
+            TIMSK2 = 0;
+            TCCR2A = 0;
+            TCCR2B = prescaler & 7;
+            break;
+        case 3:
+            TIMSK3 = 0;
+            TCCR3A = 0;
+            TCCR3B = prescaler & 7;
+            break;
+    }
+}
+
+uint16_t get_tcnt(uint8_t timer)
+{
+    if (timer == 0) {
+        return TCNT0;
+    } else if (timer == 2) {
+        return TCNT2;
+    }
+
+    uint8_t sreg = SREG;
+    uint16_t value = 0;
+    cli();
+    if (timer == 1)
+        value = TCNT1;
+    else if (timer == 3)
+        value = TCNT3;
+    SREG = sreg;
+    return value;
+}
+
+void set_tcnt(uint8_t timer, uint16_t value)
+{
+    if (timer == 0) {
+        TCNT0 = value;
+        return;
+    } else if (timer == 2) {
+        TCNT2 = value;
+        return;
+    }
+
+    uint8_t sreg = SREG;
+    cli();
+    if (timer == 1)
+        TCNT1 = value;
+    else if (timer == 3)
+        TCNT3 = value;
+    SREG = sreg;
 }

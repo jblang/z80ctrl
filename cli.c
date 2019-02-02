@@ -25,6 +25,7 @@
  */
 
 #include <avr/pgmspace.h>
+#include <avr/interrupt.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -839,6 +840,58 @@ void cli_cls(int argc, char *argv[])
     printf_P(PSTR("\e[0m\e[;H\e[2J"));
 }
 
+/**
+ * Run a benchmark
+ */
+void cli_bench(int argc, char *argv[])
+{
+    uint32_t count = 1;
+    if (argc == 2)
+        count = strtoul(argv[1], NULL, 16);
+    for (uint32_t i = 0; i < count; i++) {
+        uint8_t sreg = SREG;
+        cli();
+        config_timer(1, CLKDIV1);
+
+        TCNT1 = 0;
+        uint8_t rd = GET_RD;
+        uint16_t rdt = TCNT1;
+
+        TCNT1 = 0;
+        uint8_t m1 = GET_M1;
+        uint16_t m1t = TCNT1;
+
+        TCNT1 = 0;
+        uint8_t addrlo = GET_ADDRLO;
+        uint16_t addrlot = TCNT1;
+
+        TCNT1 = 0;
+        uint8_t addrhi = GET_ADDRHI;
+        uint16_t addrhit = TCNT1;
+
+        TCNT1 = 0;
+        bus_stat bus = bus_status();
+        uint16_t bust = TCNT1;
+
+        TCNT1 = 0;
+        bus_stat busfast = bus_status_fast();
+        uint16_t busfastt = TCNT1;
+
+        config_timer(1, CLKOFF);
+        SREG = sreg;
+        printf_P(PSTR("rd %d\t"), TCNT_TO_US(rdt, F_CPU));
+        printf_P(PSTR("m1 %d\t"), TCNT_TO_US(m1t, F_CPU));
+        printf_P(PSTR("addrlo %d\t"), TCNT_TO_US(addrlot, F_CPU));
+        printf_P(PSTR("addrhi %d\t"), TCNT_TO_US(addrhit, F_CPU));
+        printf_P(PSTR("bus %d\t"), TCNT_TO_US(bust, F_CPU));
+        printf_P(PSTR("busfast %d\n"), TCNT_TO_US(busfastt, F_CPU));
+        uart_flush();
+    }
+}
+
+
+
+
 void cli_dispatch(char *buf);
 
 #define WHITESPACE " \t\r\n"
@@ -883,6 +936,7 @@ void cli_do(int argc, char *argv[])
     cli_exec(argv[1]);
 }
 
+
 /**
  * Lookup table of monitor command names
  */
@@ -892,6 +946,7 @@ const char cli_cmd_names[] PROGMEM =
     "base\0"
 #endif
     "baud\0"
+    "bench\0"
     "boot\0"
     "bus\0"
     "break\0"
@@ -948,6 +1003,7 @@ const char cli_cmd_help[] PROGMEM =
     "set the base memory address\0"                 // base
 #endif
     "configure UART baud rate\0"                    // baud
+    "run benchmarks\0"                              // bench
     "boot from specified disk image\0"              // boot
     "display low-level bus status\0"                // bus
     "set breakpoints\0"                             // break
@@ -1006,6 +1062,7 @@ void * const cli_cmd_functions[] PROGMEM = {
     &cli_base,
 #endif
     &cli_baud,
+    &cli_bench,
     &cli_boot,
     &cli_bus,
     &cli_breakwatch,
