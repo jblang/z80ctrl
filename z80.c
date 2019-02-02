@@ -33,6 +33,7 @@
 #include "disasm.h"
 #include "uart.h"
 #include "iorq.h"
+#include "util.h"
 
 /**
  * Breakpoints and watch names
@@ -157,8 +158,10 @@ uint8_t z80_tick()
 
     if (!GET_IORQ) {
         iorq_dispatch(logged);
-        if (logged)
+        if (logged) {
+            bus_log(iorq_stat);
             uart_flush();
+        }
     }
         
     return 0;

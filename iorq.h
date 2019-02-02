@@ -28,9 +28,12 @@
 #define IORQ_H
 
 #include <stdint.h>
+#include "bus.h"
 
 void iorq_dispatch(uint8_t logged); 
 
 extern void (*dma_function)(void);
+
+bus_stat iorq_stat ;
 
  #endif

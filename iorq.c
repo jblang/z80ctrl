@@ -175,8 +175,7 @@ void iorq_dispatch(uint8_t logged)
             }
     }
     if (logged) {
-        bus_stat status = bus_status();
-        bus_log(status);
+        iorq_stat = bus_status();
     }
     BUSRQ_LO;
     while (!GET_IORQ)
