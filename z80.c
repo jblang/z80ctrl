@@ -82,7 +82,7 @@ void z80_run(void)
     for(;;) {
         if (!GET_IORQ)
             iorq_dispatch(0);
-        if (++count == 0 && !GET_HALT && do_halt)
+        if (do_halt && ++count == 0 && !GET_HALT)
             break;
     }
     clk_stop();
@@ -157,8 +157,11 @@ uint8_t z80_tick()
     }
 
     if (!GET_IORQ) {
+        set_tcnt(1, 0);
         iorq_dispatch(logged);
         if (logged) {
+            uint16_t tcnt = get_tcnt(1);
+            printf_P(PSTR("\n\t%d us"), TCNT_TO_US(tcnt, F_CPU));
             bus_log(iorq_stat);
             uart_flush();
         }
@@ -191,6 +194,7 @@ void z80_debug(uint32_t cycles)
     char mnemonic[255];
     uint32_t c = 0;
     static uint8_t brkonce = 0;
+    config_timer(1, CLKDIV1);
 
     while (GET_HALT && (cycles == 0 || c < cycles)) {
         if ((ENABLED(watches, OPFETCH) || ENABLED(breaks, OPFETCH) || cycles)) {
@@ -216,4 +220,5 @@ void z80_debug(uint32_t cycles)
         if(z80_tick())
             break;
     }
+    config_timer(1, CLKOFF);
 }

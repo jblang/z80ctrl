@@ -68,7 +68,7 @@ static uint8_t iox_reg = 0;
  */
 void iorq_dispatch(uint8_t logged)
 {
-    cli();
+    //cli();
     switch (GET_ADDRLO) {
 #ifdef IOX_BASE
         case IOX_DEVPORT:
@@ -175,7 +175,7 @@ void iorq_dispatch(uint8_t logged)
             }
     }
     if (logged) {
-        iorq_stat = bus_status();
+        iorq_stat = bus_status_fast();
     }
     BUSRQ_LO;
     while (!GET_IORQ)
@@ -188,5 +188,5 @@ void iorq_dispatch(uint8_t logged)
     }
     DATA_INPUT;
     BUSRQ_HI;
-    sei();
+    //sei();
 }
