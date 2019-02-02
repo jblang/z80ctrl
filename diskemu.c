@@ -326,6 +326,7 @@ uint8_t drive_read(void)
         return 0;
     }
 
+    //printf("read from track %d sector %d\n", selected->track, selected->sector);
     if ((i = selected->byte) < SECTORSIZE) {
         selected->byte++;
         return sectorbuf[i];
@@ -382,12 +383,16 @@ int drive_bootload()
     return 1;
 }
 
-#define DMA_DRIVE 0
-#define DMA_TRACK DMA_DRIVE+1
-#define DMA_STATUS DMA_TRACK+2
-#define DMA_BUFFER DMA_STATUS+1
-#define DMA_DPB DMA_BUFFER+TRACKSIZE
-#define DMA_SKEW DMA_DPB+DPBSIZE
+typedef struct {
+    uint8_t drive;
+    uint16_t track;
+    uint8_t sector;
+    uint8_t count;
+    uint16_t addr;
+    uint16_t dpb;
+    uint16_t skew;
+    uint8_t status;
+} dma_param;
 
 #define DMA_OK 0
 #define DMA_INVALID_DRIVE 1
@@ -395,24 +400,24 @@ int drive_bootload()
 #define DMA_UNMOUNTED_DRIVE 3
 #define DMA_DRIVE_ERROR 4
 
-#define DMA_ADDR_UNSET 0
-#define DMA_ADDR_HALFSET 1
-#define DMA_ADDR_SET 2
+#define DMA_PARAM_UNSET 0
+#define DMA_PARAM_HALFSET 1
+#define DMA_PARAM_SET 2
 
 #define DMA_CMD_RESET 0
 #define DMA_CMD_DPB 1
 #define DMA_CMD_READ 2
 #define DMA_CMD_WRITE 3
 
-uint16_t dma_addr = 0;
-uint8_t dma_status = DMA_ADDR_UNSET;
+uint16_t dma_param_addr = 0;
+uint8_t dma_param_status = DMA_PARAM_UNSET;
 
 /**
- * Get status of DMA address configuration
+ * Get status of DMA parameter configuration
  */
 uint8_t drive_dma_status()
 {
-    return dma_status;
+    return dma_param_status;
 }
 
 uint8_t altair_dpb[] = {
@@ -474,21 +479,19 @@ uint8_t *skews[] = {
  */
 void drive_dma_setdpb()
 {
-    uint8_t buf[SKEWSIZE+DPBSIZE];
-    mem_read_bare(dma_addr, buf, 1);
-    uint8_t drive = buf[DMA_DRIVE];
-    uint8_t status = DMA_OK;
-    printf("setting dbp for %d; ", drive);
-    if (drive >= NUMDRIVES)
-        status = DMA_INVALID_DRIVE;
-    else if (!(drives[drive].status & (1 << S_MOUNTED)))
-        status = DMA_UNMOUNTED_DRIVE;
+    dma_param p;
+    mem_read_bare(dma_param_addr, (uint8_t *)&p, sizeof(p));
+    //printf("setting dpb at %04x and skewtbl at %04x for drive %d\n", p.dpb, p.skew, p.drive);
+    p.status = DMA_OK;
+    if (p.drive >= NUMDRIVES)
+        p.status = DMA_INVALID_DRIVE;
+    else if (!(drives[p.drive].status & (1 << S_MOUNTED)))
+        p.status = DMA_UNMOUNTED_DRIVE;
     else {
-        mem_write_bare(dma_addr+DMA_DPB, dpbs[drives[drive].format], DPBSIZE);
-        mem_write_bare(dma_addr+DMA_SKEW, skews[drives[drive].format], SKEWSIZE);
+        mem_write_bare(p.dpb, dpbs[drives[p.drive].format], DPBSIZE);
+        mem_write_bare(p.skew, skews[drives[p.drive].format], SKEWSIZE);
     }
-    mem_write_bare(dma_addr+DMA_STATUS, &status, 1);
-    printf("status %d\n", status);
+    mem_write_bare(dma_param_addr, (uint8_t *)&p, sizeof(p));
 }
 
 /**
@@ -498,33 +501,28 @@ void drive_dma_read()
 {
     UINT br;
     FRESULT fr;
-    uint8_t buf[TRACKSIZE+1];   // track + status
-    mem_read_bare(dma_addr, buf, 3);
-    uint8_t drive = buf[DMA_DRIVE];
-    uint16_t track = buf[DMA_TRACK] | (buf[DMA_TRACK+1] << 8);
-    uint8_t status = DMA_OK;
-    if (drive >= NUMDRIVES)
-        status = DMA_INVALID_DRIVE;
-    else if (track >= NUMTRACKS)
-        status = DMA_INVALID_TRACK;
-    else if (!(drives[drive].status & (1 << S_MOUNTED)))
-        status = DMA_UNMOUNTED_DRIVE;
+    dma_param p;
+    mem_read_bare(dma_param_addr, (uint8_t *)&p, sizeof(p));
+    uint8_t buf[SECTORSIZE];
+    p.status = DMA_OK;
+    if (p.drive >= NUMDRIVES)
+        p.status = DMA_INVALID_DRIVE;
+    else if (p.track >= NUMTRACKS)
+        p.status = DMA_INVALID_TRACK;
+    else if (!(drives[p.drive].status & (1 << S_MOUNTED)))
+        p.status = DMA_UNMOUNTED_DRIVE;
     else {
-        //printf_P(PSTR("read disk %d sector %d track %d address %04x\n"), dma_disk, dma_sector, dma_track, dma_addr);
-        if ((fr = f_lseek(&drives[drive].fp, OFFSET(track, 0))) != FR_OK) {
+        //printf_P(PSTR("dma read drive %d track %d sector %d address %04x\n"), p.drive, p.track, p.sector, p.addr);
+        if ((fr = f_lseek(&drives[p.drive].fp, OFFSET(p.track, p.sector))) != FR_OK) {
             printf_P(PSTR("seek error: %S\n"), strlookup(fr_text, fr));
-            status = DMA_DRIVE_ERROR;
-        } else if ((fr = f_read(&drives[drive].fp, buf+1, TRACKSIZE, &br)) != FR_OK) {
+            p.status = DMA_DRIVE_ERROR;
+        } else if ((fr = f_read(&drives[p.drive].fp, buf, SECTORSIZE, &br)) != FR_OK) {
             printf_P(PSTR("read error: %S\n"), strlookup(fr_text, fr));
-            status = DMA_DRIVE_ERROR;
+            p.status = DMA_DRIVE_ERROR;
         }
     }
-    if (status == DMA_OK) {
-        buf[0] = status;
-        mem_write_bare(dma_addr+DMA_STATUS, buf, TRACKSIZE+1);
-    } else {
-        mem_write_bare(dma_addr+DMA_STATUS, &status, 1);
-    }
+    mem_write_bare(p.addr, buf, SECTORSIZE);
+    mem_write_bare(dma_param_addr, (uint8_t *)&p, sizeof(p));
 }
 
 /**
@@ -534,31 +532,30 @@ void drive_dma_write()
 {
     UINT bw;
     FRESULT fr;
-    uint8_t buf[TRACKSIZE];
-    mem_read_bare(dma_addr, buf, 3);
-    uint8_t drive = buf[DMA_DRIVE];
-    uint16_t track = buf[DMA_TRACK] | (buf[DMA_TRACK+1] << 8);
-    uint8_t status = DMA_OK;
-    if (drive >= NUMDRIVES)
-        status = DMA_INVALID_DRIVE;
-    else if (track >= NUMTRACKS)
-        status = DMA_INVALID_TRACK;
-    else if (!(drives[0].status & (1 << S_MOUNTED)))
-        status = DMA_UNMOUNTED_DRIVE;
+    dma_param p;
+    mem_read_bare(dma_param_addr, (uint8_t *)&p, sizeof(p));
+    uint8_t buf[SECTORSIZE];
+    p.status = DMA_OK;
+    if (p.drive >= NUMDRIVES)
+        p.status = DMA_INVALID_DRIVE;
+    else if (p.track >= NUMTRACKS)
+        p.status = DMA_INVALID_TRACK;
+    else if (!(drives[p.drive].status & (1 << S_MOUNTED)))
+        p.status = DMA_UNMOUNTED_DRIVE;
     else {
-        //printf_P(PSTR("write disk %d sector %d track %d address %04x\n"), dma_disk, dma_sector, dma_track, dma_addr);
-        if ((fr = f_lseek(&drives[drive].fp, OFFSET(track, 0))) != FR_OK) {
-            status = DMA_DRIVE_ERROR;
+        //printf_P(PSTR("dma write drive %d track %d sector %d address %04x\n"), p.drive, p.track, p.sector, p.addr);
+        if ((fr = f_lseek(&drives[p.drive].fp, OFFSET(p.track, p.sector))) != FR_OK) {
+            p.status = DMA_DRIVE_ERROR;
             printf_P(PSTR("seek error: %S\n"), strlookup(fr_text, fr));
         } else {
-            mem_read_bare(dma_addr+DMA_BUFFER, buf, TRACKSIZE);
-            if ((fr = f_write(&drives[drive].fp, buf, TRACKSIZE, &bw)) != FR_OK) {
-                status = DMA_DRIVE_ERROR;
+            mem_read_bare(p.addr, buf, SECTORSIZE);
+            if ((fr = f_write(&drives[p.drive].fp, buf, SECTORSIZE, &bw)) != FR_OK) {
+                p.status = DMA_DRIVE_ERROR;
                 printf_P(PSTR("write error: %S\n"), strlookup(fr_text, fr));
             }
         }
     }
-    mem_write_bare(dma_addr+DMA_STATUS, &status, 1);
+    mem_write_bare(dma_param_addr, (uint8_t *)&p, sizeof(p));
 }
 
 /**
@@ -566,20 +563,21 @@ void drive_dma_write()
  */
 void drive_dma_command(uint8_t data) 
 {
-    switch (dma_status) {
-        case DMA_ADDR_UNSET:
-            dma_addr = data;
-            dma_status = DMA_ADDR_HALFSET;
+    switch (dma_param_status) {
+        case DMA_PARAM_UNSET:
+            dma_param_addr = data;
+            dma_param_status = DMA_PARAM_HALFSET;
             break;
-        case DMA_ADDR_HALFSET:
-            dma_addr |= (data << 8);
-            dma_status = DMA_ADDR_SET;
+        case DMA_PARAM_HALFSET:
+            dma_param_addr |= (data << 8);
+            dma_param_status = DMA_PARAM_SET;
+            printf("disk dma address is %04x\n", dma_param_addr);
             break;
-        case DMA_ADDR_SET:
+        case DMA_PARAM_SET:
             switch(data) {
                 case DMA_CMD_RESET:
-                    dma_status = DMA_ADDR_UNSET;
-                    dma_addr = 0;
+                    dma_param_status = DMA_PARAM_UNSET;
+                    dma_param_addr = 0;
                     dma_function = NULL;
                     break;
                 case DMA_CMD_DPB:
