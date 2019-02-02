@@ -83,10 +83,10 @@
 #define IORQ 1
 #define MREQ 2
 
+#define BMASK (1 << BUSRQ) | (1 << IORQ) | (1 << MREQ)
+
 #define IORQ_INPUT DDRB &= ~(1 << IORQ)
 #define GET_IORQ (PINB & (1 << IORQ))
-
-#define GET_BFLAGS (PINB & ((1<<BUSRQ) | (1<<IORQ) | (1<<MREQ)))
 
 #define BUSRQ_OUTPUT DDRB |= (1 << BUSRQ)
 #define GET_BUSRQ (PINB & (1 << BUSRQ))
@@ -112,6 +112,8 @@
 #define CLK 6
 #define BUSACK 7
 
+#define DMASK (1 << RD) | (1 << WR) | (1 << CLK) | (1 << BUSACK)
+
 #define RD_INPUT DDRD &= ~(1 << RD)
 #define RD_OUTPUT DDRD |= (1 << RD)
 #define GET_RD (PIND & (1 << RD))
@@ -129,8 +131,6 @@
 #define CLK_HI PORTD |= (1 << CLK)
 #define CLK_LO PORTD &= ~(1 << CLK)
 #define CLK_TOGGLE PIND |= (1 << CLK)
-
-#define GET_DFLAGS (PIND & ((1<<RD) | (1<<WR) | (1<<CLK) | (1<<BUSACK)))
 
 #define BUSACK_INPUT DDRD &= ~(1 << BUSACK)
 #define GET_BUSACK (PIND & (1 << BUSACK))
@@ -201,6 +201,7 @@ void clk_stop(void);
 uint8_t bus_master(void);
 void bus_slave(void);
 bus_stat bus_status(void);
+bus_stat bus_status_fast(void);
 void bus_log(bus_stat status);
 void bus_init(void);
 

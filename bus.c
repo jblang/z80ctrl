@@ -130,13 +130,27 @@ void bus_slave(void)
 /**
  * Retrieve the current bus status
  */
-bus_stat bus_status()
+bus_stat bus_status(void)
 {
     bus_stat status;
-    status.flags = GET_BFLAGS | GET_DFLAGS;
-    status.xflags = GET_XFLAGS;
+    uint16_t iox = iox_read16(0, GPIOA0);
+    status.flags = (PINB & BMASK) | (PIND & DMASK);
+    status.xflags = iox >> 8;
+    status.data = DATA_PIN;
+    status.addr = ADDRLO_PIN | ((iox & 0xFF) << 8);
+    return status;
+}
+
+/**
+ * Retrieve only the bus signals that can be retrieved quickly
+ */
+bus_stat bus_status_fast(void)
+{
+    bus_stat status;
+    status.flags = (PINB & BMASK) | (PIND & DMASK);
+    status.xflags = 0xFF;
     status.data = GET_DATA;
-    status.addr = GET_ADDR;
+    status.addr = GET_ADDRLO;
     return status;
 }
 
@@ -150,8 +164,8 @@ void bus_log(bus_stat status)
         status.addr,
         status.data,
         0x20 <= status.data && status.data <= 0x7e ? status.data : ' ',
-        !FLAG(status.flags, MREQ) ? "memrq" :
-        !FLAG(status.flags, IORQ) ? "iorq " : "     ",
+        !FLAG(status.flags, MREQ) ? "mreq" :
+        !FLAG(status.flags, IORQ) ? "iorq " : "    ",
         !FLAG(status.flags, RD) ? "rd  " :
         !FLAG(status.flags, WR) ? "wr  " :
         !FLAG(status.xflags, RFSH) ? "rfsh" : "    ",
