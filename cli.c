@@ -971,8 +971,8 @@ const char cli_cmd_names[] PROGMEM =
     "halt\0"
     "help\0"
     "in\0"
-    "ioxread\0"
-    "ioxwrite\0"
+    "ioxrd\0"
+    "ioxwr\0"
     "loadbin\0"
     "loadhex\0"
     "mount\0"
@@ -1160,7 +1160,12 @@ void cli_loop(void)
 {
     char buf[MAXBUF];
     printf_P(PSTR(
-        "z80ctrl by J.B. Langston "
+    "\n      ___   ___       _        _ "
+    "\n  ___( _ ) / _ \\  ___| |_ _ __| |"
+    "\n |_  / _ \\| | | |/ __| __| '__| |"
+    "\n  / / (_) | |_| | (__| |_| |  | |"
+    "\n /___\\___/ \\___/ \\___|\\__|_|  |_|"
+    "\n by J.B. Langston "
 #ifdef GITVERSION
         "(" GITVERSION ")"
 #endif
