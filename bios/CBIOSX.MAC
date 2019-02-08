@@ -473,53 +473,6 @@ setdma:	ld	l,c		; set dma address
 	ld	(dmaad),hl
 	ret
 
-
-;----------------------------------------------------------------------------
-; z80ctrl DMA routines
-;----------------------------------------------------------------------------
-; initialize the dma address
-;   HL = address to set
-dmainit:
-	ld	a,0		; disable dma initially
-	ld	(dmaena),a
-	ld	c,dmaport	; talking to the disk dma port
-	in	a,(c)		; check status of the dma address
-	cp	dmaunset	; if it's unset, we're ready to set a new one
-	jp	z,sndaddr
-	cp	dmaset		; is the address fully set?
-	jp	nz,rstaddr	; if so, we're ready to reset it
-	cp	dmahalfset	; only remaining possiblity is half set
-	ret	nz		; if not, abort because of unexpected result
-	out	(c),a		; send dummy byte before resetting
-	in	a,(c)		; confirm that address is now fully set
-	cp	dmaset
-	ret	nz		; if not, abort because of unexpected result
-rstaddr:
-	ld	a,cmdreset	; send the command to reset the address
-	out	(c),a
-	in	a,(c)		; confirm that dma address is now unset
-	cp	dmaunset
-	ret	nz		; if not, abort because of unexpected result
-sndaddr:
-	out	(c),l		; send the address of the DMA block
-	in	a,(c)		; confirm that address is now half set
-	cp	dmahalfset
-	ret	nz		; if not, abort because of unexpected result
-	out	(c),h
-	in	a,(c)		; verify that the address is set now
-	cp	dmaset
-	ret	nz		; if not, abort because of unexpected result
-	ld	a,1		; everything worked as expected, enable dma
-	ld	(dmaena),a
-	ret
-
-; set dma parameters
-dmaparam:
-	ld	a,(drive)	; set disk number
-	ld	(dmadrive),a
-	ld	hl,(track)	; set track number
-	ld	(dmatrack),hl
-	ret
 ;----------------------------------------------------------------------------
 ; read - Read sector BIOS entry. Read one sector using the drive, 
 ;    track, sector, and dmaad previously specified.
@@ -541,35 +494,40 @@ dmaparam:
 ;    Clobbers all
 ;----------------------------------------------------------------------------
 read:
+	ld	b,0		; B=0 indicates read
+
+; Common code for read/write
+rwoper:
 	ld	a,(dmaena)	; check if DMA is enabled
 	or	a
-	jp	z,altread	; if not, fall back to altair interface
-	;call	ckflush		; flush track buffer if needed
+	jp	nz,dodma	; yes, do dma transfer
+	or	b		; no, fall back to altair read or write
+	jp	z,altread	; B=0 indicates read
+	jp	altwrite	; B=1 indicates write
+dodma:
+	push	bc		; save read/write flag
+	call	ckflush		; flush track buffer if needed
+	jp	nz,rwfail	; track flush error, exit
 	call	readtrk		; fill track buffer if needed
-	jp	nz,exitdio	; track read error, exit
+	jp	nz,rwfail	; track read error, exit
 	ld	a,(sector)
 	dec	a
-	call	csecaddr		; HL=address of sector in trkbuf
-	ld	de,(dmaad)	; DE=destination address
-	ld	bc,csecsiz	; BC=128 bytes
-	ldir			; copy
-	xor	a
+	call	seclookup	; HL=address of sector in trkbuf
+	ld	de,(dmaad)	; DE=dma address
+	pop	bc		; restore read/write flag
+	xor	a		; check read/write flag
+	or	b		; B=0 means read, B=1 means write
+	ld	bc,csecsiz	; BC=128 bytes long
+	jp	z,docopy	; read; nothing else to do before copy
+	ld	(bfdirty),a	; set dirty flag for write
+	ex	de,hl		; swap source/dest for write
+docopy:
+	ldir			; copy requested sector
+	xor	a		; return success code
 	ret
-exitdio:
+rwfail:
 	ld	a,bioserr	; return error code
 	ret	
-altread:
-	call	poshed		; select disk 'drive' and position disk head to 'track'
-	call	secget		; position head to desired sector
-	di
-	call	blread
-	ld	a,cuload	; unload head command
-	out	(dskcon),a	; do it
-	ei
-	ld	de,trkbuf+3	; address of sector just read
-	ld	hl,(dmaad)	; destination address
-	ex	de,hl		; prepare for ldir
-	ldir			; move
 
 ;----------------------------------------------------------------------------
 ; write - Write sector BIOS entry. Write one sector using the drive,
@@ -591,37 +549,11 @@ altread:
 ;    Clobbers all
 ;----------------------------------------------------------------------------
 write:
-	ld	a,undef		; invalidate buffered data
-	ld	(bfdrive),a
-	ld	(bftrack),a
-	call	poshed		; select desired disk and position to desired track
-	call	secget		; position head to desired sector
-	ld	hl,(dmaad)	; source of sector is in 'dmaad'
-	ld	de,trkbuf+3	; destination inside local buffer
-	ld	bc,csecsiz	; sector size is 128
-	ldir			; block move
-	ld	a,cwrseq	; command for 'start write enable sequence'
-	out	(dskcon),a	; do it
-	di
-	ld	hl,trkbuf	; point to first byte in local buffer
-	ld	b,asecsiz+1	; number of bytes to write (additional byte triggers 'real' write)
-wready:	in	a,(statin)	; get status
-	rra			; get bit for ready for write
-	jp	c,wready	; loop until ready for write
-	ld	a,(hl)		; byte to write
-	out	(dskwrit),a	; write byte
-	inc	hl		; point to next byte
-	dec	b		; decrement counter of bytes
-	jp	nz,wready	; jp if not done
-	ld	a,cuload	; unload head command
-	out	(dskcon),a	; do it
-	ei
-	xor	a		; <A> := 0 means no error
-	ret
+	ld	b,1		; B=1 indicates write
+	jp	rwoper		; execute common code
 
 ;---------------------------------------------------------------------------
-; csecaddr - Convert hard sector in a to address within trkbuf for
-;    the specified sector
+; seclookup - Look up address within trkbuf for the specified sector
 ;
 ; On Entry
 ;    a = Hard sector number
@@ -630,18 +562,17 @@ wready:	in	a,(statin)	; get status
 ;    hl->sector buffer in trkbuf
 ;    Clobbers a,b,c,H,L
 ;---------------------------------------------------------------------------
-csecaddr:
-	ld	hl,secaddr	; hl->sector address table
-	ld	b,0		; form bc=sector*2
-	rlca			; a=sector*2 (2 bytes per table entry)
-	ld	c,a		; bc=sector*2
-	add	hl,bc		; hl->address table entry for passed sector
-	
-	ld	a,(hl)		; a=lsb of sector buffer address
-	inc	hl		;
-	ld	H,(hl)		; H=msb of sector buffer address
-	ld	L,a		; hl->sector buffer
-	ret			;
+seclookup:
+	ld	hl,secaddr	; HL=sector address table
+	rlca			; A=sector*2 (2 bytes per table entry)
+	ld	b,0		; BC=sector*2
+	ld	c,a
+	add	hl,bc		; HL=address of table entry for sector
+	ld	a,(hl)		; A=lsb of sector buffer address
+	inc	hl
+	ld	h,(hl)		; H=msb of sector buffer address
+	ld	l,a		; HL=sector buffer
+	ret
 
 ;----------------------------------------------------------------------------
 ; ckflush - Check if track buffer should be flushed. This
@@ -662,22 +593,23 @@ ckflush:
 	ld	a,(bfdirty)	; see if track buffer is dirty
 	or	a
 	ret	z		; no, exit with Z set
-	ld	a,(bfdrive)	; L=buffered drive
-	ld	l,a
 	ld	a,(drive)	; A=requested drive
-	cp	l		; same drive?
-	jp	nz,wrttrk	; no, flush
-	ld	a,(track)	; a=requested track number
-	cp	H		; same track?
-	ret	z		; yes, no need to flush
+	ld	hl,bfdrive	; HL=pointer to buffered drive
+	cp	(hl)		; same drive?
+	jp	nz,wrttrk	; no, flush track buffer
+	ld	hl,(track)	; HL=requested track
+	ld	de,(bftrack)	; DE=buffered track
+	or	a		; clear carry
+	sbc	hl,de		; 16-bit compare of track number
+	ret	z		; return if same track
 wrttrk:
-	xor	a
-	ld	(bfdirty),a	; clear buffer dirty flag
 	call	dmaparam	; set DMA parameters
 	ld	a,cmdwrite	; initiate DMA read
 	out	(dmaport),a
 	ld	a,(dmaerr)	; set zero flag if there was an error
 	or	a
+	ret	nz
+	ld	(bfdirty),a	; clear buffer dirty flag
 	ret
 
 ;----------------------------------------------------------------------------
@@ -705,15 +637,14 @@ readtrk:
 	jp	nz,rtnew	; no, load track from new drive
 	ld	hl,(track)	; HL=requested track
 	ld	de,(bftrack)	; DE=buffered track
-	or	a		; 16-bit compare
-	sbc	hl,de
-	add 	hl,de
-	cp	h		; same track?
-	ret	z		; yes, track already buffered
+	or	a		; clear carry
+	sbc	hl,de		; 16-bit compare of track number
+	ret	z		; return if same track
 rtnew:
 	ld	a,undef		; invalidate buffered data
 	ld	(bfdrive),a
 	ld	(bftrack),a
+	ld	(bftrack+1),a
 	call	dmaparam	; set DMA parameters
 	ld	a,cmdread	; initiate DMA read
 	out	(dmaport),a
@@ -723,12 +654,102 @@ rtnew:
 	ld	a,(dmadrive)	; set buffered drive and track
 	ld	(bfdrive),a	; to the ones just read
 	ld	hl,(dmatrack)
+	ld	(bftrack),hl
+	ret
+
+;----------------------------------------------------------------------------
+; z80ctrl DMA routines
+;----------------------------------------------------------------------------
+; initialize the DMA address
+;   HL = address to set
+dmainit:
+	ld	a,0		; disable DMA initially
+	ld	(dmaena),a
+	ld	c,dmaport	; talk to the z80ctrl DMA port
+	in	a,(c)		; check status of the address
+	cp	dmaunset	; if it's unset, we're ready to set a new one
+	jp	z,setaddr
+	cp	dmaset		; is the address fully set?
+	jp	z,rstaddr	; if so, we're ready to reset it
+	cp	dmahalfset	; only remaining possiblity is half set
+	ret	nz		; if not, abort because of unexpected result
+	out	(c),a		; send dummy byte before resetting
+	in	a,(c)		; confirm that address is now fully set
+	cp	dmaset
+	ret	nz		; if not, abort because of unexpected result
+rstaddr:
+	ld	a,cmdreset	; send the command to reset the address
+	out	(c),a
+	in	a,(c)		; confirm that address is now unset
+	cp	dmaunset
+	ret	nz		; if not, abort because of unexpected result
+setaddr:
+	out	(c),l		; send the address of the DMA block
+	in	a,(c)		; confirm that address is now half set
+	cp	dmahalfset
+	ret	nz		; if not, abort because of unexpected result
+	out	(c),h
+	in	a,(c)		; verify that the address is set now
+	cp	dmaset
+	ret	nz		; if not, abort because of unexpected result
+	ld	a,1		; everything worked as expected, enable dma
+	ld	(dmaena),a
+	ret
+
+; set DMA parameters from BIOS parameters
+dmaparam:
+	ld	a,(drive)	; set drive number
+	ld	(dmadrive),a
+	ld	hl,(track)	; set track number
 	ld	(dmatrack),hl
 	ret
 
 ;-----------------------------------------------------------------------------
-;  Low-level disk routines
+;  Low-level Altair disk routines (unchanged from SIMH BIOS)
 ;-----------------------------------------------------------------------------
+; Altair read routine
+altread:
+	call	poshed		; select disk 'drive' and position disk head to 'track'
+	call	secget		; position head to desired sector
+	di
+	call	blread
+	ld	a,cuload	; unload head command
+	out	(dskcon),a	; do it
+	ei
+	ld	de,trkbuf+3	; address of sector just read
+	ld	hl,(dmaad)	; destination address
+	ex	de,hl		; prepare for ldir
+	ldir			; move
+	xor	a
+	ret
+
+; Altair write routine
+altwrite:
+	call	poshed		; select desired disk and position to desired track
+	call	secget		; position head to desired sector
+	ld	hl,(dmaad)	; source of sector is in 'dmaad'
+	ld	de,trkbuf+3	; destination inside local buffer
+	ld	bc,csecsiz	; sector size is 128
+	ldir			; block move
+	ld	a,cwrseq	; command for 'start write enable sequence'
+	out	(dskcon),a	; do it
+	di
+	ld	hl,trkbuf	; point to first byte in local buffer
+	ld	b,asecsiz+1	; number of bytes to write (additional byte triggers 'real' write)
+wready:	in	a,(statin)	; get status
+	rra			; get bit for ready for write
+	jp	c,wready	; loop until ready for write
+	ld	a,(hl)		; byte to write
+	out	(dskwrit),a	; write byte
+	inc	hl		; point to next byte
+	dec	b		; decrement counter of bytes
+	jp	nz,wready	; jp if not done
+	ld	a,cuload	; unload head command
+	out	(dskcon),a	; do it
+	ei
+	xor	a		; <A> := 0 means no error
+	ret
+
 ; Postcondition: 'trkbuf' contains 'asecsiz' many bytes, <BC> is set to 'csecsiz'
 blread:	ld	hl,trkbuf	; address of sector buffer
 	ld	e,asecsiz	; number of bytes to read
@@ -908,8 +929,11 @@ curtrk:	db	undef		; current track# drive 0 (logical 1)
 	db	undef		; current track# drive 6 (logical 7)
 	db	undef		; current track# drive 7 (logical 8)
 
+;-----------------------------------------------------------------------------
+;  Disk read/write parameters
+;-----------------------------------------------------------------------------
 drive:	db	0
-track:	dw	0	; MUST follow drive
+track:	dw	0
 sector:	db	0
 dmaad:	dw	0
 
@@ -940,21 +964,19 @@ chk07:	ds	cks
 ;-----------------------------------------------------------------------------
 dmadrive:	db	0		; dma drive
 dmatrack:	dw	0		; dma track
-dmasector:	db	0		; dma sector
-dmatrklen: 	db	spt		; track length (sectors per track)
-dmaseclen:	db	asecsiz		; sector length (bytes per sector)
-dmatarget:	dw	trkbuf		; DMA transfer target 
+dmatrklen: 	dw	asecsiz*spt	; track length (sectors per track)
+dmabuf:		dw	trkbuf		; DMA target address
 dmadpb:		dw	dpb		; Disk parameter block address
 dmaskew:	dw	skewtbl		; Skew table address
-dmaerr:		dw	undef		; DMA error status
+dmaerr:		db	undef		; DMA error status
 dmaena:		db	0		; DMA enabled flag
 
 ;-----------------------------------------------------------------------------
-;  Disk buffering
+;  Track buffering
 ;-----------------------------------------------------------------------------
 bfdirty:	db	0		; non-zero if buffer has been written to
 bfdrive:	db	undef		; drive currently in track buffer
-bftrack:	dw	undef		; currently buffered track (MUST follow bfdrive)
+bftrack:	db	undef,undef	; currently buffered track
 trkbuf:		ds	(asecsiz*spt)	; track buffer
 
 
