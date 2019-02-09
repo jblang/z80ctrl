@@ -603,7 +603,10 @@ ckflush:
 	sbc	hl,de		; 16-bit compare of track number
 	ret	z		; return if same track
 wrttrk:
-	call	dmaparam	; set DMA parameters
+	ld	a,(bfdrive)	; set DMA drive number
+	ld	(dmadrive),a
+	ld	hl,(bftrack)	; set DMA track number
+	ld	(dmatrack),hl
 	ld	a,cmdwrite	; initiate DMA read
 	out	(dmaport),a
 	ld	a,(dmaerr)	; set zero flag if there was an error
@@ -645,7 +648,10 @@ rtnew:
 	ld	(bfdrive),a
 	ld	(bftrack),a
 	ld	(bftrack+1),a
-	call	dmaparam	; set DMA parameters
+	ld	a,(drive)	; set DMA drive number
+	ld	(dmadrive),a
+	ld	hl,(track)	; set DMA track number
+	ld	(dmatrack),hl
 	ld	a,cmdread	; initiate DMA read
 	out	(dmaport),a
 	ld	a,(dmaerr)	; set zero flag if there was an error
@@ -694,14 +700,6 @@ setaddr:
 	ret	nz		; if not, abort because of unexpected result
 	ld	a,1		; everything worked as expected, enable dma
 	ld	(dmaena),a
-	ret
-
-; set DMA parameters from BIOS parameters
-dmaparam:
-	ld	a,(drive)	; set drive number
-	ld	(dmadrive),a
-	ld	hl,(track)	; set track number
-	ld	(dmatrack),hl
 	ret
 
 ;-----------------------------------------------------------------------------
