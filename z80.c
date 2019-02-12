@@ -161,7 +161,7 @@ uint8_t z80_tick()
         iorq_dispatch(logged);
         if (logged) {
             uint16_t tcnt = get_tcnt(1);
-            printf_P(PSTR("\n\t%d us"), TCNT_TO_US(tcnt, F_CPU));
+            printf_P(PSTR("\t%d us"), TCNT_TO_US(tcnt, F_CPU));
             bus_log(iorq_stat);
             uart_flush();
         }
