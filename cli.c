@@ -311,7 +311,7 @@ void cli_dump(int argc, char *argv[])
         printf_P(PSTR("usage: dump <start> [end]\n"));
         return;
     }
-    uint32_t start = strtoul(argv[1], NULL, 16);
+    uint32_t start = strtoul(argv[1], NULL, 16) & ~0xF;
     uint32_t end;
     if (argc < 3)
         end = start + 0xfful;
@@ -324,6 +324,8 @@ void cli_dump(int argc, char *argv[])
     uint8_t j;
 
     while (i <= end) {
+        if (((i - start) & 0xFF) == 0)
+            printf_P(PSTR("        +0 +1 +2 +3  +4 +5 +6 +7  +8 +9 +A +B  +C +D +E +F   0123456789ABCDEF\n"));
         printf_P(PSTR("%05lX   "), base_addr + i);
 #ifdef TMS_BASE
         if (tms)
