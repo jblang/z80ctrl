@@ -43,8 +43,8 @@ int fatfs_putchar(char c, FILE * stream);               /**< FatFS wrapper to wr
 #define CLKEXTFALL 6
 #define CLKEXTRISE 7
 
-#define TCNT_TO_US(tcnt, freq) ((tcnt * 1000000UL) / freq)
-#define TCNT_TO_MS(tcnt, freq) ((tcnt * 1000UL) / freq)
+#define TCNT_TO_US(tcnt, freq) (tcnt / (freq/1000000UL))
+#define TCNT_TO_MS(tcnt, freq) (tcnt / (freq/1000UL))
 
 void config_timer(uint8_t timer, uint8_t prescaler);
 uint16_t get_tcnt(uint8_t timer);
