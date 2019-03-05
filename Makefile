@@ -1,5 +1,11 @@
+# All build variables can be set on command line. Build with a 
+# command of this form:
+#
+#    TMS_BASE=0xBE SN76489_PORT=0xFF BOARD_REV=4 MSX_KEY_BASE=0xA9 PORT=/dev/tty.usbserial-00000000 make install
+#
+
 # Hardware revision (Important: must be set to correct value)
-# BOARD_REV=3
+BOARD_REV?=3
 
 # Base address for RomWBW-style paging; comment out to disable support
 # PAGE_BASE=0x78
@@ -26,17 +32,17 @@
 GITVERSION:= $(shell git log -1 --pretty='%h')
 
 # MCU type and frequency
-MCU=atmega1284p
-F_CPU=20000000L
+MCU?=atmega1284p
+F_CPU?=20000000L
 
 # Programmer options
-PROGRAMMER=arduino
-PORT=/dev/ttyS6
-BAUD=115200
+PROGRAMMER?=arduino
+PORT?=/dev/ttyS6
+BAUD?=115200
 
-CC=avr-gcc
-OBJCOPY=avr-objcopy
-AVRDUDE=avrdude
+AVRCC?=avr-gcc
+OBJCOPY?=avr-objcopy
+AVRDUDE?=avrdude
 
 BIN=z80ctrl
 FF_OBJS=ff.o diskio.o mmc_avr_spi.o
@@ -88,11 +94,14 @@ ifdef MSX_KEY_BASE
 endif
 CFLAGS=-std=c99 -Os $(FEATURE_DEFINES) -DF_CPU=$(F_CPU) -DGITVERSION="\"${GITVERSION}\"" -mmcu=$(MCU) -I.
 
+%.o: %.c
+	$(AVRCC) $(CFLAGS) $(LDFLAGS) -c -o $@ $<
+
 $(BIN).hex: $(BIN).elf
 	$(OBJCOPY) -j .text -j .data -O ihex $< $@
 
 $(BIN).elf: $(OBJS)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
+	$(AVRCC) $(CFLAGS) $(LDFLAGS) -o $@ $^
 
 install: $(BIN).hex
 	$(AVRDUDE) -c $(PROGRAMMER) -p $(MCU) -P $(PORT) -b $(BAUD) -U flash:w:$<
