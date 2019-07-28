@@ -40,7 +40,7 @@ PGM_P strlookup(PGM_P str, uint32_t index)
     PGM_P p;
     uint32_t i;
 
-    for (p = str, i = 0; i != index && pgm_read_byte(p); i++)
+    for (p = str, i = 0; i != index; i++)
         while(pgm_read_byte(p++))
             ;
 

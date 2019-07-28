@@ -478,6 +478,24 @@ void cli_breakwatch(int argc, char *argv[])
 }
 
 /**
+ * Change default directory
+ */
+void cli_cd(int argc, char *argv[])
+{
+ 	FRESULT fr;
+    char cwd[256];
+
+    if (argc < 2) {
+        printf_P(PSTR("usage: cd <directory>\n"));
+        return;
+    }
+
+    fr = f_chdir(argv[1]);
+    if (fr)
+        printf_P(PSTR("error changing directory: %S\n"), strlookup(fr_text, fr));
+}
+
+/**
  * Show a directory of files on the SD Card
  */
 void cli_dir(int argc, char *argv[])
@@ -489,7 +507,7 @@ void cli_dir(int argc, char *argv[])
     char fname[14];
 
     if (argc == 1)
-        argv[1] = "/";
+        argv[1] = ".";
 
     fr = f_opendir(&dir, argv[1]);
     if (fr) {
@@ -518,6 +536,24 @@ void cli_dir(int argc, char *argv[])
         printf_P(PSTR("%u item(s)\n"), cnt);
 }
 
+/** 
+ * Erase a file on the SD Card
+ */
+void cli_era(int argc, char *argv[])
+{
+ 	FRESULT fr;
+
+    if (argc < 2) {
+        printf_P(PSTR("usage: era <filename>...\n"));
+        return;
+    }
+
+    for(uint8_t i = 1; i < argc; i++) {
+        fr = f_unlink(argv[i]);
+        if (fr)
+            printf_P(PSTR("error deleting file: %S\n"), strlookup(fr_text, fr));
+    }
+}
 
 /**
  * Verify specified number of bytes from external memory against a buffer
@@ -953,16 +989,19 @@ const char cli_cmd_names[] PROGMEM =
     "bus\0"
     "break\0"
     "c\0"
+    "cd\0"
     "clkdiv\0"
     "cls\0"
 #ifdef DS1306_RTC
     "date\0"
 #endif
     "debug\0"
+    "del\0"
     "dir\0"
     "disasm\0"
     "do\0"
     "dump\0"
+    "era\0"
 #ifdef SST_FLASH
     "erase\0"
 #endif
@@ -977,9 +1016,11 @@ const char cli_cmd_names[] PROGMEM =
     "ioxwr\0"
     "loadbin\0"
     "loadhex\0"
+    "ls\0"
     "mount\0"
     "out\0"
     "poke\0"
+    "rm\0"
     "run\0"
     "reset\0"
     "savebin\0"
@@ -1005,21 +1046,24 @@ const char cli_cmd_help[] PROGMEM =
     "set the base memory address\0"                 // base
 #endif
     "configure UART baud rate\0"                    // baud
-    "run benchmarks\0"                              // bench
+    "\0"                                            // bench
     "boot from specified disk image\0"              // boot
     "display low-level bus status\0"                // bus
     "set breakpoints\0"                             // break
-    "shorthand to continue debugging\0"             // c
+    "\0"                                            // c
+    "change directory\0"                            // cd
     "set Z80 clock divider\0"                       // clkdiv
     "clear screen\0"                                // cls
 #ifdef DS1306_RTC
     "display or set the date on the rtc\0"          // date
 #endif
-    "debug code at address\0"                       // debug
-    "shows directory listing\0"                     // dir
+    "debug code at address (alias c)\0"             // debug
+    "\0"                                            // del
+    "shows directory listing (alias ls)\0"          // dir
     "disassembles memory location\0"                // disasm
-    "exeucte a batch file\0"                        // do
+    "execute a batch file\0"                        // do
     "dump memory in hex and ascii\0"                // dump
+    "erase a file (alias del, rm)\0"                // era
 #ifdef SST_FLASH
     "erase flash ROM\0"                             // erase
 #endif
@@ -1030,19 +1074,21 @@ const char cli_cmd_help[] PROGMEM =
     "enable or disable halt\0"                      // halt
     "list available commands\0"                     // help
     "read a value from a port\0"                    // in
-    "read a value from an io expander\0"            // ioxread
-    "write a value to an io expander\0"             // ioxwrite
+    "\0"                                            // ioxread
+    "\0"                                            // ioxwrite
     "load binary file to memory\0"                  // loadbin
     "load intel hex file to memory\0"               // loadhex
+    "\0"                                            // ls
     "mount a disk image\0"                          // mount
     "write a value to a port\0"                     // out
     "poke values into memory\0"                     // poke
+    "\0"                                            // rm
     "execute code at address\0"                     // run
-    "reset the processor, with optional vector\0"   // reset
+    "\0"                                            // reset
     "save binary file from memory\0"                // savebin
     "save intel hex file from memory\0"             // savehex
-    "shorthand for step\0"                          // s
-    "step processor N cycles\0"                     // step
+    "\0"                                            // s
+    "step processor N cycles (alias s)\0"           // step
 #ifdef TMS_BASE
     "dump tms memory in hex and ascii\0"            // tmsdump
     "fill tms memory with byte\0"                   // tmsfill
@@ -1069,16 +1115,19 @@ void * const cli_cmd_functions[] PROGMEM = {
     &cli_bus,
     &cli_breakwatch,
     &cli_debug,     // c
+    &cli_cd,
     &cli_clkdiv,
     &cli_cls,
 #ifdef DS1306_RTC
     &cli_date,
 #endif
     &cli_debug,
+    &cli_era,       // del
     &cli_dir,
     &cli_disasm,
     &cli_do,
     &cli_dump,
+    &cli_era,
 #ifdef SST_FLASH
     &cli_erase,
 #endif
@@ -1093,9 +1142,11 @@ void * const cli_cmd_functions[] PROGMEM = {
     &cli_ioxwrite,
     &cli_loadbin,
     &cli_loadhex,
+    &cli_dir,       // ls
     &cli_mount,
     &cli_out,
     &cli_poke,
+    &cli_era,       // rm
     &cli_run,
     &cli_reset,
     &cli_savebin,
@@ -1123,7 +1174,8 @@ void cli_help(int argc, char *argv[])
     int i;
     printf_P(PSTR("available commands:\n"));
     for (i = 0; i < NUM_CMDS; i++) {
-        printf_P(PSTR("%S\t%S\n"), strlookup(cli_cmd_names, i), strlookup(cli_cmd_help, i));
+        if (strlen_P(strlookup(cli_cmd_help, i)))
+            printf_P(PSTR("%S\t%S\n"), strlookup(cli_cmd_names, i), strlookup(cli_cmd_help, i));
     }
 }
 
@@ -1160,6 +1212,7 @@ void cli_dispatch(char *buf)
  */
 void cli_loop(void) 
 {
+ 	FRESULT fr;
     char buf[MAXBUF];
     printf_P(PSTR(
     "\n      ___   ___       _        _ "
@@ -1172,11 +1225,14 @@ void cli_loop(void)
         "(" GITVERSION ")"
 #endif
         "\n\ntype help to list available commands\n"));
+
     for (;;) {
-        printf_P(PSTR("z80ctrl>"));
-        if (fgets(buf, sizeof buf - 1, stdin) != NULL) {
+        fr = f_getcwd(buf, MAXBUF);
+        if (fr)
+            buf[0] = '\0';
+        printf_P(PSTR("z80ctrl:%s>"), buf);
+        if (fgets(buf, sizeof buf - 1, stdin) != NULL)
             cli_dispatch(buf);
-        }
     }
 }
 
