@@ -28,6 +28,7 @@
 #include <avr/pgmspace.h>
 #include <avr/interrupt.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "util.h"
 #include "ff.h"
@@ -136,4 +137,18 @@ void set_tcnt(uint8_t timer, uint16_t value)
     else if (timer == 3)
         TCNT3 = value;
     SREG = sreg;
+}
+
+char *splitdir(char *path)
+{
+    char *fs = strrchr(path, '/');
+    char *bs = strrchr(path, '\\');
+    if  (fs > bs) {
+        *fs = '\0';
+        return fs + 1;
+    } else if (bs != NULL) {
+        *bs = '\0';
+        return bs + 1;
+    }
+    return NULL;
 }

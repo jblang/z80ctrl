@@ -504,36 +504,61 @@ void cli_dir(int argc, char *argv[])
     FILINFO finfo;
     DIR dir;
 	UINT cnt;
-    char fname[14];
+    char *dirname;
+    char *glob;
+    char buf[14];
 
-    if (argc == 1)
-        argv[1] = ".";
-
-    fr = f_opendir(&dir, argv[1]);
-    if (fr) {
-        printf_P(PSTR("error reading directory: %S\n"), strlookup(fr_text, fr));
-        return;
+    if (argc == 1) {
+        dirname = ".";
+        glob = NULL;
+    } else {
+        dirname = argv[1];
+        glob = splitdir(dirname);
     }
+
+    if (glob == NULL) {
+        fr = f_opendir(&dir, dirname);
+        if (fr == FR_NO_PATH || fr == FR_INVALID_NAME) {
+            glob = dirname;
+            dirname = ".";
+        } else if (fr != FR_OK) {
+            printf_P(PSTR("error opening directory: %S\n"), strlookup(fr_text, fr));
+            return;
+        }
+    }
+
+    if (glob == NULL) {
+        fr = f_readdir(&dir, &finfo);
+    } else {
+        fr = f_findfirst(&dir, &finfo, dirname, glob);
+    }
+
     cnt = 0;
     for(;;) {
-        fr = f_readdir(&dir, &finfo);
-        if (fr != FR_OK) { 
-            printf_P(PSTR("error reading directory: %S\n"), strlookup(fr_text, fr)); 
-            break; 
+        if (fr != FR_OK) {
+            printf_P(PSTR("error reading directory: %S\n"), strlookup(fr_text, fr));
+            break;
         }
         if ((cnt % 5 == 0 && cnt != 0) || !finfo.fname[0])
             printf_P(PSTR("\n"));
-        if (!finfo.fname[0]) break;
-        strcpy(fname, finfo.fname);
+        if (!finfo.fname[0]) 
+            break;
+        strcpy(buf, finfo.fname);
         if (finfo.fattrib & AM_DIR)
-            strcat(fname, "/");
-        printf_P(PSTR("%-14s"), fname);
+            strcat(buf, "/");
+        printf_P(PSTR("%-14s"), buf);
         cnt++;
+        if (glob == NULL)
+            fr = f_readdir(&dir, &finfo);
+        else
+            fr = f_findnext(&dir, &finfo);
     }
-    if (fr)
-        printf_P(PSTR("error reading directory: %S\n"), strlookup(fr_text, fr));
-    else
+    if (cnt)
         printf_P(PSTR("%u item(s)\n"), cnt);
+    else
+        printf_P(PSTR("file not found\n"));
+    
+    f_closedir(&dir);
 }
 
 /** 

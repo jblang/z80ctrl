@@ -49,5 +49,5 @@ int fatfs_putchar(char c, FILE * stream);               /**< FatFS wrapper to wr
 void config_timer(uint8_t timer, uint8_t prescaler);
 uint16_t get_tcnt(uint8_t timer);
 void set_tcnt(uint8_t timer, uint16_t value);
-
+char *splitdir(char *path);
 #endif
