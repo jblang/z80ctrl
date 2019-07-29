@@ -125,30 +125,18 @@ void cli_savehex(int argc, char *argv[])
     }
 }
 
-/**
- * Load a binary file to specifie address from disk with optional offset and length
- */
-void cli_loadbin(int argc, char *argv[])
+#define MEM 0
+#define TMS 1
+#define FLASH 2
+
+void loadbin(char *filename, uint8_t dest, uint32_t start, uint32_t offset, uint32_t len)
 {
     FIL fil;
-    FILE file;
     FRESULT fr;
     UINT br;
     uint8_t buf[256];
-    uint32_t offset = 0;
-    uint32_t len = 0x100000;
-    uint8_t flash = (strcmp_P(argv[0], PSTR("flash")) == 0);
-    uint8_t tms = (strcmp_P(argv[0], PSTR("tmslbin")) == 0);
-    if (argc < 3) {
-        printf_P(PSTR("usage: %s <start addr> <filename> [offset] [length]\n"), argv[0]);
-        return;
-    }
-    uint32_t start = strtoul(argv[1], NULL, 16);
-    char *filename = argv[2];
-    if (argc >= 4)
-        offset = strtoul(argv[3], NULL, 16);
-    if (argc >= 5)
-        len = strtoul(argv[4], NULL, 16);
+    if (len == 0)
+        len = 0x100000;
     if ((fr = f_open(&fil, filename, FA_READ)) != FR_OK) {
         printf_P(PSTR("error opening file: %S\n"), strlookup(fr_text, fr));
         return;
@@ -159,12 +147,12 @@ void cli_loadbin(int argc, char *argv[])
             if (br > len)
                 br = len;
 #ifdef SST_FLASH
-            if (flash)
+            if (dest == FLASH)
                 flash_write(start, buf, br);
             else
 #endif
 #ifdef TMS_BASE
-            if (tms)
+            if (dest == TMS)
                 tms_write(start, buf, br);
             else
 #endif
@@ -179,6 +167,33 @@ void cli_loadbin(int argc, char *argv[])
     }
     if ((fr = f_close(&fil)) != FR_OK)
         printf_P(PSTR("error closing file: %S\n"), strlookup(fr_text, fr));
+}
+
+/**
+ * Load a binary file to specifie address from disk with optional offset and length
+ */
+void cli_loadbin(int argc, char *argv[])
+{
+    if (argc < 3) {
+        printf_P(PSTR("usage: %s <start addr> <filename> [offset] [length]\n"), argv[0]);
+        return;
+    }
+    uint8_t dest;
+    if (strcmp_P(argv[0], PSTR("flash")) == 0)
+        dest = FLASH;
+    else if (strcmp_P(argv[0], PSTR("tmslbin")) == 0)
+        dest = TMS;
+    else
+        dest = MEM;    
+    uint32_t start = strtoul(argv[1], NULL, 16);
+    char *filename = argv[2];
+    uint32_t offset = 0;
+    uint32_t len = 0;
+    if (argc >= 4)
+        offset = strtoul(argv[3], NULL, 16);
+    if (argc >= 5)
+        len = strtoul(argv[4], NULL, 16);
+    loadbin(filename, dest, start, offset, len);
 }
 
 
@@ -1211,11 +1226,13 @@ void cli_dispatch(char *buf)
 {
     char *cmd;
     char *argv[MAXARGS];
+    char filename[14];
+    FILINFO file;
     int argc;
     int i;
     void (*cmd_func)(int, char*[]);
     if ((argv[0] = strtok(buf, WHITESPACE)) == NULL)
-        return;            
+        return;
     for (argc = 1; argc < MAXARGS; argc++) {
         if ((argv[argc] = strtok(NULL, WHITESPACE)) == NULL)
             break;
@@ -1226,10 +1243,19 @@ void cli_dispatch(char *buf)
             break;
         }
     }
-    if (i == NUM_CMDS)
-        printf_P(PSTR("unknown command: %s. type help for list.\n"), argv[0]);
-    else
+    if (i < NUM_CMDS) {
         cmd_func(argc, argv);
+    } else {
+        strcpy(filename, argv[0]);
+        strcat_P(filename, PSTR(".COM"));
+        if (f_stat(filename, &file) == FR_OK) {
+            loadbin(filename, MEM, 0x100, 0, 0);
+            z80_reset(0x100);
+            z80_run();
+        } else {
+            printf_P(PSTR("unknown command: %s. type help for list.\n"), argv[0]);
+        }
+    }
 }
 
 /**
