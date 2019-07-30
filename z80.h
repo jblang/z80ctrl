@@ -41,6 +41,7 @@ typedef struct {
 extern range breaks[];
 extern range watches[];
 extern uint8_t do_halt;
+extern uint8_t halt_key;
 extern const char debug_names[];
 
 #define INRANGE(ranges, type, addr) ((ranges)[(type)].start <= (addr) && (addr) <= (ranges)[type].end)

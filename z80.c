@@ -50,6 +50,7 @@ range watches[] = {{0xffff, 0}, {0xffff, 0}, {0xffff, 0}, {0xffff, 0}, {0xffff, 
  * Whether to stop when the halt signal occurs
  */
 uint8_t do_halt = 1;
+uint8_t halt_key = 0;
 
 /**
  * Reset the Z80 to a specified address
@@ -80,6 +81,8 @@ void z80_run(void)
     uint16_t count;
     clk_run();
     for(;;) {
+        if (uart_peek(0) == halt_key && halt_key != 0)
+            break;
         if (!GET_IORQ)
             iorq_dispatch(0);
         if (do_halt && ++count == 0 && !GET_HALT)
@@ -197,6 +200,8 @@ void z80_debug(uint32_t cycles)
     config_timer(1, CLKDIV1);
 
     while (GET_HALT && (cycles == 0 || c < cycles)) {
+        if (uart_peek(0) == halt_key && halt_key != 0)
+            break;
         if ((ENABLED(watches, OPFETCH) || ENABLED(breaks, OPFETCH) || cycles)) {
             if (!GET_RD && !GET_MREQ && !GET_M1) {
                 uint16_t addr = GET_ADDR;

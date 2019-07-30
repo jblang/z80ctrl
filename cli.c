@@ -911,6 +911,33 @@ void cli_halt(int argc, char *argv[]) {
 }
 
 /**
+ * Enable or disable halt
+ */
+void cli_haltkey(int argc, char *argv[]) {
+    if (argc == 2) {
+        if (strcmp_P(argv[1], PSTR("off")) == 0)
+            halt_key = 0;
+        else if (argv[1][0] == '^' && argv[1][1] <= '_' && argv[1][1] >= '@')
+            halt_key = argv[1][1] - 64;
+        else if (argv[1][0] == '^' && argv[1][1] <= 'z' && argv[1][1] >= 'a')
+            halt_key = argv[1][1] - 96;
+        else
+            halt_key = strtoul(argv[1], NULL, 16) & 0xff;
+    }
+    if (halt_key == 0)
+        printf_P(PSTR("halt key is disabled\n"));
+    else {
+        printf_P(PSTR("halt key is %02x "), halt_key);
+        if (halt_key <= 74)
+            printf_P(PSTR("(^%c)\n"), halt_key + 64);
+        else if (halt_key >= 33 && halt_key <= 126)
+            printf_P(PSTR("(%c)\n"), halt_key);
+        else
+            printf_P(PSTR("\n"));
+    }
+}
+
+/**
  * Clear the screen
  */
 void cli_cls(int argc, char *argv[])
@@ -1050,6 +1077,7 @@ const char cli_cmd_names[] PROGMEM =
     "flash\0"
 #endif
     "halt\0"
+    "haltkey\0"
     "help\0"
     "in\0"
     "ioxrd\0"
@@ -1112,6 +1140,7 @@ const char cli_cmd_help[] PROGMEM =
     "flash file to ROM\0"                           // flash
 #endif
     "enable or disable halt\0"                      // halt
+    "enable halt via keyboard shortcut\0"           // haltkey
     "list available commands\0"                     // help
     "read a value from a port\0"                    // in
     "\0"                                            // ioxread
@@ -1176,6 +1205,7 @@ void * const cli_cmd_functions[] PROGMEM = {
     &cli_loadbin,   // flash
 #endif
     &cli_halt,
+    &cli_haltkey,
     &cli_help,
     &cli_in,
     &cli_ioxread,
