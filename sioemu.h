@@ -27,16 +27,27 @@
 #ifndef SIOEMU_H
 #define SIOEMU_H
 
-#define SIO0_STATUS 0x10
-#define SIO0_DATA 0x11
-#define SIO1_STATUS 0x12
-#define SIO1_DATA 0x13
+#ifndef SIO_BASE
+#define SIO_BASE 0x10
+#endif
 
-/**
- * Utility macros to generate SIO status register values
- */
-#define ACIA_STATUS(u) ((((uart_testtx(z80_uart[(u)]) == 0) << 1) & 0x2) | ((uart_testrx(z80_uart[(u)]) > 0) & 0x1))
+#define SIO0_STATUS SIO_BASE
+#define SIO0_DATA SIO_BASE+1
+#define SIO1_STATUS SIO_BASE+2
+#define SIO1_DATA SIO_BASE+3
 
-extern uint8_t z80_uart[];
+
+#define SIO_UART0 0
+#define SIO_UART1 1
+#define SIO_FILE 0xfe
+#define SIO_UNATTACHED 0xff
+
+#define SIO_OUTPUT 0
+#define SIO_INPUT 1
+
+void sio_attach(uint8_t port, uint8_t dir, uint8_t mode, char *filename) ;
+uint8_t sio_read(uint8_t port);
+void sio_write(uint8_t port, uint8_t data);
+uint8_t sio_status(uint8_t port);
 
 #endif

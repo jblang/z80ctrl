@@ -47,8 +47,6 @@ void (*dma_function)(void) = NULL;
 /**
  * IO registers
  */
-#define SIMH_DEV 0xFE
-#define SENSE_SW 0xFF
 
 #ifdef IOX_BASE
 #define IOX_DEVPORT IOX_BASE
@@ -61,7 +59,6 @@ void (*dma_function)(void) = NULL;
 static uint8_t iox_dev = 0;
 static uint8_t iox_reg = 0;
 #endif
-
 
 /**
  * Handle Z80 IO request
@@ -98,30 +95,30 @@ void iorq_dispatch(uint8_t logged)
 #endif
         case SIO0_STATUS:
             if (!GET_RD) {
-                SET_DATA(ACIA_STATUS(0));
+                SET_DATA(sio_status(0));
                 DATA_OUTPUT;
             }
             break;
         case SIO1_STATUS:
             if (!GET_RD) {
-                SET_DATA(ACIA_STATUS(1));
+                SET_DATA(sio_status(1));
                 DATA_OUTPUT;
             }
             break;
         case SIO0_DATA:
             if (!GET_RD) {
-                SET_DATA(uart_getc(z80_uart[0]));
+                SET_DATA(sio_read(0));
                 DATA_OUTPUT;
             } else if (!GET_WR) {
-                uart_putc(z80_uart[0], GET_DATA);
+                sio_write(0, GET_DATA);
             }
             break;
         case SIO1_DATA:
             if (!GET_RD) {
-                SET_DATA(uart_getc(z80_uart[1]));
+                SET_DATA(sio_read(1));
                 DATA_OUTPUT;
             } else if (!GET_WR) {
-                uart_putc(z80_uart[1], GET_DATA);
+                sio_write(1, GET_DATA);
             }
             break;
         case DRIVE_STATUS:

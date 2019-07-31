@@ -858,13 +858,28 @@ void cli_date(int argc, char *argv[])
  */
 void cli_attach(int argc, char *argv[])
 {
-    if (argc != 3) {
-        printf_P(PSTR("usage: attach <virtual uart> <physical uart>\n"));
+    uint8_t dir;
+    uint8_t mode = SIO_UNATTACHED;
+    char *filename = NULL;
+    if (argc != 4) {
+        printf_P(PSTR("usage: attach [0|1] [read|write] [uart0|uart1|filename]\n"));
         return;
     }
+    if (strcmp_P(argv[2], PSTR("read")) == 0)
+        dir = SIO_INPUT;
+    else
+        dir = SIO_OUTPUT;
+
     uint8_t virtual = strtoul(argv[1], NULL, 10) & 1;
-    uint8_t physical = strtoul(argv[2], NULL, 10) & 1;
-    z80_uart[virtual] = physical;
+    if (strcmp_P(argv[3], PSTR("uart0")) == 0)
+        mode = SIO_UART0;
+    else if (strcmp_P(argv[3], PSTR("uart1")) == 0)
+        mode = SIO_UART1;
+    else { 
+        mode = SIO_FILE;
+        filename = argv[3];
+    }
+    sio_attach(virtual, dir, mode, filename);
 }
 
 /**
@@ -1158,7 +1173,7 @@ const char cli_cmd_names[] PROGMEM =
  * Lookup table of help text for monitor commands
  */
 const char cli_cmd_help[] PROGMEM =
-    "attach virtual uart to physical uart\0"        // attach
+    "attach virtual uart\0"                         // attach
 #ifdef PAGE_BASE
     "set the base memory address\0"                 // base
 #endif
