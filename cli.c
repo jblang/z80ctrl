@@ -982,14 +982,63 @@ void cli_bench(int argc, char *argv[])
         bus_stat busfast = bus_status_fast();
         uint16_t busfastt = TCNT1;
 
+        TCNT1 = 0;
+        bus_master();
+        uint16_t busmastert = TCNT1;
+
+        uint8_t buf[256];
+
+        TCNT1 = 0;
+        mem_read_bare(0, buf, 256);
+        uint16_t memreadbaret = TCNT1;
+
+        TCNT1 = 0;
+        bus_slave();
+        uint16_t busslavet = TCNT1;
+
+        TCNT1 = 0;
+        mem_read(0, buf, 256);
+        uint16_t memreadt = TCNT1;
+
+        TCNT1 = 0;
+        mem_read(10, buf, 256);
+        uint16_t memreadskewt = TCNT1;
+
+        FIL fp;
+        UINT br;
+        TCNT1 = 0;
+        f_open(&fp, "/cpm2.dsk", FA_READ);
+        uint16_t fopent = TCNT1;
+
+        TCNT1 = 0;
+        f_read(&fp, buf, 256, &br);
+        uint16_t freadt = TCNT1;
+
+        TCNT1 = 0;
+        f_lseek(&fp, 4096);
+        uint16_t fseekt = TCNT1;
+
+        TCNT1 = 0;
+        f_close(&fp);
+        uint16_t fcloset = TCNT1;
+
         config_timer(1, CLKOFF);
         SREG = sreg;
-        printf_P(PSTR("rd %d\t"), TCNT_TO_US(rdt, F_CPU));
-        printf_P(PSTR("m1 %d\t"), TCNT_TO_US(m1t, F_CPU));
-        printf_P(PSTR("addrlo %d\t"), TCNT_TO_US(addrlot, F_CPU));
-        printf_P(PSTR("addrhi %d\t"), TCNT_TO_US(addrhit, F_CPU));
-        printf_P(PSTR("bus %d\t"), TCNT_TO_US(bust, F_CPU));
-        printf_P(PSTR("busfast %d\n"), TCNT_TO_US(busfastt, F_CPU));
+        printf_P(PSTR("get_rd %d\n"), TCNT_TO_US(rdt, F_CPU));
+        printf_P(PSTR("get_m1 %d\n"), TCNT_TO_US(m1t, F_CPU));
+        printf_P(PSTR("get_addrlo %d\n"), TCNT_TO_US(addrlot, F_CPU));
+        printf_P(PSTR("get_addrhi %d\n"), TCNT_TO_US(addrhit, F_CPU));
+        printf_P(PSTR("bus_status %d\n"), TCNT_TO_US(bust, F_CPU));
+        printf_P(PSTR("bus_status_fast %d\n"), TCNT_TO_US(busfastt, F_CPU));
+        printf_P(PSTR("bus_master %d\n"), TCNT_TO_US(busmastert, F_CPU));
+        printf_P(PSTR("bus_slave %d\n"), TCNT_TO_US(busslavet, F_CPU));
+        printf_P(PSTR("mem_read_bare %d\n"), TCNT_TO_US(memreadbaret, F_CPU));
+        printf_P(PSTR("mem_read %d\n"), TCNT_TO_US(memreadt, F_CPU));
+        printf_P(PSTR("mem_read (skewed) %d\n"), TCNT_TO_US(memreadskewt, F_CPU));
+        printf_P(PSTR("f_open %d\n"), TCNT_TO_US(fopent, F_CPU));
+        printf_P(PSTR("f_read %d\n"), TCNT_TO_US(freadt, F_CPU));
+        printf_P(PSTR("f_lseek %d\n"), TCNT_TO_US(fseekt, F_CPU));
+        printf_P(PSTR("f_close %d\n"), TCNT_TO_US(fcloset, F_CPU));
         uart_flush();
     }
 }
