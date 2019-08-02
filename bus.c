@@ -223,8 +223,9 @@ uint32_t base_addr = 0;
 /**
  * Read specified number of bytes from external memory to a buffer
  */
-void mem_read_bare(uint32_t addr, uint8_t *buf, uint16_t len)
+void mem_read_bare(uint32_t addr, void *buf, uint16_t len)
 {
+    uint8_t *cbuf = buf;
     addr += base_addr & 0xFC000;
 #ifdef PAGE_BASE
     DATA_OUTPUT;
@@ -238,7 +239,7 @@ void mem_read_bare(uint32_t addr, uint8_t *buf, uint16_t len)
     RD_LO;
     SET_ADDR(addr & 0xFFFF);
     for (uint16_t i = 0; i < len; i++) {
-        buf[i] = GET_DATA;
+        cbuf[i] = GET_DATA;
         //bus_log(bus_status());
         addr++;
 #ifdef PAGE_BASE
@@ -263,7 +264,7 @@ void mem_read_bare(uint32_t addr, uint8_t *buf, uint16_t len)
     MREQ_HI;
 }
 
-void mem_read(uint32_t addr, uint8_t *buf, uint16_t len)
+void mem_read(uint32_t addr, void *buf, uint16_t len)
 {
     if (!bus_master())
         return;
@@ -274,8 +275,9 @@ void mem_read(uint32_t addr, uint8_t *buf, uint16_t len)
 /**
  *  Write specified number of bytes to external memory from a buffer
  */
-void _mem_write_bare(uint32_t addr, const uint8_t *buf, uint16_t len, uint8_t pgmspace)
+void _mem_write_bare(uint32_t addr, const void *buf, uint16_t len, uint8_t pgmspace)
 {
+    const uint8_t *cbuf = buf;
     addr += base_addr & 0xFC000;
     DATA_OUTPUT;
 #ifdef PAGE_BASE
@@ -288,9 +290,9 @@ void _mem_write_bare(uint32_t addr, const uint8_t *buf, uint16_t len, uint8_t pg
     SET_ADDR(addr & 0xFFFF);
     for (uint16_t i = 0; i < len; i++) {
         if (pgmspace)
-            SET_DATA(pgm_read_byte(&buf[i]));
+            SET_DATA(pgm_read_byte(&cbuf[i]));
         else
-            SET_DATA(buf[i]);
+            SET_DATA(cbuf[i]);
         WR_LO;
         //bus_log(bus_status());
         WR_HI;
@@ -315,7 +317,7 @@ void _mem_write_bare(uint32_t addr, const uint8_t *buf, uint16_t len, uint8_t pg
     DATA_INPUT;
 }
 
-void _mem_write(uint32_t addr, const uint8_t *buf, uint16_t len, uint8_t pgmspace)
+void _mem_write(uint32_t addr, const void *buf, uint16_t len, uint8_t pgmspace)
 {
     if (!bus_master())
         return;

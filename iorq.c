@@ -31,6 +31,7 @@
 #include "rtc.h"
 #include "diskemu.h"
 #include "sioemu.h"
+#include "filedma.h"
 #ifdef MSX_KEY_BASE
 #include "msxkey.h"
 #endif
@@ -145,12 +146,12 @@ void iorq_dispatch(uint8_t logged)
                 drive_write(GET_DATA);
             }
             break;
-        case DRIVE_DMA:
+        case FILE_DMA:
             if (!GET_RD) { 
-                SET_DATA(drive_dma_status());
+                SET_DATA(file_dma_reset());
                 DATA_OUTPUT;
             } else if (!GET_WR) {
-                drive_dma_command(GET_DATA);
+                file_dma_command(GET_DATA);
             }
             break;
 #ifdef MSX_KEY_BASE

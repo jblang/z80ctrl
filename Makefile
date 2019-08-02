@@ -37,7 +37,7 @@ F_CPU?=20000000L
 
 # Programmer options
 PROGRAMMER?=arduino
-PORT?=/dev/ttyS6
+PORT?=/dev/ttyS10
 BAUD?=115200
 
 AVRCC?=avr-gcc
@@ -55,6 +55,7 @@ OBJS=	cli.o \
 	iorq.o \
 	sioemu.o \
 	diskemu.o \
+	filedma.o \
 	ihex.o \
 	disasm.o \
 	util.o \

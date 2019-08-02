@@ -207,10 +207,10 @@ bus_stat bus_status_fast(void);
 void bus_log(bus_stat status);
 void bus_init(void);
 
-void mem_read_bare(uint32_t addr, uint8_t * buf, uint16_t len);
-void mem_read(uint32_t addr, uint8_t * buf, uint16_t len);
-void _mem_write_bare(uint32_t addr, const uint8_t *buf, uint16_t len, uint8_t pgmspace);
-void _mem_write(uint32_t addr, const uint8_t *buf, uint16_t len, uint8_t pgmspace);
+void mem_read_bare(uint32_t addr, void * buf, uint16_t len);
+void mem_read(uint32_t addr, void * buf, uint16_t len);
+void _mem_write_bare(uint32_t addr, const void *buf, uint16_t len, uint8_t pgmspace);
+void _mem_write(uint32_t addr, const void *buf, uint16_t len, uint8_t pgmspace);
 
 #define mem_write(addr, buf, len) _mem_write((addr), (buf), (len), 0);
 #define mem_write_P(addr, buf, len) _mem_write((addr), (buf), (len), 1);
