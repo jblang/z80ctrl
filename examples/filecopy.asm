@@ -21,43 +21,67 @@
 
             org 100h
 
-ramtop      equ 0ffffh
-pathlen     equ 16
+ramtop:     equ 0ffffh
+uarts:      equ 10h
+uartd:      equ 11h
+lf:         equ 0ah
+cr:	        equ 0dh
 
     ld      hl, ramtop                  ; set up stack
     ld      sp, hl
 
     call    f_init                      ; initialize file DMA mailbox
 
+    ld      de, filebuf                 ; get command-line buffer
+    ld      bc, buflen
+    call    f_cli_first
+    cp      3                           ; verify that there are at least 2 params
+    jp      c, usage
+
+    call    f_cli_next                  ; skip over command name
+
     ld      hl, sourcefp                ; open source file for reading
-    ld      de, sourcename
     ld      a, FA_READ
     call    f_open
-    jp      nz, done
+    jp      nz, error
 
-    ld      hl, destfp                  ; open dest file for writing
-    ld      de, destname
+    call    f_cli_next
+
+    ld      hl, destfp                  ; open destination file for writing
     ld      a, FA_WRITE | FA_CREATE_NEW
     call    f_open
-    jp      nz, done
+    jp      nz, error
 
     ld      de, filebuf
 loop:
     ld      hl, sourcefp                ; fill buffer with bytes from source
     ld      bc, buflen
     call    f_read
-    jp      nz, done
+    jp      nz, error
     ld      hl, destfp                  ; write bytes from buffer to destination
     ld      bc, (f_retlen)
     call    f_write
-    jp      nz, done
+    jp      nz, error
     ld      hl, buflen                  ; check whether last read was less than full buffer
     or      a
     sbc     hl, bc
     add     hl, bc
     jp      z, loop                     ; if not, go again
+    jp      close
 
-done:
+usage:
+    ld      hl, usage_text              ; print usage
+    call    strout
+    jp      close
+
+error:
+    call    f_find_error                ; print error message
+    ex      de, hl
+    call    strout
+    ld      hl, crlf
+    call    strout
+
+close:
     ld      hl, sourcefp
     call    f_close                     ; close the source file
     ld      hl, destfp
@@ -65,13 +89,30 @@ done:
 
     halt
 
-sourcefp    ds 42           ; file pointers
+
+strout:     ld a, (hl)
+            and a
+            ret z
+	        call chrout
+            inc hl
+            jr strout
+
+chrout:     push af
+rdylp:	    in a, (uarts)
+	        bit 1,a
+	        jr z, rdylp
+	        pop af
+            out (uartd), a
+	        ret
+
+sourcefp    ds 42                       ; file pointers
 destfp      ds 42
 
-sourcename  db "/TEST.TXT", 0
-destname    db "/COPY.TXT", 0
-
-filebuf     ds 256          ; temporary space for file
+filebuf     ds 256                      ; temporary buffer
 buflen      equ $-filebuf
+
+usage_text  db "usage: filecopy <source> <dest>"
+crlf        db cr, lf, 0
+colon       db ": ", 0
 
 include     "filedma.asm"

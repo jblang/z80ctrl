@@ -42,6 +42,7 @@
 #include "diskio.h"
 #include "uart.h"
 #include "xmodem.h"
+#include "filedma.h"
 #ifdef DS1306_RTC
 #include "rtc.h"
 #endif
@@ -1353,6 +1354,7 @@ void cli_dispatch(char *buf)
         strcpy(filename, argv[0]);
         strcat_P(filename, PSTR(".COM"));
         if (f_stat(filename, &file) == FR_OK) {
+            file_dma_savecli(argc, argv);
             loadbin(filename, MEM, 0x100, 0, 0);
             z80_reset(0x100);
             z80_run();

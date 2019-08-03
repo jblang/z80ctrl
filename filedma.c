@@ -63,7 +63,9 @@ typedef enum {
     F_DISK_WRITE,
     F_DISK_IOCTL,
 
-    F_GET_FATTIME
+    F_GET_FATTIME,
+
+    F_GET_CLIBUF = 64
 } dma_command_t;
 
 uint16_t dma_mailbox = 0;
@@ -129,6 +131,21 @@ FRESULT mem_to_file(FIL *fp, uint16_t base, UINT btw, UINT *bw)
         base += bw1;
     } while(btw > 0 && bw1 == btw1);
     return fr;
+}
+
+uint8_t clibuf[256];
+
+void file_dma_savecli(int argc, char *argv[])
+{
+    memset(clibuf, 0, 256);
+    clibuf[0] = argc;
+    uint8_t *next = clibuf + 1;
+
+    for (int i = 0; i < argc; i++)
+    {
+        strcpy(next, argv[i]);
+        next += strlen(argv[i]) + 1;
+    }
 }
 
 /*
@@ -257,6 +274,10 @@ void file_dma_execute()
         case F_GETCWD:
             if ((params.fr = f_getcwd(buf, buflen)) == FR_OK)
                 mem_write_bare(params.outaddr, buf, buflen);
+            break;
+        case F_GET_CLIBUF:
+            mem_write_bare(params.outaddr, clibuf, buflen);
+            params.fr = FR_OK;
             break;
         default:
             params.fr = FR_INVALID_PARAMETER;

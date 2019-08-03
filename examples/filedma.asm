@@ -66,6 +66,7 @@ F_DISK_READ             equ 28h
 F_DISK_WRITE            equ 29h
 F_DISK_IOCTL            equ 2ah
 F_GET_FATTIME           equ 2bh
+F_GET_CLIBUF            equ 40h
 
 
 
@@ -102,25 +103,54 @@ FR_INVALID_PARAMETER	equ 13h
 
 dmaport     equ 0bh
 
+; get CLI buffer
+;   DE = CLI buffer address
+;   BC = CLI buffer length
+; returns:
+;   A = param count
+;   DE = pointer to first CLI param
+f_cli_first:
+    ld      a, F_GET_CLIBUF
+    ld      (f_outaddr), de
+    ld      (f_maxlen), bc
+    call    f_dma_exec
+    ld      a, (de)
+    inc     de
+    ret
+
+; null-terminate current parameter and find next
+;   DE = starting address
+;   returns address of next parameter in DE
+f_cli_next:
+    ex      de, hl
+    xor     a
+.loop
+    cp      (hl)
+    inc     hl
+    jp      nz, .loop
+    ex      de, hl
+    ret
+
+
 ; open a file
 ;   A = file access f_mode
 ;   HL = file object address
-;   DE = file name address
+;   DE = path buffer address
+;   BC = path buffer length
 f_open:
     ld      (f_mode), a
     ld      (f_fpaddr), hl
     ld      (f_inaddr), de
-    ld      de, pathlen
-    ld      (f_maxlen), de
+    ld      (f_maxlen), bc
     ld      a, F_OPEN
-    jp      f_execute
+    jp      f_dma_exec
 
 ; close a file
 ;   HL = file object address
 f_close:
     ld      (f_fpaddr), hl
     ld      a, F_CLOSE
-    jp      f_execute
+    jp      f_dma_exec
 
 ; read from a file
 ;   HL = file object address
@@ -131,7 +161,7 @@ f_read:
     ld      (f_outaddr), de
     ld      (f_maxlen), bc
     ld      a, F_READ
-    jp      f_execute
+    jp      f_dma_exec
 
 ; write to a file
 ;   HL = file object address
@@ -142,7 +172,7 @@ f_write:
     ld      (f_inaddr), de
     ld      (f_maxlen), bc
     ld      a, F_WRITE
-    jp      f_execute
+    jp      f_dma_exec
 
 ; seek into file
 ;   HL = file object address
@@ -153,61 +183,61 @@ f_lseek:
     ld      (f_ofs), de
     ld      (f_ofs+2), bc
     ld      a, F_LSEEK
-    jp      f_execute
+    jp      f_dma_exec
 
 ; open directory
 ;   HL = directory object address
 ;   DE = path buffer address
+;   BC = path buffer length
 f_opendir:
     ld      (f_fpaddr), hl
     ld      (f_inaddr), de
-    ld      de, pathlen
-    ld      (f_maxlen), de
+    ld      (f_maxlen), bc
     ld      a, F_OPENDIR
-    jp      f_execute
+    jp      f_dma_exec
 
 ; read directory
 ;   HL = directory object address
-;   DE = file info object address
+;   IX = file info object address
 f_readdir:
     ld      (f_fpaddr), hl
-    ld      (f_outaddr), de
+    ld      (f_outaddr), ix
     ld      a, F_READDIR
-    jp      f_execute
+    jp      f_dma_exec
 
 ; close directory
 ;   HL = directory object address
 f_closedir:
     ld      (f_fpaddr), hl
     ld      a, F_CLOSEDIR
-    jp      f_execute
+    jp      f_dma_exec
 
 ; find first matching directory entry
 ;   HL = directory object address
-;   DE = file info object address
-;   BC = address of null-terminated path followed by null-terminated pattern
+;   DE = path/pattern buffer address
+;   BC = path/pattern buffer length
+;   IX = file info object address
 f_findfirst:
     ld      (f_fpaddr), hl
-    ld      (f_outaddr), de
-    ld      (f_inaddr), bc
-    ld      bc, pathlen
+    ld      (f_inaddr), de
     ld      (f_maxlen), bc
+    ld      (f_outaddr), ix
     ld      a, F_FINDFIRST
-    jp      f_execute
+    jp      f_dma_exec
 
 ; find next matching directory entry
 ;   HL = directory object address
-;   DE = file info object address
+;   IX = file info object address
 f_findnext:
     ld      (f_fpaddr), hl
-    ld      (f_outaddr), de
+    ld      (f_outaddr), ix
     ld      a, F_FINDNEXT
-    jp      f_execute
+    jp      f_dma_exec
 
 ; initiate a DMA transfer
 ;       A = DMA command
 ;       returns result code in A; NZ set if err
-f_execute:
+f_dma_exec:
     out     (dmaport), a
     ld      a, (f_result)
     cp      FR_OK
@@ -222,6 +252,36 @@ f_init:
     out     (c), l           ; set new DMA mailbox address
     out     (c), h
     ret
+
+f_find_error:
+    ld      b,a
+    inc     b
+    ld      de, fr_text
+.loop
+    call    f_cli_next
+    djnz    .loop
+    ret
+
+fr_text:
+    db "OK", 0
+    db "disk error", 0
+    db "internal error", 0
+    db "drive not ready", 0
+    db "file not found", 0
+    db "path not found", 0
+    db "invalid path name", 0
+    db "access denied", 0
+    db "file already exists", 0
+    db "invalid object", 0
+    db "write protected", 0
+    db "invalid drive number", 0
+    db "drive not mounted", 0
+    db "invalid filesystem", 0
+    db "mkfs aborted", 0
+    db "timeout", 0
+    db "file locked", 0
+    db "out of memory", 0
+    db "too many open files", 0
 
 ; mailbox for DMA communicaation
 f_mailbox:
