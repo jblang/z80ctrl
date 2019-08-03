@@ -113,43 +113,68 @@ FR_INVALID_PARAMETER	equ 13h
     ld      hl, mailbox
     call    setmailbox
 
-    ; open file for reading
+    ; set up file handle address
+    ld      hl, fp
+    ld      (filaddr), hl
+
+    ; open source for reading
     ld      a, FA_READ
-    ld      (mailbox.mode), a
+    ld      (mode), a
+    ld      hl, sourcename
+    ld      (inaddr), hl
+    ld      hl, sourcelen
+    ld      (length), hl
     ld      a, F_OPEN
-    ld      hl, filename
-    ld      bc, fnlen
-    call    dodma
+    call    fatfs
     jp      nz, end
 
     ; read up to 8000h bytes from file
     ld      a, F_READ
-    ld      de, filedata
-    ld      bc, 8000h
-    call    dodma
+    ld      hl, filedata
+    ld      (outaddr), hl
+    ld      hl, 8000h
+    ld      (length), hl
+    call    fatfs
+    ld      de, (length)
     jp      nz, end
 
-    ; close the file
+    ; close the files
     ld      a, F_CLOSE
-    call    dodma
+    call    fatfs
+    jp      nz, end
+
+    ; open dest for writing
+    ld      a, FA_WRITE | FA_CREATE_NEW
+    ld      (mode), a
+    ld      a, F_OPEN
+    ld      hl, destname
+    ld      (inaddr), hl
+    ld      hl, destlen
+    ld      (length), hl
+    call    fatfs
+    jp      nz, end
+
+    ; write bytes to new file
+    ld      a, F_WRITE
+    ld      hl, filedata
+    ld      (inaddr), hl
+    ld      (length), de
+    call    fatfs
+    jp      nz, end
+
+    ; close the files
+    ld      a, F_CLOSE
+    call    fatfs
     
 end
     halt
 
 ; initiate a DMA transfer
 ;       A = DMA command
-;       HL = address of input buffer
-;       DE = address of output buffer
-;       BC = length of buffer
 ;       returns result code in A; NZ set if error
-dodma
-    ld      (mailbox.cmd), a
-    ld      (mailbox.inaddr), hl
-    ld      (mailbox.outaddr), de
-    ld      (mailbox.length), bc
-    xor     a
+fatfs
     out     (dmaport), a
-    ld      a, (mailbox.fr)
+    ld      a, (fr)
     cp      FR_OK
     ret
 
@@ -162,16 +187,19 @@ setmailbox
     ret
 
 mailbox
-.cmd        db 0
-.fr         db 0
-.inaddr     dw 0
-.outaddr    dw 0
-.length     dw 0
-.ofs        dd 0
-.mode       db 0
-.mask       db 0
-.fpdp       ds 36
+filaddr     dw 0
+inaddr      dw 0
+outaddr     dw 0
+length      dw 0
+ofs         dd 0
+mode        db 0
+mask        db 0
+fr          db 0
 
-filename    db "/TEST.TXT", 0
-fnlen       equ $-filename
+fp          ds 42
+
+sourcename  db "/TEST.TXT", 0
+sourcelen   equ $-sourcename
+destname    db "/COPY.TXT", 0
+destlen     equ $-destname
 filedata    db 0
