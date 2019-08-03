@@ -71,10 +71,11 @@ uint8_t dma_command = 0;
 dma_status_t dma_status = DMA_MAILBOX_UNSET;
 
 typedef struct {
-    uint16_t filaddr;
+    uint16_t fpaddr;
     uint16_t inaddr;
     uint16_t outaddr;
-    uint16_t length;
+    uint16_t maxlen;
+    uint16_t retlen;
     uint32_t ofs;
     uint8_t mode;
     uint8_t mask;
@@ -92,6 +93,44 @@ uint8_t file_dma_reset()
     return 0xff;
 }
 
+FRESULT file_to_mem(FIL *fp, uint16_t base, UINT btr, UINT *br)
+{
+    uint8_t buf[256];
+    FRESULT fr;
+    UINT btr1, br1;
+
+    *br = 0;
+    do {
+        btr1 = btr < 256 ? btr : 256;
+        if ((fr = f_read(fp, buf, btr1, &br1)) != FR_OK)
+            break;
+        mem_write_bare(base, buf, br1);
+        *br += br1;
+        btr -= br1;
+        base += br1;
+    } while (btr > 0 && br1 == btr1);
+    return fr;
+}
+
+FRESULT mem_to_file(FIL *fp, uint16_t base, UINT btw, UINT *bw)
+{
+    uint8_t buf[256];
+    FRESULT fr;
+    UINT btw1, bw1;
+
+    *bw = 0;
+    do {
+        btw1 = btw < 256 ? btw : 256;
+        mem_read_bare(base, buf, btw1);
+        if ((fr = f_write(fp, buf, btw1, &bw1)) != FR_OK)
+            break;
+        *bw += bw1;
+        btw -= bw1;
+        base += bw1;
+    } while(btw > 0 && bw1 == btw1);
+    return fr;
+}
+
 /*
  * Execute queued DMA command
  */
@@ -104,65 +143,29 @@ void file_dma_execute()
         DIR dp;
     } obj;
     const size_t objsize = sizeof(FIL) >= sizeof(DIR) ? sizeof(FIL) : sizeof(DIR);
-
-    UINT btr, br, btw, bw;
     uint8_t buf[256];
-    uint8_t buf2[256];
+    uint8_t *bufp;
+    uint16_t buflen;
 
     mem_read_bare(dma_mailbox, &params, sizeof(dma_mailbox_t));
-    mem_read_bare(params.filaddr, &obj.dp, objsize);
+    mem_read_bare(params.fpaddr, &obj.dp, objsize);
+    buflen = params.maxlen < 256 ? params.maxlen : 256;
 
-    //printf("executing dma: cmd %02x, inaddr %04x, outaddr %04x, length %04x\n", params.cmd, params.inaddr, params.outaddr, params.length);
+    //printf("executing dma: cmd %02x, inaddr %04x, outaddr %04x, length %04x\n", params.cmd, params.inaddr, params.outaddr, params.maxlen);
 
     switch (dma_command) {
         case F_OPEN:
-            mem_read_bare(params.inaddr, buf, params.length & 0xff);
+            mem_read_bare(params.inaddr, buf, buflen);
             params.fr = f_open(&obj.fp, buf, params.mode);
             break;
         case F_CLOSE:
             params.fr = f_close(&obj.fp);
             break;
         case F_READ:
-            btr = params.length;
-            params.length = 0;
-            for (;;) {
-                if (btr <= 256) {
-                    if ((params.fr = f_read(&obj.fp, buf, btr, &br)) != FR_OK)
-                        break;
-                    mem_write_bare(params.outaddr + params.length, buf, br);
-                    params.length += br;
-                    break;
-                } else {
-                    if ((params.fr = f_read(&obj.fp, buf, 256, &br)) != FR_OK)
-                        break;
-                    mem_write_bare(params.outaddr + params.length, buf, br);
-                    params.length += br;
-                    if (br < 256)
-                        break;
-                }
-                btr -= 256;
-            }
+            params.fr = file_to_mem(&obj.fp, params.outaddr, params.maxlen, &params.retlen);
             break;
         case F_WRITE:
-            btw = params.length;
-            params.length = 0;
-            for (;;) {
-                if (btw <= 256) {
-                    mem_read_bare(params.inaddr + params.length, buf, btw);
-                    if ((params.fr = f_write(&obj.fp, buf, btw, &bw)) != FR_OK)
-                        break;
-                    params.length += bw;
-                    break;
-                } else {
-                    mem_read_bare(params.inaddr + params.length, buf, 256);
-                    if ((params.fr = f_write(&obj.fp, buf, 256, &bw)) != FR_OK)
-                        break;
-                    params.length += bw;
-                    if (bw < 256)
-                        break;
-                }
-                btw -= 256;
-            }
+            params.fr = mem_to_file(&obj.fp, params.inaddr, params.maxlen, &params.retlen);
             break;
         case F_LSEEK:
             params.fr = f_lseek(&obj.fp, params.ofs);
@@ -193,7 +196,7 @@ void file_dma_execute()
             params.fr = f_error(&obj.fp);
             break;
         case F_OPENDIR:
-            mem_read_bare(params.inaddr, buf, params.length & 0xff);
+            mem_read_bare(params.inaddr, buf, buflen);
             params.fr = f_opendir(&obj.dp, buf);
             break;
         case F_CLOSEDIR:
@@ -204,9 +207,9 @@ void file_dma_execute()
                 mem_write_bare(params.outaddr, &fno, sizeof fno);
             break;
         case F_FINDFIRST:
-            mem_read_bare(params.inaddr, buf, params.length & 0xff);
-            mem_read_bare(params.inaddr + (params.length & 0xff), buf2, params.length & 0xff);
-            if ((params.fr = f_findfirst(&obj.dp, &fno, buf, buf2)) == FR_OK)
+            mem_read_bare(params.inaddr, buf, buflen);
+            bufp = strchr(buf, 0) + 1;
+            if ((params.fr = f_findfirst(&obj.dp, &fno, buf, bufp)) == FR_OK)
                 mem_write_bare(params.outaddr, &fno, sizeof fno);
             break;
         case F_FINDNEXT:
@@ -214,46 +217,46 @@ void file_dma_execute()
                 mem_write_bare(params.outaddr, &fno, sizeof fno);
             break;
         case F_STAT:
-            mem_read_bare(params.inaddr, buf, params.length & 0xff);
+            mem_read_bare(params.inaddr, buf, buflen);
             params.fr = f_stat(buf, &fno);
             break;
         case F_UNLINK:
-            mem_read_bare(params.inaddr, buf, params.length & 0xff);
+            mem_read_bare(params.inaddr, buf, buflen);
             params.fr = f_unlink(buf);
             break;
         case F_RENAME:
-            mem_read_bare(params.inaddr, buf, params.length & 0xff);
-            mem_read_bare(params.inaddr + (params.length & 0xff), buf2, params.length & 0xff);
-            params.fr = f_rename(buf, buf2);
+            mem_read_bare(params.inaddr, buf, buflen);
+            bufp = strchr(buf, 0) + 1;
+            params.fr = f_rename(buf, bufp);
             break;
 #if F_USE_CHMOD && !F_FS_READONLY
         case F_CHMOD:
-            mem_read_bare(params.inaddr, buf, params.length & 0xff);
+            mem_read_bare(params.inaddr, buf, buflen);
             params.fr = f_chmod(buf, params.mode, params.mask);
             break;
         case F_UTIME:
-            mem_read_bare(params.inaddr, buf, params.length & 0xff);
+            mem_read_bare(params.inaddr, buf, buflen);
             if ((params.fr = f_utime(buf, &fno)) == FR_OK)
                 mem_write_bare(params.outaddr, &fno, sizeof fno);
             break;
 #endif
         case F_MKDIR:
-            mem_read_bare(params.inaddr, buf, params.length & 0xff);
+            mem_read_bare(params.inaddr, buf, buflen);
             params.fr = f_mkdir(buf);
             break;
         case F_CHDIR:
-            mem_read_bare(params.inaddr, buf, params.length & 0xff);
+            mem_read_bare(params.inaddr, buf, buflen);
             params.fr = f_chdir(buf);
             break;
 #if F_VOLUMES >= 2
         case F_CHDRIVE:
-            mem_read_bare(params.inaddr, buf, params.length & 0xff);
+            mem_read_bare(params.inaddr, buf, buflen);
             params.fr = f_chdrive(buf);
             break;
 #endif
         case F_GETCWD:
-            if ((params.fr = f_getcwd(buf, params.length & 0xff)) == FR_OK)
-                mem_write_bare(params.outaddr, buf, params.length & 0xff);
+            if ((params.fr = f_getcwd(buf, buflen)) == FR_OK)
+                mem_write_bare(params.outaddr, buf, buflen);
             break;
         default:
             params.fr = FR_INVALID_PARAMETER;
@@ -261,7 +264,7 @@ void file_dma_execute()
     }
     //printf("completed with status %02x\n", params.fr);
     mem_write_bare(dma_mailbox, &params, sizeof(dma_mailbox_t));
-    mem_write_bare(params.filaddr, &obj.dp, objsize);
+    mem_write_bare(params.fpaddr, &obj.dp, objsize);
 }
 
 /**

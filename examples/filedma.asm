@@ -19,11 +19,7 @@
 ; FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
 ; DEALINGS IN THE SOFTWARE.
 
-
-            org 100h
-
-dmaport     equ 0bh
-ramtop      equ 0ffffh
+; File DMA client library
 
 ; FatFS commands
 F_OPEN                  equ 00h
@@ -104,102 +100,137 @@ FR_NOT_ENOUGH_CORE		equ 11h
 FR_TOO_MANY_OPEN_FILES	equ 12h
 FR_INVALID_PARAMETER	equ 13h
 
+dmaport     equ 0bh
 
-    ; set up stack
-    ld      hl, ramtop
-    ld      sp, hl
-
-    ; set up mailbox address
-    ld      hl, mailbox
-    call    setmailbox
-
-    ; set up file handle address
-    ld      hl, fp
-    ld      (filaddr), hl
-
-    ; open source for reading
-    ld      a, FA_READ
-    ld      (mode), a
-    ld      hl, sourcename
-    ld      (inaddr), hl
-    ld      hl, sourcelen
-    ld      (length), hl
+; open a file
+;   A = file access f_mode
+;   HL = file object address
+;   DE = file name address
+f_open:
+    ld      (f_mode), a
+    ld      (f_fpaddr), hl
+    ld      (f_inaddr), de
+    ld      de, pathlen
+    ld      (f_maxlen), de
     ld      a, F_OPEN
-    call    fatfs
-    jp      nz, end
+    jp      f_execute
 
-    ; read up to 8000h bytes from file
+; close a file
+;   HL = file object address
+f_close:
+    ld      (f_fpaddr), hl
+    ld      a, F_CLOSE
+    jp      f_execute
+
+; read from a file
+;   HL = file object address
+;   DE = destination buffer address
+;   BC = destination buffer length
+f_read:
+    ld      (f_fpaddr), hl
+    ld      (f_outaddr), de
+    ld      (f_maxlen), bc
     ld      a, F_READ
-    ld      hl, filedata
-    ld      (outaddr), hl
-    ld      hl, 8000h
-    ld      (length), hl
-    call    fatfs
-    ld      de, (length)
-    jp      nz, end
+    jp      f_execute
 
-    ; close the files
-    ld      a, F_CLOSE
-    call    fatfs
-    jp      nz, end
-
-    ; open dest for writing
-    ld      a, FA_WRITE | FA_CREATE_NEW
-    ld      (mode), a
-    ld      a, F_OPEN
-    ld      hl, destname
-    ld      (inaddr), hl
-    ld      hl, destlen
-    ld      (length), hl
-    call    fatfs
-    jp      nz, end
-
-    ; write bytes to new file
+; write to a file
+;   HL = file object address
+;   DE = source buffer address
+;   BC = source buffer length
+f_write:
+    ld      (f_fpaddr), hl
+    ld      (f_inaddr), de
+    ld      (f_maxlen), bc
     ld      a, F_WRITE
-    ld      hl, filedata
-    ld      (inaddr), hl
-    ld      (length), de
-    call    fatfs
-    jp      nz, end
+    jp      f_execute
 
-    ; close the files
-    ld      a, F_CLOSE
-    call    fatfs
-    
-end
-    halt
+; seek into file
+;   HL = file object address
+;   DE = low word of offset
+;   BC = high word of offset
+f_lseek:
+    ld      (f_fpaddr), hl
+    ld      (f_ofs), de
+    ld      (f_ofs+2), bc
+    ld      a, F_LSEEK
+    jp      f_execute
+
+; open directory
+;   HL = directory object address
+;   DE = path buffer address
+f_opendir:
+    ld      (f_fpaddr), hl
+    ld      (f_inaddr), de
+    ld      de, pathlen
+    ld      (f_maxlen), de
+    ld      a, F_OPENDIR
+    jp      f_execute
+
+; read directory
+;   HL = directory object address
+;   DE = file info object address
+f_readdir:
+    ld      (f_fpaddr), hl
+    ld      (f_outaddr), de
+    ld      a, F_READDIR
+    jp      f_execute
+
+; close directory
+;   HL = directory object address
+f_closedir:
+    ld      (f_fpaddr), hl
+    ld      a, F_CLOSEDIR
+    jp      f_execute
+
+; find first matching directory entry
+;   HL = directory object address
+;   DE = file info object address
+;   BC = address of null-terminated path followed by null-terminated pattern
+f_findfirst:
+    ld      (f_fpaddr), hl
+    ld      (f_outaddr), de
+    ld      (f_inaddr), bc
+    ld      bc, pathlen
+    ld      (f_maxlen), bc
+    ld      a, F_FINDFIRST
+    jp      f_execute
+
+; find next matching directory entry
+;   HL = directory object address
+;   DE = file info object address
+f_findnext:
+    ld      (f_fpaddr), hl
+    ld      (f_outaddr), de
+    ld      a, F_FINDNEXT
+    jp      f_execute
 
 ; initiate a DMA transfer
 ;       A = DMA command
-;       returns result code in A; NZ set if error
-fatfs
+;       returns result code in A; NZ set if err
+f_execute:
     out     (dmaport), a
-    ld      a, (fr)
+    ld      a, (f_result)
     cp      FR_OK
     ret
 
 ; set up the mailbox address to use for DMA communication
-setmailbox
+;       HL = address of mailbox
+f_init:
+    ld      hl, f_mailbox
     ld      c, dmaport
     in      a, (c)           ; clear DMA mailbox address
     out     (c), l           ; set new DMA mailbox address
     out     (c), h
     ret
 
-mailbox
-filaddr     dw 0
-inaddr      dw 0
-outaddr     dw 0
-length      dw 0
-ofs         dd 0
-mode        db 0
-mask        db 0
-fr          db 0
-
-fp          ds 42
-
-sourcename  db "/TEST.TXT", 0
-sourcelen   equ $-sourcename
-destname    db "/COPY.TXT", 0
-destlen     equ $-destname
-filedata    db 0
+; mailbox for DMA communicaation
+f_mailbox:
+f_fpaddr    dw 0            ; address of file pointer
+f_inaddr    dw 0            ; address of input buffer
+f_outaddr   dw 0            ; address of output buffer
+f_maxlen    dw 0            ; maximum buffer length
+f_retlen    dw 0            ; length read or written
+f_ofs       dd 0            ; offset for f_lseek
+f_mode      db 0            ; f_mode for f_open, attr for f_chmod
+f_mask      db 0            ; f_mask for f_chmod
+f_result    db 0            ; result of last operation
