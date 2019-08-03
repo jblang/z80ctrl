@@ -1001,11 +1001,19 @@ void cli_bench(int argc, char *argv[])
         bus_master();
         uint16_t busmastert = TCNT1;
 
-        uint8_t buf[256];
+        uint8_t buf[1024];
 
         TCNT1 = 0;
-        mem_read_bare(0, buf, 256);
-        uint16_t memreadbaret = TCNT1;
+        mem_read_bare(0, buf, 1024);
+        uint16_t memreadbare1kt = TCNT1;
+
+        TCNT1 = 0;
+        mem_read_bare(0, buf, 32);
+        uint16_t memreadbare32t = TCNT1;
+
+        TCNT1 = 0;
+        mem_read_bare(0xf0, buf, 32);
+        uint16_t memreadbare32ct = TCNT1;
 
         TCNT1 = 0;
         bus_slave();
@@ -1014,10 +1022,6 @@ void cli_bench(int argc, char *argv[])
         TCNT1 = 0;
         mem_read(0, buf, 256);
         uint16_t memreadt = TCNT1;
-
-        TCNT1 = 0;
-        mem_read(10, buf, 256);
-        uint16_t memreadskewt = TCNT1;
 
         FIL fp;
         UINT br;
@@ -1039,27 +1043,33 @@ void cli_bench(int argc, char *argv[])
 
         config_timer(1, CLKOFF);
         SREG = sreg;
-        printf_P(PSTR("get_rd %d\n"), TCNT_TO_US(rdt, F_CPU));
-        printf_P(PSTR("get_m1 %d\n"), TCNT_TO_US(m1t, F_CPU));
-        printf_P(PSTR("get_addrlo %d\n"), TCNT_TO_US(addrlot, F_CPU));
-        printf_P(PSTR("get_addrhi %d\n"), TCNT_TO_US(addrhit, F_CPU));
-        printf_P(PSTR("bus_status %d\n"), TCNT_TO_US(bust, F_CPU));
-        printf_P(PSTR("bus_status_fast %d\n"), TCNT_TO_US(busfastt, F_CPU));
-        printf_P(PSTR("bus_master %d\n"), TCNT_TO_US(busmastert, F_CPU));
-        printf_P(PSTR("bus_slave %d\n"), TCNT_TO_US(busslavet, F_CPU));
-        printf_P(PSTR("mem_read_bare %d\n"), TCNT_TO_US(memreadbaret, F_CPU));
-        printf_P(PSTR("mem_read %d\n"), TCNT_TO_US(memreadt, F_CPU));
-        printf_P(PSTR("mem_read (skewed) %d\n"), TCNT_TO_US(memreadskewt, F_CPU));
-        printf_P(PSTR("f_open %d\n"), TCNT_TO_US(fopent, F_CPU));
-        printf_P(PSTR("f_read %d\n"), TCNT_TO_US(freadt, F_CPU));
-        printf_P(PSTR("f_lseek %d\n"), TCNT_TO_US(fseekt, F_CPU));
-        printf_P(PSTR("f_close %d\n"), TCNT_TO_US(fcloset, F_CPU));
+
+        printf_P(PSTR("Operation Times:\n"));
+        printf_P(PSTR("\tget_rd %d us\n"), TCNT_TO_US(rdt, F_CPU));
+        printf_P(PSTR("\tget_m1 %d us\n"), TCNT_TO_US(m1t, F_CPU));
+        printf_P(PSTR("\tget_addrlo %d us\n"), TCNT_TO_US(addrlot, F_CPU));
+        printf_P(PSTR("\tget_addrhi %d us\n"), TCNT_TO_US(addrhit, F_CPU));
+        printf_P(PSTR("\tbus_status %d us\n"), TCNT_TO_US(bust, F_CPU));
+        printf_P(PSTR("\tbus_status_fast %d us\n"), TCNT_TO_US(busfastt, F_CPU));
+        printf_P(PSTR("\tbus_master %d us\n"), TCNT_TO_US(busmastert, F_CPU));
+        printf_P(PSTR("\tbus_slave %d us\n"), TCNT_TO_US(busslavet, F_CPU));
+        printf_P(PSTR("\tmem_read_bare %d us (1KB)\n"), TCNT_TO_US(memreadbare1kt, F_CPU));
+        printf_P(PSTR("\tmem_read_bare %d us (32 bytes)\n"), TCNT_TO_US(memreadbare32t, F_CPU));
+        printf_P(PSTR("\tmem_read_bare %d us (32 bytes, cross-page)\n"), TCNT_TO_US(memreadbare32ct, F_CPU));
+        printf_P(PSTR("\tmem_read %d us\n"), TCNT_TO_US(memreadt, F_CPU));
+        printf_P(PSTR("\tf_open %d us\n"), TCNT_TO_US(fopent, F_CPU));
+        printf_P(PSTR("\tf_read %d us\n"), TCNT_TO_US(freadt, F_CPU));
+        printf_P(PSTR("\tf_lseek %d us\n"), TCNT_TO_US(fseekt, F_CPU));
+        printf_P(PSTR("\tf_close %d us\n\n"), TCNT_TO_US(fcloset, F_CPU));
+
+        printf_P(PSTR("Data Structure Sizes:\n"));
+        printf_P(PSTR("\tFIL: %d bytes\n"), sizeof(FIL));
+        printf_P(PSTR("\tDIR: %d bytes\n"), sizeof(DIR));
+        printf_P(PSTR("\tFILINFO: %d bytes\n"), sizeof(FILINFO));
+        printf_P(PSTR("\tFSIZE_t: %d bytes\n"), sizeof(FSIZE_t));
         uart_flush();
     }
 }
-
-
-
 
 void cli_dispatch(char *buf);
 
