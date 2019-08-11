@@ -78,14 +78,13 @@ void z80_reset(uint32_t addr)
  */
 void z80_run(void)
 {
-    uint16_t count;
     clk_run();
     for(;;) {
         if (uart_peek(0) == halt_key && halt_key != 0)
             break;
         if (!GET_IORQ)
             iorq_dispatch(0);
-        if (do_halt && ++count == 0 && !GET_HALT)
+        if (do_halt && !GET_HALT)
             break;
     }
     clk_stop();
