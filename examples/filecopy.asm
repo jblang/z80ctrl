@@ -26,46 +26,58 @@ uarts:      equ 10h
 uartd:      equ 11h
 lf:         equ 0ah
 cr:	        equ 0dh
+buflen:     equ 32*1024
 
+    jp      start
+
+include     "filedma.asm"
+
+start:
     ld      hl, ramtop                  ; set up stack
     ld      sp, hl
 
     call    f_init                      ; initialize file DMA mailbox
 
-    ld      de, filebuf                 ; get command-line buffer
-    ld      bc, buflen
-    call    f_cli_first
+    f_setw  f_outaddr, filebuf          ; set up file buffer
+    f_setw  f_maxlen, buflen
+
+    call    f_cli_first                 ; get command-line arguments
     cp      3                           ; verify that there are at least 2 params
-    jp      c, usage
+    jp      c, usage                    ; if not, show usage
 
-    call    f_cli_next                  ; skip over command name
+    call    f_cli_next                  ; get pointer to first filename
+    ld      (f_inaddr), de
 
-    ld      hl, sourcefp                ; open source file for reading
-    ld      a, FA_READ
-    call    f_open
+    f_setw  f_fpaddr, sourcefp          ; open source file for reading
+    f_setb  f_mode, FA_READ
+    f_call  F_OPEN
     jp      nz, error
 
-    call    f_cli_next
+    call    f_cli_next                  ; get pointer to second filename
+    ld      (f_inaddr), de
 
-    ld      hl, destfp                  ; open destination file for writing
-    ld      a, FA_WRITE | FA_CREATE_NEW
-    call    f_open
+    f_setw  f_fpaddr, destfp            ; open destination file for writing
+    f_setb  f_mode, FA_WRITE | FA_CREATE_NEW
+    f_call  F_OPEN
     jp      nz, error
 
-    ld      de, filebuf
+    f_setw  f_inaddr, filebuf           ; set input address back to beginning of buffer
+
 loop:
-    ld      hl, sourcefp                ; fill buffer with bytes from source
-    ld      bc, buflen
-    call    f_read
+    f_setw  f_fpaddr, sourcefp          ; fill buffer with bytes from source
+    f_call  F_READ
     jp      nz, error
-    ld      hl, destfp                  ; write bytes from buffer to destination
-    ld      bc, (f_retlen)
-    call    f_write
+
+    f_setw  f_fpaddr, destfp            ; write bytes from buffer to destination
+    f_cpyw  f_maxlen, f_retlen          ; copy number of bytes returned by read
+    f_call  F_WRITE
     jp      nz, error
+
     ld      hl, buflen                  ; check whether last read was less than full buffer
+    ld      de, (f_maxlen)
     or      a
-    sbc     hl, bc
-    add     hl, bc
+    sbc     hl, de
+    add     hl, de
     jp      z, loop                     ; if not, go again
     jp      close
 
@@ -75,44 +87,43 @@ usage:
     jp      close
 
 error:
-    call    f_find_error                ; print error message
+    call    f_error                     ; print error message
     ex      de, hl
     call    strout
     ld      hl, crlf
     call    strout
 
 close:
-    ld      hl, sourcefp
-    call    f_close                     ; close the source file
-    ld      hl, destfp
-    call    f_close                     ; close the file
+    f_setw  f_fpaddr, sourcefp
+    f_call  F_CLOSE                     ; close the source file
+    f_setw  f_fpaddr, destfp
+    f_call  F_CLOSE                     ; close the file
 
     halt
 
+; output null-terminated string
+;   HL = pointer to string
+strout:     ld a, (hl)                  ; get next character
+            and a                       ; check if it's null
+            ret z                       ; if so, we're done
+	        call chrout                 ; otherwise output character
+            inc hl                      ; point to next character
+            jr strout                   ; repeat
 
-strout:     ld a, (hl)
-            and a
-            ret z
-	        call chrout
-            inc hl
-            jr strout
-
-chrout:     push af
-rdylp:	    in a, (uarts)
+; output character
+chrout:     push af                     ; save character
+rdylp:	    in a, (uarts)               ; check if uart is ready to receive
 	        bit 1,a
-	        jr z, rdylp
-	        pop af
-            out (uartd), a
+	        jr z, rdylp                 ; if not, wait until it is
+	        pop af                      ; restore character
+            out (uartd), a              ; output it
 	        ret
-
-sourcefp    ds 42                       ; file pointers
-destfp      ds 42
-
-filebuf     ds 256                      ; temporary buffer
-buflen      equ $-filebuf
 
 usage_text  db "usage: filecopy <source> <dest>"
 crlf        db cr, lf, 0
 colon       db ": ", 0
 
-include     "filedma.asm"
+sourcefp    ds fplen                    ; file pointers for fatfs
+destfp      ds fplen
+
+filebuf     equ $

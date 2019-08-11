@@ -68,8 +68,6 @@ F_DISK_IOCTL            equ 2ah
 F_GET_FATTIME           equ 2bh
 F_GET_CLIBUF            equ 40h
 
-
-
 ; FatFS file open flags
 FA_READ				    equ 01h
 FA_WRITE			    equ 02h
@@ -101,167 +99,10 @@ FR_NOT_ENOUGH_CORE		equ 11h
 FR_TOO_MANY_OPEN_FILES	equ 12h
 FR_INVALID_PARAMETER	equ 13h
 
-dmaport     equ 0bh
+dmaport                 equ 0bh     ; port to initiate dma transfer
+fplen                   equ 42      ; length of fatfs file pointer
 
-; get CLI buffer
-;   DE = CLI buffer address
-;   BC = CLI buffer length
-; returns:
-;   A = param count
-;   DE = pointer to first CLI param
-f_cli_first:
-    ld      a, F_GET_CLIBUF
-    ld      (f_outaddr), de
-    ld      (f_maxlen), bc
-    call    f_dma_exec
-    ld      a, (de)
-    inc     de
-    ret
-
-; null-terminate current parameter and find next
-;   DE = starting address
-;   returns address of next parameter in DE
-f_cli_next:
-    ex      de, hl
-    xor     a
-.loop
-    cp      (hl)
-    inc     hl
-    jp      nz, .loop
-    ex      de, hl
-    ret
-
-
-; open a file
-;   A = file access f_mode
-;   HL = file object address
-;   DE = path buffer address
-;   BC = path buffer length
-f_open:
-    ld      (f_mode), a
-    ld      (f_fpaddr), hl
-    ld      (f_inaddr), de
-    ld      (f_maxlen), bc
-    ld      a, F_OPEN
-    jp      f_dma_exec
-
-; close a file
-;   HL = file object address
-f_close:
-    ld      (f_fpaddr), hl
-    ld      a, F_CLOSE
-    jp      f_dma_exec
-
-; read from a file
-;   HL = file object address
-;   DE = destination buffer address
-;   BC = destination buffer length
-f_read:
-    ld      (f_fpaddr), hl
-    ld      (f_outaddr), de
-    ld      (f_maxlen), bc
-    ld      a, F_READ
-    jp      f_dma_exec
-
-; write to a file
-;   HL = file object address
-;   DE = source buffer address
-;   BC = source buffer length
-f_write:
-    ld      (f_fpaddr), hl
-    ld      (f_inaddr), de
-    ld      (f_maxlen), bc
-    ld      a, F_WRITE
-    jp      f_dma_exec
-
-; seek into file
-;   HL = file object address
-;   DE = low word of offset
-;   BC = high word of offset
-f_lseek:
-    ld      (f_fpaddr), hl
-    ld      (f_ofs), de
-    ld      (f_ofs+2), bc
-    ld      a, F_LSEEK
-    jp      f_dma_exec
-
-; open directory
-;   HL = directory object address
-;   DE = path buffer address
-;   BC = path buffer length
-f_opendir:
-    ld      (f_fpaddr), hl
-    ld      (f_inaddr), de
-    ld      (f_maxlen), bc
-    ld      a, F_OPENDIR
-    jp      f_dma_exec
-
-; read directory
-;   HL = directory object address
-;   IX = file info object address
-f_readdir:
-    ld      (f_fpaddr), hl
-    ld      (f_outaddr), ix
-    ld      a, F_READDIR
-    jp      f_dma_exec
-
-; close directory
-;   HL = directory object address
-f_closedir:
-    ld      (f_fpaddr), hl
-    ld      a, F_CLOSEDIR
-    jp      f_dma_exec
-
-; find first matching directory entry
-;   HL = directory object address
-;   DE = path/pattern buffer address
-;   BC = path/pattern buffer length
-;   IX = file info object address
-f_findfirst:
-    ld      (f_fpaddr), hl
-    ld      (f_inaddr), de
-    ld      (f_maxlen), bc
-    ld      (f_outaddr), ix
-    ld      a, F_FINDFIRST
-    jp      f_dma_exec
-
-; find next matching directory entry
-;   HL = directory object address
-;   IX = file info object address
-f_findnext:
-    ld      (f_fpaddr), hl
-    ld      (f_outaddr), ix
-    ld      a, F_FINDNEXT
-    jp      f_dma_exec
-
-; initiate a DMA transfer
-;       A = DMA command
-;       returns result code in A; NZ set if err
-f_dma_exec:
-    out     (dmaport), a
-    ld      a, (f_result)
-    cp      FR_OK
-    ret
-
-; set up the mailbox address to use for DMA communication
-;       HL = address of mailbox
-f_init:
-    ld      hl, f_mailbox
-    ld      c, dmaport
-    in      a, (c)           ; clear DMA mailbox address
-    out     (c), l           ; set new DMA mailbox address
-    out     (c), h
-    ret
-
-f_find_error:
-    ld      b,a
-    inc     b
-    ld      de, fr_text
-.loop
-    call    f_cli_next
-    djnz    .loop
-    ret
-
+; error messages corresponding to codes
 fr_text:
     db "OK", 0
     db "disk error", 0
@@ -282,6 +123,88 @@ fr_text:
     db "file locked", 0
     db "out of memory", 0
     db "too many open files", 0
+
+; look up error message for error code
+;       A = error code
+;       returns pointer to string in DE
+f_error:
+    ld      b,a
+    inc     b
+    ld      de, fr_text
+.loop
+    call    f_cli_next
+    djnz    .loop
+    ret
+
+; set a byte-length parameter
+macro f_setb name, value
+    ld      a, value
+    ld      (name), a
+endmacro
+
+; set a word-length parameter
+macro f_setw name, value
+    ld      hl, value
+    ld      (name), hl
+endmacro
+
+; copy a word-length parameter
+macro f_cpyw dst, src
+    ld      hl, (src)
+    ld      (dst), hl
+endmacro
+
+; call a DMA function
+macro f_call func
+    ld      a, func
+    call    f_dma_exec
+endmacro
+
+; get CLI buffer
+;   f_outbuf must already be set to buffer address
+;   f_maxlen must already be set to buffer length
+; returns:
+;   A = param count
+;   DE = pointer to first CLI param
+f_cli_first:
+    ld      a, F_GET_CLIBUF
+    call    f_dma_exec
+    ld      de, (f_outaddr)
+    ld      a, (de)
+    inc     de
+    ret
+
+; point DE to next CLI parameter
+;   DE = starting address
+;   returns address of next parameter in DE
+f_cli_next:
+    ex      de, hl
+    xor     a
+.loop
+    cp      (hl)
+    inc     hl
+    jp      nz, .loop
+    ex      de, hl
+    ret
+
+; initiate a DMA transfer
+;       A = DMA command
+;       returns result code in A; NZ set if err
+f_dma_exec:
+    out     (dmaport), a
+    ld      a, (f_result)
+    cp      FR_OK
+    ret
+
+; set up the mailbox address to use for DMA communication
+;       HL = address of mailbox
+f_init:
+    ld      hl, f_mailbox
+    ld      c, dmaport
+    in      a, (c)           ; clear DMA mailbox address
+    out     (c), l           ; set new DMA mailbox address
+    out     (c), h
+    ret
 
 ; mailbox for DMA communicaation
 f_mailbox:
