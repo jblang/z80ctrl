@@ -32,6 +32,7 @@
 #include "diskemu.h"
 #include "sioemu.h"
 #include "filedma.h"
+#include "bdosemu.h"
 #ifdef MSX_KEY_BASE
 #include "msxkey.h"
 #endif
@@ -152,6 +153,14 @@ void iorq_dispatch(uint8_t logged)
                 DATA_OUTPUT;
             } else if (!GET_WR) {
                 file_dma_command(GET_DATA);
+            }
+            break;
+        case BDOS_DMA:
+            if (!GET_RD) { 
+                SET_DATA(bdos_dma_reset());
+                DATA_OUTPUT;
+            } else if (!GET_WR) {
+                bdos_dma_command(GET_DATA);
             }
             break;
 #ifdef MSX_KEY_BASE

@@ -37,7 +37,7 @@ F_CPU?=20000000L
 
 # Programmer options
 PROGRAMMER?=arduino
-PORT?=/dev/ttyS10
+PORT?=/dev/ttyS3
 BAUD?=115200
 
 AVRCC?=avr-gcc
@@ -60,6 +60,7 @@ OBJS=	cli.o \
 	disasm.o \
 	util.o \
 	xmodem.o \
+	bdosemu.o \
 	$(FF_OBJS)
 
 ifdef BOARD_REV

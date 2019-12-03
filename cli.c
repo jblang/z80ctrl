@@ -38,6 +38,7 @@
 #include "util.h"
 #include "disasm.h"
 #include "diskemu.h"
+#include "bdosemu.h"
 #include "sioemu.h"
 #include "diskio.h"
 #include "uart.h"
@@ -130,20 +131,27 @@ void cli_savehex(int argc, char *argv[])
 #define TMS 1
 #define FLASH 2
 
-void loadbin(char *filename, uint8_t dest, uint32_t start, uint32_t offset, uint32_t len)
+uint32_t loadbin(char *filename, uint8_t dest, int32_t start, uint32_t offset, uint32_t len)
 {
     FIL fil;
     FRESULT fr;
     UINT br;
     uint8_t buf[256];
+    uint16_t load = 0;
     if (len == 0)
         len = 0x100000;
     if ((fr = f_open(&fil, filename, FA_READ)) != FR_OK) {
         printf_P(PSTR("error opening file: %S\n"), strlookup(fr_text, fr));
-        return;
+        return 0;
     } else if ((fr = f_lseek(&fil, offset)) != FR_OK) {
         printf_P(PSTR("seek error: %S\n"), strlookup(fr_text, fr));
     } else {
+        if (start < 0) {
+            if (f_read(&fil, &load, 2, &br) == FR_OK)
+                start = load;
+            else
+                return 0;
+        }
         while ((fr = f_read(&fil, buf, 256, &br)) == FR_OK) {
             if (br > len)
                 br = len;
@@ -168,6 +176,7 @@ void loadbin(char *filename, uint8_t dest, uint32_t start, uint32_t offset, uint
     }
     if ((fr = f_close(&fil)) != FR_OK)
         printf_P(PSTR("error closing file: %S\n"), strlookup(fr_text, fr));
+    return load;
 }
 
 /**
@@ -1075,7 +1084,7 @@ void cli_bench(int argc, char *argv[])
 void cli_dispatch(char *buf);
 
 #define WHITESPACE " \t\r\n"
-#define MAXBUF 1024
+#define MAXBUF 256
 #define MAXARGS 256
 #define AUTOEXEC "autoexec.z8c"
 
@@ -1354,9 +1363,14 @@ void cli_dispatch(char *buf)
         strcpy(filename, argv[0]);
         strcat_P(filename, PSTR(".COM"));
         if (f_stat(filename, &file) == FR_OK) {
-            file_dma_savecli(argc, argv);
+            save_cli(argc, argv);
+            uint16_t start = loadbin("bdos.prg", MEM, -1, 0, 0);
+            //printf_P(PSTR("bdos loaded at %04x\n"), start);
+            bdos_init(argc, argv);
             loadbin(filename, MEM, 0x100, 0, 0);
-            z80_reset(0x100);
+            while (uart_testrx(0))  // flush receive buffer
+                uart_getc(0);
+            z80_reset(start);
             z80_run();
         } else {
             printf_P(PSTR("unknown command: %s. type help for list.\n"), argv[0]);
