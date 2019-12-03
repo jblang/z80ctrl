@@ -6561,4 +6561,4 @@ const char fr_text[] PROGMEM =
     "OK\0disk error\0internal error\0drive not ready\0file not found\0path not found\0"
     "invalid path name\0access denied\0file already exists\0invalid object\0"
     "write protected\0invalid drive number\0drive not mounted\0invalid filesystem\0"
-    "mkfs aborted\0timeout\0file locked\0out of memory\0too many open files\0";
+    "mkfs aborted\0timeout\0file locked\0out of memory\0too many open files\0invalid parameter\0";
