@@ -32,6 +32,7 @@
 
 #include "util.h"
 #include "ff.h"
+#include "bus.h"
 
 /**
  * Look up a text string by index from a NULL-separated PROGMEM array
@@ -152,3 +153,59 @@ char *splitdir(char *path)
     }
     return NULL;
 }
+
+#define BUFSIZE 8192
+
+FRESULT file_to_mem(FIL *fp, uint16_t base, UINT btr, UINT *br)
+{
+    uint8_t buf[BUFSIZE];
+    FRESULT fr;
+    UINT btr1, br1;
+
+    *br = 0;
+    do {
+        btr1 = btr < BUFSIZE ? btr : BUFSIZE;
+        if ((fr = f_read(fp, buf, btr1, &br1)) != FR_OK)
+            break;
+        mem_write_bare(base, buf, br1);
+        *br += br1;
+        btr -= br1;
+        base += br1;
+    } while (btr > 0 && br1 == btr1);
+    return fr;
+}
+
+FRESULT mem_to_file(FIL *fp, uint16_t base, UINT btw, UINT *bw)
+{
+    uint8_t buf[BUFSIZE];
+    FRESULT fr;
+    UINT btw1, bw1;
+
+    *bw = 0;
+    do {
+        btw1 = btw < BUFSIZE ? btw : BUFSIZE;
+        mem_read_bare(base, buf, btw1);
+        if ((fr = f_write(fp, buf, btw1, &bw1)) != FR_OK)
+            break;
+        *bw += bw1;
+        btw -= bw1;
+        base += bw1;
+    } while(btw > 0 && bw1 == btw1);
+    return fr;
+}
+
+uint8_t clibuf[256];
+
+void save_cli(int argc, char *argv[])
+{
+    memset(clibuf, 0, 256);
+    clibuf[0] = argc;
+    uint8_t *next = clibuf + 1;
+
+    for (int i = 0; i < argc; i++)
+    {
+        strcpy(next, argv[i]);
+        next += strlen(argv[i]) + 1;
+    }
+}
+

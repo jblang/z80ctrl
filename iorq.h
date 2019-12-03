@@ -32,6 +32,12 @@
 
 void iorq_dispatch(uint8_t logged); 
 
+typedef enum {
+    DMA_MAILBOX_UNSET = 0,
+    DMA_MAILBOX_HALFSET,
+    DMA_MAILBOX_SET
+} dma_status_t;
+
 extern void (*dma_function)(void);
 
 bus_stat iorq_stat ;

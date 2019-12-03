@@ -29,6 +29,7 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <ff.h>
 
 const char *strlookup(const char *str, uint32_t index); /**< Lookup a string by index in a NULL-separated PROGMEM array */
 int fatfs_getchar(FILE * stream);                       /**< FatFS wrapper to read a single byte from a file */
@@ -50,4 +51,11 @@ void config_timer(uint8_t timer, uint8_t prescaler);
 uint16_t get_tcnt(uint8_t timer);
 void set_tcnt(uint8_t timer, uint16_t value);
 char *splitdir(char *path);
+
+extern uint8_t clibuf[256];
+
+FRESULT file_to_mem(FIL *fp, uint16_t base, UINT btr, UINT *br);
+FRESULT mem_to_file(FIL *fp, uint16_t base, UINT btw, UINT *bw);
+void save_cli(int argc, char *argv[]);
+
 #endif
