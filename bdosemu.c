@@ -9,6 +9,8 @@
 #include "util.h"
 #include "ff.h"
 
+//#define BDOS_DEBUG
+
 #define NOFILES 16
 #define NODRIVES 4
 
@@ -249,8 +251,7 @@ uint8_t fcb_match(uint8_t *mask, uint8_t *fcbname)
 /**
  * Dump the contents of an FCB
  */
-
-
+#ifdef BDOS_DEBUG
 uint8_t fcb_dump(fcb_t *f)
 {
     printf_P(PSTR("DR FILENAME EXT   DR FILENAME EXT   CR EX S2   R0 R1 R2   RC S1   &FCB &FIL\n"));
@@ -285,6 +286,7 @@ uint8_t fcb_dump(fcb_t *f)
     printf_P(PSTR("%02x %02x   "), f->rc, f->s1);
     printf_P(PSTR("%04x %04x\n"), f->fcbaddr, f->filaddr);
 }
+#endif
 
 /**
  * Translate FatFS error to BDOS error and log error if appropriate
@@ -375,8 +377,11 @@ uint8_t bdos_search(uint16_t fcbaddr, uint16_t dmaaddr, uint8_t mode, uint8_t *f
     else
         bytesleft = 0;
 
+#ifdef BDOS_DEBUG
     printf_P(PSTR("dir:\n"));
     fcb_dump(&dirfcb);
+#endif
+
     // Pad extra space with empty directory entries
     memcpy(buf, &dirfcb, 32);
     memset(buf+32, 0xe5, RECSIZ-32);
@@ -428,8 +433,10 @@ uint8_t bdos_readwrite(uint16_t fcbaddr, uint16_t dmaaddr, uint8_t mode)
     if (dma_command == BDOS_READ || dma_command == BDOS_WRITE)
         offset += RECSIZ;
     fcb_setseq(&reqfcb, offset);
+#ifdef BDOS_DEBUG
     printf_P(PSTR("after:\n"));
     fcb_dump(&reqfcb);
+#endif
     mem_write_bare(params.fcbaddr, &reqfcb, sizeof(fcb_t));
     // Indicate success
     return 0;
@@ -516,13 +523,17 @@ void bdos_dma_execute()
 {
     // Get DMA parameters
     mem_read_bare(dma_mailbox, &params, sizeof(bdos_mailbox_t));
+#ifdef BDOS_DEBUG
     printf_P(PSTR("\nBDOS %d %S   fcb %04xh   dma %04xh\n"), dma_command, strlookup(bdos_names, dma_command), params.fcbaddr, params.dmaaddr);
+#endif
 
     // Get the specified FCB
     if (dma_command != BDOS_SNEXT) {
         mem_read_bare(params.fcbaddr, &reqfcb, sizeof(fcb_t));
+#ifdef BDOS_DEBUG
         printf_P(PSTR("fcb:\n"));
         fcb_dump(&reqfcb);
+#endif
     }
 
     switch (dma_command) {
