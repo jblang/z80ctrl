@@ -30,6 +30,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 
 #include "ff.h"
 #include "bus.h"
@@ -1340,7 +1341,7 @@ void cli_dispatch(char *buf)
 {
     char *cmd;
     char *argv[MAXARGS];
-    char filename[14];
+    char filename[256];
     FILINFO file;
     int argc;
     int i;
@@ -1361,10 +1362,13 @@ void cli_dispatch(char *buf)
         cmd_func(argc, argv);
     } else {
         strcpy(filename, argv[0]);
-        strcat_P(filename, PSTR(".COM"));
+        for (i = 0; i < strlen(filename); i++)
+            filename[i] = toupper(filename[i]);
+        if(strcmp(filename + strlen(filename) - strlen(".COM"), ".COM") != 0)
+            strcat_P(filename, PSTR(".COM"));
         if (f_stat(filename, &file) == FR_OK) {
             save_cli(argc, argv);
-            uint16_t start = loadbin("bdos.prg", MEM, -1, 0, 0);
+            uint16_t start = loadbin("/bdos.prg", MEM, -1, 0, 0);
             //printf_P(PSTR("bdos loaded at %04x\n"), start);
             bdos_init(argc, argv);
             loadbin(filename, MEM, 0x100, 0, 0);

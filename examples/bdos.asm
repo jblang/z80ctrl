@@ -788,6 +788,8 @@ cboot:
 
 ; warm boot
 wboot:
+	ld	a,0			; close any open files
+	out (bdosp),a
 	halt			; return to z80ctrl
 
 ; unimplemented bios functions
