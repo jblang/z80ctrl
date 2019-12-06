@@ -511,7 +511,6 @@ uint8_t bdos_open()
     uint8_t mode;
     FRESULT fr;
 
-    printf_P(PSTR("closing file...\n"));
     bdos_close();
 
     // Do mode-dependent things (OPEN/MAKE)
