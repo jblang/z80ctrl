@@ -36,11 +36,11 @@
  * Physical to virtual UART mapping.
  */
 
-FIL sio_writefile[2];
-FIL sio_readfile[2];
+static FIL sio_writefile[2];
+static FIL sio_readfile[2];
 
-uint8_t sio_writemode[2] = {SIO_UART0, SIO_UART1};
-uint8_t sio_readmode[2] = {SIO_UART0, SIO_UART1};
+static uint8_t sio_writemode[2] = {SIO_UART0, SIO_UART1};
+static uint8_t sio_readmode[2] = {SIO_UART0, SIO_UART1};
 
 #define SIO_EOF 0x1A
 

@@ -63,9 +63,9 @@ typedef enum {
     F_GET_CLIBUF = 64
 } dma_command_t;
 
-uint16_t dma_mailbox = 0;
-uint8_t dma_command = 0;
-dma_status_t dma_status = DMA_MAILBOX_UNSET;
+static uint16_t dma_mailbox = 0;
+static uint8_t dma_command = 0;
+static dma_status_t dma_status = DMA_MAILBOX_UNSET;
 
 typedef struct {
     uint16_t fpaddr;

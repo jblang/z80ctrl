@@ -92,11 +92,11 @@ typedef struct _drive {
 // Number of emulated disk drives
 #define NUMDRIVES 8
 
-drive drives[NUMDRIVES];
-drive *selected;
+static drive drives[NUMDRIVES];
+static drive *selected;
 
-uint8_t sectorbuf[SECTORSIZE+1];
-uint8_t dirtysector = 0;
+static uint8_t sectorbuf[SECTORSIZE+1];
+static uint8_t dirtysector = 0;
 
 /**
  * Unmount a disk image

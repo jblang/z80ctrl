@@ -342,12 +342,12 @@ uint8_t disasm(uint8_t (*input)(), char *output)
     //printf_P(PSTR("%s %02X %03o %04X\t"), register_pairs[im], prefix, opcode, operand);
 }
 
-uint8_t disasm_index = 0;   /**< index of next byte within 256 byte buffer */
-uint32_t disasm_addr = 0;   /**< address of next chunk to read from external RAM */
-uint8_t *disasm_buf;        /**< pointer to disassembly buffer */
+static uint8_t disasm_index = 0;   /**< index of next byte within 256 byte buffer */
+static uint32_t disasm_addr = 0;   /**< address of next chunk to read from external RAM */
+static uint8_t *disasm_buf;        /**< pointer to disassembly buffer */
 
-uint8_t instr_bytes[8];     /**< bytes contained in the current instruction */
-uint8_t instr_length = 0;   /**< length of the current construction */
+static uint8_t instr_bytes[8];     /**< bytes contained in the current instruction */
+static uint8_t instr_length = 0;   /**< length of the current construction */
 
 /**
  * Return next byte for instruction from memory
