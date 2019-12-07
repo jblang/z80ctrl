@@ -82,7 +82,6 @@ const char bdos_names[] PROGMEM = {
 // BDOS return codes
 #define BDOS_ERROR 0xff
 #define BDOS_SUCCESS 0
-#define BDOS_EOF 1
 
 // FCB layout
 typedef struct {
@@ -92,21 +91,12 @@ typedef struct {
     uint8_t s1;
     uint8_t s2;
     uint8_t rc;
-    uint8_t dr2;
-    uint8_t fn2[11];
-    uint16_t fcbaddr;
-    uint16_t filaddr;
+    uint8_t fatfn[13];
+    uint8_t mode;
+    uint16_t seq;
     uint8_t cr;
     uint8_t r0, r1, r2;
 } fcb_t;
-
-
-// File wrapper for external memory storage
-typedef struct {
-    uint16_t fcbaddr;
-    uint16_t filaddr;
-    FIL fil;
-} filwrap_t;
 
 // Parameter mailbox format
 typedef struct {
@@ -120,13 +110,21 @@ static uint16_t dma_mailbox = 0;
 static uint8_t dma_command = 0;
 static dma_status_t dma_status = DMA_MAILBOX_UNSET;
 static bdos_mailbox_t params;
-static fcb_t curfcb;
-static filwrap_t wrapper;
+
+static uint16_t nextseq = 1;    // sequence numbers to uniquely identify FCBs
+static uint16_t curseq = 0;
+
+static fcb_t curfcb;            // FCB for the current command
+static fcb_t dirfcb;            // Directory entry returned by the last search command
+
+static FIL fil;
+static DIR dir;
+static FILINFO fno;
 
 /**
  * Get null-terminated filename.ext from fixed length FCB field
  */
-void fcb_getname(uint8_t *fcbname, uint8_t *fatname)
+void fcb_fatname(uint8_t *fatname, uint8_t *fcbname)
 {
     uint8_t j = 0;
     for (uint8_t i = 0; i < 11; i++) {
@@ -141,7 +139,7 @@ void fcb_getname(uint8_t *fcbname, uint8_t *fatname)
 /**
  * Set fixed-length FCB field from null-terminated filename.ext
  */
-void fcb_setname(uint8_t *fatname, uint8_t *fcbname)
+void fcb_setname(uint8_t *fcbname, uint8_t *fatname)
 {
     uint8_t i = 0, j = 0;
     while (i < 8)
@@ -165,7 +163,7 @@ void fcb_setname(uint8_t *fatname, uint8_t *fcbname)
 /**
  * Parse d:filename.ext argument and set FCB fields
  */
-void fcb_setdrivename(char *arg, uint8_t *drive, uint8_t *filename)
+void fcb_setdrivename(uint8_t *drive, uint8_t *filename, char *arg)
 {
     if (arg[1] == ':') {
         if (arg[0] >= 'a' && arg[0] <= 'p')
@@ -174,9 +172,9 @@ void fcb_setdrivename(char *arg, uint8_t *drive, uint8_t *filename)
             *drive = arg[0] - 'A' + 1;
         else
             *drive = 0;
-        fcb_setname(arg+2, filename);
+        fcb_setname(filename, arg+2);
     } else {
-        fcb_setname(arg, filename);
+        fcb_setname(filename, arg);
     }
 }
 
@@ -228,44 +226,44 @@ uint8_t fcb_match(uint8_t *mask, uint8_t *fcbname)
 }
 
 /**
+ * Print the filename from an FCB
+ */
+uint8_t fcb_printfn(uint8_t *fn)
+{
+    for (uint8_t i = 0; i < 11; i++) {
+        if (i == 8)
+            putchar(' ');
+        if (0x20 <= (fn[i] & 0x7f) && (fn[i] & 0x7f) <= 0x7e)
+            putchar(fn[i] & 0x7f);
+        else
+            putchar(' ');
+    }
+}
+
+/**
  * Dump the contents of an FCB
  */
-#ifdef BDOS_DEBUG
 uint8_t fcb_dump(fcb_t *f)
 {
-    printf_P(PSTR("DR FILENAME EXT   DR FILENAME EXT   CR EX S2   R0 R1 R2   RC S1   &FCB &FIL\n"));
-    for (uint8_t j = 0; j < 2; j++) {
-        uint8_t *fn;
-        uint8_t dr;
-        if (j == 0) {
-            fn = f->fn;
-            dr = f->dr;
-        } else {
-            fn = f->fn2;
-            dr = f->dr2;
-        }
-        printf_P(PSTR("%02x "), dr);
-        for (uint8_t i = 0; i < 11; i++) {
-            if (i == 8)
-                putchar(' ');
-            if (0x20 <= (fn[i] & 0x7f) && (fn[i] & 0x7f) <= 0x7e)
-                putchar(fn[i] & 0x7f);
-            else
-                putchar(' ');
-        }
-        printf_P(PSTR("   "));
-    }
-    printf_P(PSTR("%02x "), f->cr);
-    if (f->ex == '?')
-        printf_P(PSTR("?? "));
-    else
-        printf_P(PSTR("%02x "), f->ex);
-    printf_P(PSTR("%02x   "), f->s2);
-    printf_P(PSTR("%02x %02x %02x   "), f->r0, f->r1, f->r2);    
-    printf_P(PSTR("%02x %02x   "), f->rc, f->s1);
-    printf_P(PSTR("%04x %04x\n"), f->fcbaddr, f->filaddr);
+    printf_P(PSTR("dr filename ext   cr ex s2   r0 r1 r2   rc s1   fatfn          seq  mode\n"));
+    printf_P(PSTR("%02x "), f->dr);
+    fcb_printfn(f->fn);
+    printf_P(PSTR("   %02x %02x %02x"), f->cr, f->ex, f->s2);
+    printf_P(PSTR("   %02x %02x %02x"), f->r0, f->r1, f->r2);    
+    printf_P(PSTR("   %02x %02x"), f->rc, f->s1);
+    printf_P(PSTR("   %-12s"), f->fatfn);
+    printf_P(PSTR("   %04x %02x\n"), f->seq, f->mode);
 }
-#endif
+
+/**
+ * Log the current command and parameters
+ */
+void bdos_log(const char *message)
+{
+    printf_P(PSTR("\n%S: BDOS %d %S   fcb %04xh   dma %04xh   ret %02x\n"), message, dma_command, strlookup(bdos_names, dma_command), params.fcbaddr, params.dmaaddr, params.ret);
+    if (dma_command != BDOS_SNEXT && dma_command != BDOS_TERMCPM)
+        fcb_dump(&curfcb);
+}
 
 /**
  * Translate FatFS error to BDOS error and log error if appropriate
@@ -275,7 +273,8 @@ uint8_t bdos_error(FRESULT fr)
     if (fr == FR_OK) {
         return BDOS_SUCCESS;
     } else {
-        printf_P(PSTR("BDOS error: %S\n"), strlookup(fr_text, fr));
+        bdos_log(PSTR("Error"));
+        printf_P(PSTR("FatFs error %d: %S\n"), fr, strlookup(fr_text, fr));
         return BDOS_ERROR;
     }
 }
@@ -283,15 +282,12 @@ uint8_t bdos_error(FRESULT fr)
 /**
  * Search for a files matching name in an FCB
  */
-uint8_t bdos_search(uint8_t mode, uint8_t *fatfn)
+uint8_t bdos_search(uint8_t mode)
 {
     static uint8_t mask[12];
     static uint8_t searchex;
     static uint32_t bytesleft;
-    static fcb_t dirfcb;
-    static DIR dp;
     FRESULT fr;
-    FILINFO fno;
     uint8_t buf[RECSIZ];
 
     // On first search, save mask and extent, then reopen directory
@@ -299,28 +295,25 @@ uint8_t bdos_search(uint8_t mode, uint8_t *fatfn)
         memcpy(mask, curfcb.fn, 11);
         mask[11] = 0;
         searchex = curfcb.ex;
-        f_closedir(&dp);
-        if (fr = f_opendir(&dp, ".") != FR_OK)
+        f_closedir(&dir);
+        if (fr = f_opendir(&dir, ".") != FR_OK)
             return bdos_error(fr);
         memset(&dirfcb, 0, sizeof(fcb_t));
         bytesleft = 0;
     } 
     
-    // Get the next file if no more extents for current file
+    // Get the next file if done with current file
     if (bytesleft == 0) {    
         do {
-            if (fr = f_readdir(&dp, &fno) != FR_OK)
+            if (fr = f_readdir(&dir, &fno) != FR_OK)
                 return bdos_error(fr);
             if (fno.fname[0] == 0)  // indicate end of directory
                 return BDOS_ERROR;
             if (fno.fattrib & AM_DIR)   // skip subdirectories
                 continue;
-            fcb_setname(fno.fname, dirfcb.fn);
+            fcb_setname(dirfcb.fn, fno.fname);
         } while (!fcb_match(mask, dirfcb.fn));  // check filename match
 
-        if (fatfn != NULL)
-            strncpy(fatfn, fno.fname, 13);
-        
         // Translate attributes
         if (fno.fattrib & AM_RDO)
             dirfcb.fn[9] |= 0x80;
@@ -357,39 +350,90 @@ uint8_t bdos_search(uint8_t mode, uint8_t *fatfn)
         bytesleft = 0;
 
 #ifdef BDOS_DEBUG
-    printf_P(PSTR("dir:\n"));
+    printf_P(PSTR("Directory Entry:\n"));
     fcb_dump(&dirfcb);
 #endif
 
-    // Pad extra space with empty directory entries
-    memcpy(buf, &dirfcb, 32);
-    memset(buf+32, 0xe5, RECSIZ-32);
-    // Save directory entry to DMA buffer
-    mem_write_bare(params.dmaaddr, buf, RECSIZ);
+    // Only write directory entry to dma buffer for actual search command
+    if (dma_command == BDOS_SFIRST || dma_command == BDOS_SNEXT) {
+        // Pad extra space with empty directory entries
+        memcpy(buf, &dirfcb, 32);
+        memset(buf+32, 0xe5, RECSIZ-32);
+        // Save directory entry to DMA buffer
+        mem_write_bare(params.dmaaddr, buf, RECSIZ);
+    }
     return BDOS_SUCCESS;
 }
 
 /**
- * Return FatFS file object associated with FCB address
+ * Open the FAT file needed by the FCB if it's not already
  */
-FRESULT bdos_findfp()
+FRESULT fcb_openfil(fcb_t *fcb)
 {
-    // Current fil already matches requested fcb; nothing to do
-    if (wrapper.fcbaddr == curfcb.fcbaddr && curfcb.filaddr == wrapper.filaddr)
+    if (fcb->seq == curseq)
         return FR_OK;
+    f_close(&fil);
+    FRESULT fr = f_open(&fil, fcb->fatfn, fcb->mode);
+    if (fr == FR_OK)
+        curseq = fcb->seq;
+    return fr;
+}
 
-    // Current fil is valid; write it back to external RAM
-    if (wrapper.filaddr != 0)
-        mem_write_bare(wrapper.filaddr, &wrapper, sizeof(filwrap_t));
+/**
+ * Open file named in FCB
+ */
+uint8_t bdos_open()
+{
+    FRESULT fr;
 
-    // FCB has a valid filaddr, load the fil and confirm it matches 
-    if (curfcb.filaddr != 0) {
-        mem_read_bare(curfcb.filaddr, &wrapper, sizeof(filwrap_t));
-        if (wrapper.filaddr == curfcb.filaddr && wrapper.fcbaddr == curfcb.fcbaddr)
-            return FR_OK;
+    // Handle read-only files
+    curfcb.mode = FA_READ; 
+    if (!(fno.fattrib & AM_RDO))
+        curfcb.mode |= FA_WRITE;
+
+    // Command-specific behavior
+    if (dma_command == BDOS_OPEN) {
+        // Search for first existing file to match any wildcards
+        if ((fr = bdos_search(BDOS_SFIRST)) != BDOS_SUCCESS)
+            return fr;
+        strncpy(curfcb.fatfn, fno.fname, 13);
+        curfcb.s2 = 0;  // s2 is always zeroed by open call
+    } else {
+        // Otherwise make a new file
+        fcb_fatname(curfcb.fatfn, curfcb.fn);
+        curfcb.mode |= FA_CREATE_NEW;
+        // New files start at offset 0
+        fcb_setseq(&curfcb, 0); 
     }
 
-    return FR_INVALID_OBJECT;
+    // assign sequence number to uniquely identify fcb
+    curfcb.seq = nextseq++;
+    if (nextseq == 0)
+        nextseq = 1;
+
+    // Open the file
+    if ((fr = fcb_openfil(&curfcb)) != FR_OK)
+        return bdos_error(fr);
+    // File will no longer be new next time it's opened
+    curfcb.mode &= ~FA_CREATE_NEW;
+
+    // Save FCB back to memory
+    mem_write_bare(params.fcbaddr, &curfcb, sizeof(fcb_t));
+    return BDOS_SUCCESS;
+}
+
+
+/**
+ * Close file associated with fcb
+ */
+uint8_t bdos_close()
+{
+    f_close(&fil);
+    curseq = 0; // no currently active file
+    // Clear internal indentifiers from FCB
+    memset(curfcb.fatfn, 0, 16);
+    mem_write_bare(params.fcbaddr, &curfcb, sizeof(fcb_t));
+    return BDOS_SUCCESS;
 }
 
 /**
@@ -403,21 +447,21 @@ uint8_t bdos_readwrite()
     UINT br;
 
     // Try to get an active FP for this FCB
-    if ((fr = bdos_findfp()) != FR_OK)
+    if ((fr = fcb_openfil(&curfcb)) != FR_OK)
         return bdos_error(fr);
-    // Calculate offset for 
+    // Calculate offset for access method
     if (dma_command == BDOS_READ || dma_command == BDOS_WRITE) {
         offset = fcb_seqoffset(&curfcb);
     } else {
         offset = fcb_randoffset(&curfcb); 
     }
     // Seek to calculated offset if different from current offset
-    if (offset != f_tell(&wrapper.fil))
-        if ((fr = f_lseek(&wrapper.fil, offset)) != FR_OK)
+    if (offset != f_tell(&fil))
+        if ((fr = f_lseek(&fil, offset)) != FR_OK)
             return bdos_error(fr);
     // Do the read or write operation
     if (dma_command == BDOS_READRAND || dma_command == BDOS_READ) {
-        if ((fr = f_read(&wrapper.fil, buf, RECSIZ, &br)) != FR_OK)
+        if ((fr = f_read(&fil, buf, RECSIZ, &br)) != FR_OK)
             return bdos_error(fr);
         // Return EOF if no bytes read
         if (br == 0)
@@ -427,17 +471,13 @@ uint8_t bdos_readwrite()
         mem_write_bare(params.dmaaddr, buf, RECSIZ);
     } else {
         mem_read_bare(params.dmaaddr, buf, RECSIZ);
-        if ((fr = f_write(&wrapper.fil, buf, RECSIZ, &br)) != FR_OK)
+        if ((fr = f_write(&fil, buf, RECSIZ, &br)) != FR_OK)
             return bdos_error(fr);
     }
     // Automatically increment record if in sequential mode
     if (dma_command == BDOS_READ || dma_command == BDOS_WRITE)
         offset += RECSIZ;
     fcb_setseq(&curfcb, offset);
-#ifdef BDOS_DEBUG
-    printf_P(PSTR("after:\n"));
-    fcb_dump(&curfcb);
-#endif
     mem_write_bare(params.fcbaddr, &curfcb, sizeof(fcb_t));
     // Indicate success
     return 0;
@@ -449,104 +489,8 @@ uint8_t bdos_readwrite()
 uint8_t bdos_randrec()
 {
     fcb_setrand(&curfcb, fcb_seqoffset(&curfcb));
-    mem_write_bare(curfcb.fcbaddr, &curfcb, sizeof(fcb_t));
+    mem_write_bare(params.fcbaddr, &curfcb, sizeof(fcb_t));
     return 0;
-}
-
-/**
- * Close file associated with FCB
- */
-uint8_t bdos_close()
-{
-    FRESULT fr;
-
-    // Find the file pointer associated with the current FCB
-    if ((fr = bdos_findfp()) != FR_OK)
-        return fr;
-
-    // Close the file pointer
-    fr = f_close(&wrapper.fil);
-
-    // Clear the addresses on the wrapper and write back to external ram
-    wrapper.filaddr = 0;
-    wrapper.fcbaddr = 0;
-    mem_write_bare(curfcb.filaddr, &wrapper, sizeof(filwrap_t));
-
-    // Clear the fil address on the FCB
-    curfcb.filaddr = 0;
-    mem_write_bare(curfcb.fcbaddr, &curfcb, 33);
-
-    return fr;
-}
-
-/**
- * Close all files and clear all addresses
- */
-uint8_t bdos_closeall()
-{
-    FRESULT fr;
-    uint16_t firstaddr = dma_mailbox + sizeof(bdos_mailbox_t);
-    uint16_t lastaddr = 0x10000 - sizeof(filwrap_t);
-    for (uint32_t filaddr = firstaddr; filaddr <= lastaddr; filaddr += sizeof(filwrap_t)) {
-        mem_read_bare(filaddr, &wrapper, sizeof(filwrap_t));
-        f_close(&wrapper.fil);
-        if (wrapper.fcbaddr != 0) {
-            mem_read_bare(wrapper.fcbaddr, &curfcb, sizeof(fcb_t));
-            curfcb.fcbaddr = 0;
-            curfcb.filaddr = 0;
-            mem_write_bare(wrapper.fcbaddr, &curfcb, 33);
-        }
-        wrapper.fcbaddr = 0;
-        wrapper.filaddr = 0;
-        mem_write_bare(filaddr, &wrapper, sizeof(filwrap_t));
-    }
-}
-
-/**
- * Open file named in FCB
- */
-uint8_t bdos_open()
-{
-    uint8_t fatfn[13];
-    uint8_t mode;
-    FRESULT fr;
-
-    bdos_close();
-
-    // Do mode-dependent things (OPEN/MAKE)
-    if (dma_command == BDOS_OPEN) {
-        mode = FA_READ | FA_WRITE;
-        curfcb.s2 = 0;
-    } else { // BDOS_MAKE
-        mode = FA_READ | FA_WRITE | FA_CREATE_NEW;
-        fcb_setseq(&curfcb, 0);
-    }
-
-    // Search for an empty slot in which to store a file
-    uint16_t firstaddr = dma_mailbox + sizeof(bdos_mailbox_t);
-    uint16_t lastaddr = 0x10000 - sizeof(filwrap_t);
-    for (uint32_t filaddr = firstaddr; filaddr <= lastaddr; filaddr += sizeof(filwrap_t)) {
-        mem_read_bare(filaddr, &wrapper, sizeof(filwrap_t));
-        if (wrapper.filaddr == 0 && wrapper.fcbaddr == 0) {
-            fcb_getname(curfcb.fn, fatfn);
-            if ((fr = f_open(&wrapper.fil, fatfn, mode)) != FR_OK)
-                return bdos_error(fr);
-            curfcb.filaddr = filaddr;
-            wrapper.filaddr = filaddr;
-            wrapper.fcbaddr = curfcb.fcbaddr;
-            mem_write_bare(wrapper.filaddr, &wrapper, sizeof(filwrap_t));
-            mem_write_bare(curfcb.fcbaddr, &curfcb, 33);
-#ifdef BDOS_DEBUG
-            printf_P(PSTR("Empty file slot found at %04x.\n"), filaddr);
-            fcb_dump(&curfcb);
-#endif
-            return BDOS_SUCCESS;
-        }
-    }
-#ifdef BDOS_DEBUG
-    printf_P(PSTR("no empty slots!\n"));
-#endif
-    return bdos_error(FR_NOT_ENOUGH_CORE);
 }
 
 /**
@@ -555,13 +499,12 @@ uint8_t bdos_open()
 uint8_t bdos_delete()
 {
     FRESULT fr = FR_OK;
-    uint8_t fatfn[13];
     // Search for files matching wildcards
-    uint8_t ret = bdos_search(BDOS_SFIRST, fatfn);
+    uint8_t ret = bdos_search(BDOS_SFIRST);
     while (!ret) {
-        if (fr = f_unlink(fatfn) != FR_OK)
+        if (fr = f_unlink(fno.fname) != FR_OK)
             return bdos_error(fr);
-        ret = bdos_search(BDOS_SNEXT, fatfn);
+        ret = bdos_search(BDOS_SNEXT);
     }
     return bdos_error(fr);
 }
@@ -572,9 +515,21 @@ uint8_t bdos_delete()
 uint8_t bdos_rename()
 {
     uint8_t fatfn[13], fatfn2[13];
-    fcb_getname(curfcb.fn, fatfn);
-    fcb_getname(curfcb.fn2, fatfn2);
+    fcb_fatname(fatfn, curfcb.fn);
+    fcb_fatname(fatfn2, curfcb.fatfn+1);
     return bdos_error(f_rename(fatfn, fatfn2));
+}
+
+/**
+ * Compute file size
+ */
+uint8_t bdos_size()
+{
+    uint8_t ret;
+    if (ret = bdos_search(BDOS_SFIRST))
+        return ret;
+    fcb_setrand(&curfcb, (fno.fsize + RECSIZ-1)/ RECSIZ);
+    mem_write_bare(params.fcbaddr, &curfcb, sizeof(fcb_t));
 }
 
 /**
@@ -585,22 +540,17 @@ void bdos_dma_execute()
     // Get DMA parameters
     mem_read_bare(dma_mailbox, &params, sizeof(bdos_mailbox_t));
 #ifdef BDOS_DEBUG
-    printf_P(PSTR("\nBDOS %d %S   fcb %04xh   dma %04xh\n"), dma_command, strlookup(bdos_names, dma_command), params.fcbaddr, params.dmaaddr);
+    bdos_log(PSTR("Before"));
 #endif
 
     // Get the specified FCB
     if (dma_command != BDOS_SNEXT) {
         mem_read_bare(params.fcbaddr, &curfcb, sizeof(fcb_t));
-        curfcb.fcbaddr = params.fcbaddr;
-#ifdef BDOS_DEBUG
-        printf_P(PSTR("fcb:\n"));
-        fcb_dump(&curfcb);
-#endif
     }
 
     switch (dma_command) {
         case BDOS_TERMCPM:
-            params.ret = bdos_closeall();
+            f_close(&fil);
             break;
         case BDOS_OPEN:
         case BDOS_MAKE:
@@ -611,7 +561,7 @@ void bdos_dma_execute()
             break;
         case BDOS_SFIRST:
         case BDOS_SNEXT:
-            params.ret = bdos_search(dma_command, NULL);
+            params.ret = bdos_search(dma_command);
             break;
         case BDOS_READ:
         case BDOS_WRITE:
@@ -628,6 +578,8 @@ void bdos_dma_execute()
             break;
         case BDOS_ATTRIB:
         case BDOS_SIZE:
+            params.ret = bdos_size();
+            break;
         case BDOS_RANDREC:
             params.ret = bdos_randrec();
             break;
@@ -635,6 +587,10 @@ void bdos_dma_execute()
             params.ret = bdos_error(FR_INVALID_PARAMETER);
             break;
     }
+
+#ifdef BDOS_DEBUG
+    bdos_log(PSTR("After"));
+#endif
 
     // Write back return values
     mem_write_bare(dma_mailbox, &params, sizeof(bdos_mailbox_t));
@@ -648,16 +604,16 @@ void bdos_init(int argc, char *argv[])
     char comtail[256];
     fcb_t deffcb;
 
-    // Close any files left open by previous applications
-    if (dma_status == DMA_MAILBOX_SET)
-        bdos_closeall();
-
     // Set up default FCB with filenames on command line
     memset(&deffcb, 0, sizeof(fcb_t));
     if (argc >= 2)
-        fcb_setdrivename(argv[1], &deffcb.dr, deffcb.fn);
+        fcb_setdrivename(&deffcb.dr, deffcb.fn, argv[1]);
+    else 
+        memset(deffcb.fn, ' ', 11);
     if (argc >= 3)
-        fcb_setdrivename(argv[2], &deffcb.dr2, deffcb.fn2);
+        fcb_setdrivename(deffcb.fatfn, deffcb.fatfn+1, argv[2]);
+    else
+        memset(deffcb.fatfn+1, ' ', 11);
     mem_write(DEFFCB, &deffcb, sizeof(fcb_t));
     memset(comtail, ' ', 256);
 
@@ -677,9 +633,9 @@ void bdos_init(int argc, char *argv[])
  */
 uint8_t bdos_dma_reset()
 {
+    dma_function = NULL;
     dma_status = DMA_MAILBOX_UNSET;
     dma_mailbox = 0;
-    dma_function = NULL;
     return 0xa5;
 }
 
