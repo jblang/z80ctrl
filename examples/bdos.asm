@@ -595,6 +595,11 @@ retmon:	ld	hl,(entsp)
 
 ;	data areas
 
+lret	equ	aret		;low(aret)
+linfo:	ds	1		;low(info)
+fcbdsk:	ds	1		;disk named in fcb
+resel:	ds	1		;reselection flag
+
 compcol:
 	db	0		;true if computing column position
 strtcol:
@@ -702,8 +707,33 @@ func39	equ	func_ret	;unimplemented
 func40	equ	bdosemu		;random disk write with zero fill of unallocated block
 
 ;*****************************************************************
+; bios jump table
+;*****************************************************************
+
+	align	100h
+
+bios:	jp 	cboot
+wboote:	jp	wboot
+	jp	const
+	jp	bconin
+	jp	bconout
+	jp	list
+	jp	punch
+	jp	reader
+	jp	noop
+	jp	noop
+	jp	noop
+	jp	noop
+	jp	noop
+	jp	noop
+	jp	noop
+	jp	prstat
+	jp	noop
+
+;*****************************************************************
 ; bios functions
 ;*****************************************************************
+; From SIMH BIOS by Peter Schorn
 
 ; SIO controller ports
 constat	equ	16		; sio port 1 status port
@@ -797,56 +827,8 @@ noop:
 	ret
 
 ;*****************************************************************
-; bios jump table
-;*****************************************************************
-
-	align	100h
-
-bios:	jp 	cboot
-wboote:	jp	wboot
-	jp	const
-	jp	bconin
-	jp	bconout
-	jp	list
-	jp	punch
-	jp	reader
-	jp	noop
-	jp	noop
-	jp	noop
-	jp	noop
-	jp	noop
-	jp	noop
-	jp	noop
-	jp	prstat
-	jp	noop
-
-;*****************************************************************
 ; bios data area
 ;*****************************************************************
-
-; dummy values for unimplemented functionality
-usrcode:
-	db	0		;current user number
-lret	equ	aret		;low(aret)
-linfo:	ds	1		;low(info)
-fcbdsk:	ds	1		;disk named in fcb
-resel:	ds	1		;reselection flag
-rodsk:	defw	0		;read only disk vector
-dlog:	defw	0ffffh		;logged-in disk vector
-alvec:	defw	0		;disk allocation vector
-
-; disk parameter block
-dpblk:
-	defw	128  		; SPT - sectors per track
-	defb	7       	; BSH - block shift factor from BLS
-	defb	127      	; BLM - block mask from BLS
-	defb	15       	; EXM - Extent mask
-	defw	0fh		; DSM - Storage size (blocks - 1)
-	defw	0ffffh		; DRM - Number of directory entries - 1
-	defb	0ffh     	; AL0 - 1 bit set per directory block (ALLOC0)
-	defb	0ffh   		; AL1 - 1 bit set per directory block (ALLOC0)
-	defw	0       	; CKS - DIR check vector size (DRM+1)/4 (0=fixed disk) (ALLOC1)
-	defw	0       	; OFF - Reserved tracks offset
 
 ; mailbox to transfer BDOS data
 mailbox:
@@ -854,3 +836,21 @@ info:	defw	0		; fcb information address
 aret:	defw	0		; return value
 curdsk:	defb	0		; current disk number
 dmaad:	defw	tbuff		; initial dma address
+usrcode:db	0		;current user number
+rodsk:	defw	0		;read only disk vector
+dlog:	defw	1		;logged-in disk vector
+
+; disk parameter block
+dpblk:
+	defw	64  		; SPT - sectors per track
+	defb	5       	; BSH - block shift factor from BLS
+	defb	01fh      	; BLM - block mask from BLS
+	defb	1       	; EXM - Extent mask
+	defw	07ffh		; DSM - Storage size (blocks - 1)
+	defw	03ffh		; DRM - Number of directory entries - 1
+	defb	0ffh     	; AL0 - 1 bit set per directory block (ALLOC0)
+	defb	0   		; AL1 - 1 bit set per directory block (ALLOC0)
+	defw	0       	; CKS - DIR check vector size (DRM+1)/4 (0=fixed disk) (ALLOC1)
+	defw	2       	; OFF - Reserved tracks offset
+
+alvec:	defw	0		;disk allocation vector

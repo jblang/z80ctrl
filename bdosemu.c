@@ -98,12 +98,30 @@ typedef struct {
     uint8_t r0, r1, r2;
 } fcb_t;
 
+// Disk Parameter Block
+typedef struct {
+    uint16_t spt;
+    uint8_t bsh;
+    uint8_t blm;
+    uint8_t exm;
+    uint16_t dsm;
+    uint16_t drm;
+    uint8_t al0;
+    uint8_t al1;
+    uint16_t cks;
+    uint16_t off;
+} dpb_t;
+
 // Parameter mailbox format
 typedef struct {
     uint16_t fcbaddr;
     uint16_t ret;
     uint8_t curdrv;
     uint16_t dmaaddr;
+    uint8_t usernum;
+    uint16_t alloc;
+    uint16_t rodsk;
+    uint16_t dlog;
 } bdos_mailbox_t;
 
 static uint16_t dma_mailbox = 0;
