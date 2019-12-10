@@ -70,6 +70,8 @@ void clk_stop()
     OCR2B = 0;
 }
 
+uint8_t bus_mode = BUS_SLAVE;
+
 /**
  *  Request control of the bus from the Z80
  */
@@ -84,6 +86,7 @@ uint8_t bus_master(void)
         if (i-- == 0) {
             printf_P(PSTR("bus master request timed out\n"));
             BUSRQ_HI;
+            bus_mode = BUS_SLAVE;
             return 0;
         }
     }
@@ -97,6 +100,7 @@ uint8_t bus_master(void)
     WR_OUTPUT;
     ADDR_OUTPUT;
     DATA_INPUT;
+    bus_mode = BUS_MASTER;
     return 1;
 }
 
@@ -116,6 +120,7 @@ void bus_slave(void)
     SET_DATA(0); // Disable pullups on data and address lines
     SET_ADDRLO(0);
     BUSRQ_HI;
+    bus_mode = BUS_SLAVE;
 
     // Clock the Z80 until it takes back control of the bus
     while (!GET_BUSACK)  {
@@ -214,145 +219,41 @@ void bus_init(void)
     BUSRQ_LO;
     BUSRQ_HI;
 
-    // Make bidirectional signals inputs
-    bus_slave();
-}
-
-uint32_t base_addr = 0;
-
-/**
- * Read specified number of bytes from external memory to a buffer
- */
-void mem_read_bare(uint32_t addr, void *buf, uint16_t len)
-{
-    uint8_t *cbuf = buf;
-    addr += base_addr & 0xFC000;
-#ifdef PAGE_BASE
-    DATA_OUTPUT;
-    mem_page_bare(0, PAGE(addr & 0xF0000));
-    mem_page_bare(1, PAGE(addr & 0xF0000)+1);
-    mem_page_bare(2, PAGE(addr & 0xF0000)+2);
-    mem_page_bare(3, PAGE(addr & 0xF0000)+3);
-#endif
-    DATA_INPUT;
-    MREQ_LO;
-    RD_LO;
-    SET_ADDR(addr & 0xFFFF);
-    for (uint16_t i = 0; i < len; i++) {
-        cbuf[i] = GET_DATA;
-        //bus_log(bus_status());
-        addr++;
-#ifdef PAGE_BASE
-        if ((addr & 0xFFFF) == 0) {
-            MREQ_HI;
-            DATA_OUTPUT;
-            mem_page_bare(0, PAGE(addr));
-            mem_page_bare(1, PAGE(addr)+1);
-            mem_page_bare(2, PAGE(addr)+2);
-            mem_page_bare(3, PAGE(addr)+3);
-            DATA_INPUT;
-            MREQ_LO;
-        }
-#endif
-        if ((addr & 0xFF) == 0) {
-            SET_ADDR(addr & 0xFFFF);
-        } else {
-            SET_ADDRLO(addr & 0xFF);
-        }
-    }
-    RD_HI;
-    MREQ_HI;
-}
-
-void mem_read(uint32_t addr, void *buf, uint16_t len)
-{
-    if (!bus_master())
-        return;
-    mem_read_bare(addr, buf, len);
-    bus_slave();
-}
-
-/**
- *  Write specified number of bytes to external memory from a buffer
- */
-void _mem_write_bare(uint32_t addr, const void *buf, uint16_t len, uint8_t pgmspace)
-{
-    const uint8_t *cbuf = buf;
-    addr += base_addr & 0xFC000;
-    DATA_OUTPUT;
-#ifdef PAGE_BASE
-    mem_page_bare(0, PAGE(addr & 0xF0000));
-    mem_page_bare(1, PAGE(addr & 0xF0000)+1);
-    mem_page_bare(2, PAGE(addr & 0xF0000)+2);
-    mem_page_bare(3, PAGE(addr & 0xF0000)+3);
-#endif
-    MREQ_LO;
-    SET_ADDR(addr & 0xFFFF);
-    for (uint16_t i = 0; i < len; i++) {
-        if (pgmspace)
-            SET_DATA(pgm_read_byte(&cbuf[i]));
-        else
-            SET_DATA(cbuf[i]);
-        WR_LO;
-        //bus_log(bus_status());
-        WR_HI;
-        addr++;
-#ifdef PAGE_BASE
-        if ((addr & 0xFFFF) == 0) {
-            MREQ_HI;
-            mem_page_bare(0, PAGE(addr));
-            mem_page_bare(1, PAGE(addr)+1);
-            mem_page_bare(2, PAGE(addr)+2);
-            mem_page_bare(3, PAGE(addr)+3);
-            MREQ_LO;
-        }
-#endif
-        if ((addr & 0xFF) == 0) {
-            SET_ADDR(addr & 0xFFFF);
-        } else {
-            SET_ADDRLO(addr & 0xFF);
-        }
-    }
-    MREQ_HI;
-    DATA_INPUT;
-}
-
-void _mem_write(uint32_t addr, const void *buf, uint16_t len, uint8_t pgmspace)
-{
-    if (!bus_master())
-        return;
-    _mem_write_bare(addr, buf, len, pgmspace);
-    bus_slave();
+    // Start out in control of the bus
+    bus_master();
 }
 
 /**
  * Output value to an IO register
  */
-void io_out_bare(uint8_t addr, uint8_t value)
+uint8_t io_out(uint8_t addr, uint8_t value)
 {
+    if (bus_mode != BUS_MASTER)
+        return 0;
+    MREQ_HI;
     SET_ADDRLO(addr);
     SET_DATA(value);
+    DATA_OUTPUT;
     IORQ_LO;
     WR_LO;
     WR_HI;
     IORQ_HI;
+    DATA_INPUT;
+    return 1;
 }
 
-void io_out(uint8_t addr, uint8_t value)
-{
-    if (!bus_master())
-        return;
-    DATA_OUTPUT;
-    io_out_bare(addr, value);
-    bus_slave();
-}   
+uint32_t base_addr = 0;
 
 /**
  * Input value from an IO register
  */
-uint8_t io_in_bare(uint8_t addr)
+uint8_t io_in(uint8_t addr)
 {
+    if (bus_mode != BUS_MASTER)
+        return 0;
+    MREQ_HI;
     SET_ADDRLO(addr);
+    DATA_INPUT;
     IORQ_LO;
     RD_LO;
     _delay_us(2);
@@ -362,20 +263,112 @@ uint8_t io_in_bare(uint8_t addr)
     return value;
 }
 
-uint8_t io_in(uint8_t addr)
+#ifdef PAGE_BASE
+#define PAGE_ENABLE (PAGE_BASE + 4)     // enable paging
+
+uint8_t mem_pages[] = {0, 0, 0, 0};
+
+
+/**
+ * Set the specified memory bank to the specified page
+ */
+void mem_page(uint8_t bank, uint8_t page)
 {
-    if (!bus_master())
-        return 0;
-    DATA_INPUT;
-    uint8_t value = io_in_bare(addr);
-    bus_slave();
-    return value;
+    uint8_t mreq = GET_MREQ;
+    uint8_t dataddr = DATA_DDR
+    io_out(PAGE_ENABLE, 1);
+    io_out(PAGE_BASE + (bank & 3), page & 0x3f);
+    mem_pages[bank] = page;
+    if (!mreq)
+        MREQ_LO;
+    dataddr = DATA_DDR;
 }
 
+/**
+ * Page in the four pages starting ad the specified address
+ */
+#define PAGE(addr) ((addr) >> 14)
+static void mem_page_addr(uint32_t addr)
+{
+    addr += base_addr;
+    if ((addr & 0xFFFF) == 0) {
+        mem_page(0, PAGE(addr & 0xF0000));
+        mem_page(1, PAGE(addr & 0xF0000)+1);
+        mem_page(2, PAGE(addr & 0xF0000)+2);
+        mem_page(3, PAGE(addr & 0xF0000)+3);
+    }
+}
+#else
+#define mem_page_addr(addr)
+#endif
+
+/**
+ * Read specified number of bytes from external memory to a buffer
+ */
+uint8_t mem_read(uint32_t addr, void *buf, uint16_t len)
+{
+    uint8_t *cbuf = buf;
+    if (bus_mode != BUS_MASTER)
+        return 0;
+    mem_page_addr(addr);
+    DATA_INPUT;
+    MREQ_LO;
+    RD_LO;
+    SET_ADDR(addr & 0xFFFF);
+    for (uint16_t i = 0; i < len; i++) {
+        cbuf[i] = GET_DATA;
+        addr++;
+        mem_page_addr(addr);
+        if ((addr & 0xFF) == 0) {
+            SET_ADDR(addr & 0xFFFF);
+        } else {
+            SET_ADDRLO(addr & 0xFF);
+        }
+    }
+    RD_HI;
+    MREQ_HI;
+    return 1;
+}
+
+/**
+ *  Write specified number of bytes to external memory from a buffer
+ */
+uint8_t _mem_write(uint32_t addr, const void *buf, uint16_t len, uint8_t pgmspace)
+{
+    const uint8_t *cbuf = buf;
+    if (bus_mode != BUS_MASTER)
+        return 0;
+    mem_page_addr(addr);
+    DATA_OUTPUT;
+    MREQ_LO;
+    SET_ADDR(addr & 0xFFFF);
+    for (uint16_t i = 0; i < len; i++) {
+        if (pgmspace)
+            SET_DATA(pgm_read_byte(&cbuf[i]));
+        else
+            SET_DATA(cbuf[i]);
+        WR_LO;
+        WR_HI;
+        addr++;
+        mem_page_addr(addr);
+        if ((addr & 0xFF) == 0) {
+            SET_ADDR(addr & 0xFFFF);
+        } else {
+            SET_ADDRLO(addr & 0xFF);
+        }
+    }
+    MREQ_HI;
+    DATA_INPUT;
+    return 1;
+}
+
+/**
+ * Mute the SN76489
+ */
 void sn76489_mute()
 {
     #ifdef SN76489_PORT
-    if (!bus_master())
+    if (bus_mode != BUS_MASTER)
         return;
     uint8_t oldclkdiv = clkdiv;
     clkdiv = 4;
@@ -402,31 +395,5 @@ void sn76489_mute()
     IORQ_HI;
     clk_stop();
     clkdiv = oldclkdiv;
-    bus_slave();
     #endif
 }
-
-#ifdef PAGE_BASE
-#define PAGE_ENABLE (PAGE_BASE + 4)     // enable paging
-
-uint8_t mem_pages[] = {0, 0, 0, 0};
-
-void mem_page_bare(uint8_t bank, uint8_t page)
-{
-    io_out_bare(PAGE_ENABLE, 1);
-    io_out_bare(PAGE_BASE + (bank & 3), page & 0x3f);
-}
-
-/**
- * Select the specified memory page for specified bank
- */
-void mem_page(uint8_t bank, uint8_t page)
-{
-    if (!bus_master())
-        return;
-    DATA_OUTPUT;
-    mem_page_bare(bank, page);
-    bus_slave();
-}
-
-#endif

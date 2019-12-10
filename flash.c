@@ -31,7 +31,7 @@
 
 // Reference: http://ww1.microchip.com/downloads/en/DeviceDoc/20005022C.pdf
 
-void flash_cmd_prefix(void)
+static void flash_cmd_prefix(void)
 {
         SET_ADDR(0x5555);
         SET_DATA(0xAA);
@@ -43,15 +43,15 @@ void flash_cmd_prefix(void)
         WR_HI;
 }
 
-void flash_write(uint32_t addr, uint8_t *buf, uint32_t len)
+uint8_t flash_write(uint32_t addr, uint8_t *buf, uint32_t len)
 {
-    if (!bus_master())
-        return;
+    if (bus_mode != BUS_MASTER)
+        return 0;
     DATA_OUTPUT;
     // first two banks must be physical pages 0 and 1
-    mem_page_bare(0, 0);
-    mem_page_bare(1, 1);
-    mem_page_bare(2, PAGE(addr));
+    mem_page(0, 0);
+    mem_page(1, 1);
+    mem_page(2, PAGE(addr));
     MREQ_LO;
     for (uint32_t i = 0; i < len; i++) {
         // Send byte program command sequence
@@ -65,11 +65,12 @@ void flash_write(uint32_t addr, uint8_t *buf, uint32_t len)
         if ((addr & 0x3fff) == 0) {
             // Load page to write into bank 3
             MREQ_HI;
-            mem_page_bare(2, PAGE(addr));
+            mem_page(2, PAGE(addr));
             MREQ_LO;
         }
         SET_ADDR((addr & 0x3fff) + 0x8000);
         SET_DATA(buf[i]);
+        DATA_OUTPUT;
         WR_LO;
         WR_HI;
 
@@ -79,21 +80,21 @@ void flash_write(uint32_t addr, uint8_t *buf, uint32_t len)
     }
     MREQ_HI;
     DATA_INPUT;
-    bus_slave();
+    return 1;
 }
 
 
 /** 
  * Erase the 4KB sector that the address falls within
  */
-void flash_erase(uint32_t addr)
+uint8_t flash_erase(uint32_t addr)
 {
-    if (!bus_master())
-        return;
+    if (bus_mode != BUS_MASTER)
+        return 0;
     DATA_OUTPUT;
     // first two banks must be physical pages 0 and 1
-    mem_page_bare(0, 0);
-    mem_page_bare(1, 1);
+    mem_page(0, 0);
+    mem_page(1, 1);
     MREQ_LO;
     // Send erase command sequence
     flash_cmd_prefix();
@@ -112,15 +113,16 @@ void flash_erase(uint32_t addr)
     } else {
         // Erase 4KB sector
         MREQ_HI;
-        mem_page_bare(0, PAGE(addr));
+        mem_page(0, PAGE(addr));
         MREQ_LO;
         SET_ADDR(addr & 0x3000);
         SET_DATA(0x30);
+        DATA_OUTPUT;
         WR_LO;
         WR_HI;
         _delay_ms(100);
     }
     MREQ_HI;
     DATA_INPUT;
-    bus_slave();
+    return 1;
 }

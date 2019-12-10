@@ -30,8 +30,8 @@
 #error "TMS9918 support requires board revision 3 or higher"
 #endif
 
-void tms_read(uint16_t addr, uint8_t *buf, uint16_t len);
-void _tms_write(uint16_t addr, const uint8_t *buf, uint16_t len, uint8_t pgmspace);
+uint8_t tms_read(uint16_t addr, uint8_t *buf, uint16_t len);
+uint8_t _tms_write(uint16_t addr, const uint8_t *buf, uint16_t len, uint8_t pgmspace);
 #define tms_write(addr, buf, len) _tms_write((addr), (buf), (len), 0)
 #define tms_write_P(addr, buf, len) _tms_write((addr), (buf), (len), 1)
 

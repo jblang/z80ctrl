@@ -378,7 +378,7 @@ uint8_t bdos_search(uint8_t mode)
         memcpy(buf, &dirfcb, 32);
         memset(buf+32, 0xe5, RECSIZ-32);
         // Save directory entry to DMA buffer
-        mem_write_bare(params.dmaaddr, buf, RECSIZ);
+        mem_write(params.dmaaddr, buf, RECSIZ);
     }
     return BDOS_SUCCESS;
 }
@@ -436,7 +436,7 @@ uint8_t bdos_open()
     curfcb.mode &= ~FA_CREATE_NEW;
 
     // Save FCB back to memory
-    mem_write_bare(params.fcbaddr, &curfcb, sizeof(fcb_t));
+    mem_write(params.fcbaddr, &curfcb, sizeof(fcb_t));
     return BDOS_SUCCESS;
 }
 
@@ -450,7 +450,7 @@ uint8_t bdos_close()
     curseq = 0; // no currently active file
     // Clear internal indentifiers from FCB
     memset(curfcb.fatfn, 0, 16);
-    mem_write_bare(params.fcbaddr, &curfcb, sizeof(fcb_t));
+    mem_write(params.fcbaddr, &curfcb, sizeof(fcb_t));
     return BDOS_SUCCESS;
 }
 
@@ -486,9 +486,9 @@ uint8_t bdos_readwrite()
             return 1;
         // pad incomplete record with EOF
         memset(buf+br, 0x1a, RECSIZ-br); 
-        mem_write_bare(params.dmaaddr, buf, RECSIZ);
+        mem_write(params.dmaaddr, buf, RECSIZ);
     } else {
-        mem_read_bare(params.dmaaddr, buf, RECSIZ);
+        mem_read(params.dmaaddr, buf, RECSIZ);
         if ((fr = f_write(&fil, buf, RECSIZ, &br)) != FR_OK)
             return bdos_error(fr);
     }
@@ -496,7 +496,7 @@ uint8_t bdos_readwrite()
     if (dma_command == BDOS_READ || dma_command == BDOS_WRITE)
         offset += RECSIZ;
     fcb_setseq(&curfcb, offset);
-    mem_write_bare(params.fcbaddr, &curfcb, sizeof(fcb_t));
+    mem_write(params.fcbaddr, &curfcb, sizeof(fcb_t));
     // Indicate success
     return 0;
 }
@@ -507,7 +507,7 @@ uint8_t bdos_readwrite()
 uint8_t bdos_randrec()
 {
     fcb_setrand(&curfcb, fcb_seqoffset(&curfcb));
-    mem_write_bare(params.fcbaddr, &curfcb, sizeof(fcb_t));
+    mem_write(params.fcbaddr, &curfcb, sizeof(fcb_t));
     return 0;
 }
 
@@ -547,7 +547,7 @@ uint8_t bdos_size()
     if (ret = bdos_search(BDOS_SFIRST))
         return ret;
     fcb_setrand(&curfcb, (fno.fsize + RECSIZ-1)/ RECSIZ);
-    mem_write_bare(params.fcbaddr, &curfcb, sizeof(fcb_t));
+    mem_write(params.fcbaddr, &curfcb, sizeof(fcb_t));
 }
 
 /**
@@ -556,14 +556,14 @@ uint8_t bdos_size()
 void bdos_dma_execute()
 {
     // Get DMA parameters
-    mem_read_bare(dma_mailbox, &params, sizeof(bdos_mailbox_t));
+    mem_read(dma_mailbox, &params, sizeof(bdos_mailbox_t));
 #ifdef BDOS_DEBUG
     bdos_log(PSTR("Before"));
 #endif
 
     // Get the specified FCB
     if (dma_command != BDOS_SNEXT) {
-        mem_read_bare(params.fcbaddr, &curfcb, sizeof(fcb_t));
+        mem_read(params.fcbaddr, &curfcb, sizeof(fcb_t));
     }
 
     switch (dma_command) {
@@ -611,7 +611,7 @@ void bdos_dma_execute()
 #endif
 
     // Write back return values
-    mem_write_bare(dma_mailbox, &params, sizeof(bdos_mailbox_t));
+    mem_write(dma_mailbox, &params, sizeof(bdos_mailbox_t));
 }
 
 /**

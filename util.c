@@ -167,7 +167,7 @@ FRESULT file_to_mem(FIL *fp, uint16_t base, UINT btr, UINT *br)
         btr1 = btr < BUFSIZE ? btr : BUFSIZE;
         if ((fr = f_read(fp, buf, btr1, &br1)) != FR_OK)
             break;
-        mem_write_bare(base, buf, br1);
+        mem_write(base, buf, br1);
         *br += br1;
         btr -= br1;
         base += br1;
@@ -184,7 +184,7 @@ FRESULT mem_to_file(FIL *fp, uint16_t base, UINT btw, UINT *bw)
     *bw = 0;
     do {
         btw1 = btw < BUFSIZE ? btw : BUFSIZE;
-        mem_read_bare(base, buf, btw1);
+        mem_read(base, buf, btw1);
         if ((fr = f_write(fp, buf, btw1, &bw1)) != FR_OK)
             break;
         *bw += bw1;

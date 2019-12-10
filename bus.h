@@ -192,43 +192,40 @@ typedef struct {
         uint8_t data;
 } bus_stat;
 
+enum {
+    BUS_MASTER,
+    BUS_SLAVE
+};
+
 #define FLAG(b, f) ((b) & (1<<f))
 
+extern uint8_t bus_mode;
 extern uint8_t clkdiv;
 extern uint32_t base_addr;
 
 void clk_cycle(uint8_t cycles);
 void clk_run(void);
 void clk_stop(void);
+
 uint8_t bus_master(void);
 void bus_slave(void);
+void bus_init(void);
+
 bus_stat bus_status(void);
 bus_stat bus_status_fast(void);
 void bus_log(bus_stat status);
-void bus_init(void);
 
-void mem_read_bare(uint32_t addr, void * buf, uint16_t len);
-void mem_read(uint32_t addr, void * buf, uint16_t len);
-void _mem_write_bare(uint32_t addr, const void *buf, uint16_t len, uint8_t pgmspace);
-void _mem_write(uint32_t addr, const void *buf, uint16_t len, uint8_t pgmspace);
+uint8_t io_out(uint8_t addr, uint8_t value);
+uint8_t io_in(uint8_t addr);
 
+#ifdef PAGE_BASE
+void mem_page(uint8_t bank, uint8_t page);
+#endif
+uint8_t mem_read(uint32_t addr, void * buf, uint16_t len);
+uint8_t _mem_write(uint32_t addr, const void *buf, uint16_t len, uint8_t pgmspace);
 #define mem_write(addr, buf, len) _mem_write((addr), (buf), (len), 0);
 #define mem_write_P(addr, buf, len) _mem_write((addr), (buf), (len), 1);
 
-#define mem_write_bare(addr, buf, len) _mem_write_bare((addr), (buf), (len), 0);
-#define mem_write_bare_P(addr, buf, len) _mem_write_bare((addr), (buf), (len), 1);
-
-void io_out_bare(uint8_t addr, uint8_t value);
-void io_out(uint8_t addr, uint8_t value);
-uint8_t io_in_bare(uint8_t addr);
-uint8_t io_in(uint8_t addr);
-
 void sn76489_mute(void);
-
-#ifdef PAGE_BASE
-#define PAGE(addr) ((addr) >> 14)
-void mem_page_bare(uint8_t bank, uint8_t page);
-void mem_page(uint8_t bank, uint8_t page);
-#endif
 
 #endif

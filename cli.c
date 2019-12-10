@@ -1009,26 +1009,26 @@ void cli_bench(int argc, char *argv[])
         uint16_t busfastt = TCNT1;
 
         TCNT1 = 0;
+        bus_slave();
+        uint16_t busslavet = TCNT1;
+
+        TCNT1 = 0;
         bus_master();
         uint16_t busmastert = TCNT1;
 
         uint8_t buf[1024];
 
         TCNT1 = 0;
-        mem_read_bare(0, buf, 1024);
+        mem_read(0, buf, 1024);
         uint16_t memreadbare1kt = TCNT1;
 
         TCNT1 = 0;
-        mem_read_bare(0, buf, 32);
+        mem_read(0, buf, 32);
         uint16_t memreadbare32t = TCNT1;
 
         TCNT1 = 0;
-        mem_read_bare(0xf0, buf, 32);
+        mem_read(0xf0, buf, 32);
         uint16_t memreadbare32ct = TCNT1;
-
-        TCNT1 = 0;
-        bus_slave();
-        uint16_t busslavet = TCNT1;
 
         TCNT1 = 0;
         mem_read(0, buf, 256);
@@ -1064,9 +1064,9 @@ void cli_bench(int argc, char *argv[])
         printf_P(PSTR("\tbus_status_fast %d us\n"), TCNT_TO_US(busfastt, F_CPU));
         printf_P(PSTR("\tbus_master %d us\n"), TCNT_TO_US(busmastert, F_CPU));
         printf_P(PSTR("\tbus_slave %d us\n"), TCNT_TO_US(busslavet, F_CPU));
-        printf_P(PSTR("\tmem_read_bare %d us (1KB)\n"), TCNT_TO_US(memreadbare1kt, F_CPU));
-        printf_P(PSTR("\tmem_read_bare %d us (32 bytes)\n"), TCNT_TO_US(memreadbare32t, F_CPU));
-        printf_P(PSTR("\tmem_read_bare %d us (32 bytes, cross-page)\n"), TCNT_TO_US(memreadbare32ct, F_CPU));
+        printf_P(PSTR("\tmem_read %d us (1KB)\n"), TCNT_TO_US(memreadbare1kt, F_CPU));
+        printf_P(PSTR("\tmem_read %d us (32 bytes)\n"), TCNT_TO_US(memreadbare32t, F_CPU));
+        printf_P(PSTR("\tmem_read %d us (32 bytes, cross-page)\n"), TCNT_TO_US(memreadbare32ct, F_CPU));
         printf_P(PSTR("\tmem_read %d us\n"), TCNT_TO_US(memreadt, F_CPU));
         printf_P(PSTR("\tf_open %d us\n"), TCNT_TO_US(fopent, F_CPU));
         printf_P(PSTR("\tf_read %d us\n"), TCNT_TO_US(freadt, F_CPU));

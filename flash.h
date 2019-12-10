@@ -34,7 +34,7 @@
 #error "Flash support requires board revision 3 or higher"
 #endif
 
-void flash_erase(uint32_t addr);
-void flash_write(uint32_t addr, uint8_t *buf, uint32_t len);
+uint8_t flash_erase(uint32_t addr);
+uint8_t flash_write(uint32_t addr, uint8_t *buf, uint32_t len);
 
 #endif
