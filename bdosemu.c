@@ -98,6 +98,16 @@ typedef struct {
     uint8_t r0, r1, r2;
 } fcb_t;
 
+typedef struct {
+    uint8_t dr;
+    uint8_t fn[11];
+    uint8_t ex;
+    uint8_t s1;
+    uint8_t s2;
+    uint8_t rc;
+    uint16_t al[8];
+} dir_t;
+
 // Disk Parameter Block
 typedef struct {
     uint16_t spt;
@@ -133,7 +143,7 @@ static uint16_t nextseq = 1;    // sequence numbers to uniquely identify FCBs
 static uint16_t curseq = 0;
 
 static fcb_t curfcb;            // FCB for the current command
-static fcb_t dirfcb;            // Directory entry returned by the last search command
+static dir_t dirfcb;            // Directory entry returned by the last search command
 
 static FIL fil;
 static DIR dir;
@@ -274,6 +284,21 @@ uint8_t fcb_dump(fcb_t *f)
 }
 
 /**
+ * Dump the contents of a directory entry
+ */
+uint8_t dir_dump(dir_t *d)
+{
+    printf_P(PSTR("dr filename ext   ex s2   rc s1   alloc\n"));
+    printf_P(PSTR("%02x "), d->dr);
+    fcb_printfn(d->fn);
+    printf_P(PSTR("   %02x %02x"), d->ex, d->s2);
+    printf_P(PSTR("   %02x %02x   "), d->rc, d->s1);
+    for (uint8_t i = 0; i < 8; i++)
+        printf_P(PSTR("%04x "), d->al[i]);
+    putchar('\n');
+}
+
+/**
  * Log the current command and parameters
  */
 void bdos_log(const char *message)
@@ -305,6 +330,7 @@ uint8_t bdos_search(uint8_t mode)
     static uint8_t mask[12];
     static uint8_t searchex;
     static uint32_t bytesleft;
+    static uint16_t blockno;
     FRESULT fr;
     uint8_t buf[RECSIZ];
 
@@ -316,19 +342,20 @@ uint8_t bdos_search(uint8_t mode)
         f_closedir(&dir);
         if (fr = f_opendir(&dir, ".") != FR_OK)
             return bdos_error(fr);
-        memset(&dirfcb, 0, sizeof(fcb_t));
+        memset(&dirfcb, 0, sizeof(dir_t));
         bytesleft = 0;
+        blockno = 1;
     } 
     
     // Get the next file if done with current file
     if (bytesleft == 0) {    
         do {
-            if (fr = f_readdir(&dir, &fno) != FR_OK)
-                return bdos_error(fr);
-            if (fno.fname[0] == 0)  // indicate end of directory
-                return BDOS_ERROR;
-            if (fno.fattrib & AM_DIR)   // skip subdirectories
-                continue;
+            do {
+                if (fr = f_readdir(&dir, &fno) != FR_OK)
+                    return bdos_error(fr);
+                if (fno.fname[0] == 0)  // indicate end of directory
+                    return BDOS_ERROR;
+            } while (fno.fattrib & AM_DIR); // skip directories
             fcb_setname(dirfcb.fn, fno.fname);
         } while (!fcb_match(mask, dirfcb.fn));  // check filename match
 
@@ -361,6 +388,17 @@ uint8_t bdos_search(uint8_t mode)
     if (dirfcb.rc > RECSIZ)
         dirfcb.rc = RECSIZ;
 
+    // Set the appropriate number of allocated blocks
+    uint8_t blocks = (dirfcb.rc + 31) / 32;
+    for (uint8_t i = 0; i < 8; i++) {
+        if (blocks > 0) {
+            dirfcb.al[i] = blockno++;
+            blocks--;
+        } else {
+            dirfcb.al[i] = 0;
+        }
+    }
+
     // Check if more extents to return, and decrement bytes left by on extent
     if (bytesleft > EXTSIZ && searchex == '?')
         bytesleft -= EXTSIZ;
@@ -369,14 +407,14 @@ uint8_t bdos_search(uint8_t mode)
 
 #ifdef BDOS_DEBUG
     printf_P(PSTR("Directory Entry:\n"));
-    fcb_dump(&dirfcb);
+    dir_dump(&dirfcb);
 #endif
 
     // Only write directory entry to dma buffer for actual search command
     if (dma_command == BDOS_SFIRST || dma_command == BDOS_SNEXT) {
         // Pad extra space with empty directory entries
-        memcpy(buf, &dirfcb, 32);
-        memset(buf+32, 0xe5, RECSIZ-32);
+        memcpy(buf, &dirfcb, sizeof(dir_t));
+        memset(buf+sizeof(dir_t), 0xe5, RECSIZ-sizeof(dir_t));
         // Save directory entry to DMA buffer
         mem_write(params.dmaaddr, buf, RECSIZ);
     }
@@ -557,14 +595,14 @@ void bdos_dma_execute()
 {
     // Get DMA parameters
     mem_read(dma_mailbox, &params, sizeof(bdos_mailbox_t));
-#ifdef BDOS_DEBUG
-    bdos_log(PSTR("Before"));
-#endif
 
     // Get the specified FCB
     if (dma_command != BDOS_SNEXT) {
         mem_read(params.fcbaddr, &curfcb, sizeof(fcb_t));
     }
+#ifdef BDOS_DEBUG
+    bdos_log(PSTR("Before"));
+#endif
 
     switch (dma_command) {
         case BDOS_TERMCPM:
