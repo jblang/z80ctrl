@@ -506,10 +506,9 @@ void cli_breakwatch(int argc, char *argv[])
 /**
  * Change default directory
  */
-void cli_cd(int argc, char *argv[])
+void cli_chdir(int argc, char *argv[])
 {
  	FRESULT fr;
-    char cwd[256];
 
     if (argc < 2) {
         printf_P(PSTR("usage: cd <directory>\n"));
@@ -519,6 +518,24 @@ void cli_cd(int argc, char *argv[])
     fr = f_chdir(argv[1]);
     if (fr)
         printf_P(PSTR("error changing directory: %S\n"), strlookup(fr_text, fr));
+}
+
+/**
+ * Create a directory
+ */
+void cli_mkdir(int argc, char *argv[])
+{
+ 	FRESULT fr;
+
+    if (argc < 2) {
+        printf_P(PSTR("usage: mkdir <dir>\n"));
+        return;
+    }
+
+    for (uint8_t i = 1; i < argc; i++) {
+        if (fr = f_mkdir(argv[i]))
+            printf_P(PSTR("error making directory %s: %S\n"), argv[i], strlookup(fr_text, fr));
+    }
 }
 
 /**
@@ -590,19 +607,71 @@ void cli_dir(int argc, char *argv[])
 /** 
  * Erase a file on the SD Card
  */
-void cli_era(int argc, char *argv[])
+void cli_del(int argc, char *argv[])
 {
  	FRESULT fr;
+    DIR dir;
+    FILINFO fno;
 
     if (argc < 2) {
-        printf_P(PSTR("usage: era <filename>...\n"));
+        printf_P(PSTR("usage: del <filename>...\n"));
         return;
     }
 
-    for(uint8_t i = 1; i < argc; i++) {
-        fr = f_unlink(argv[i]);
-        if (fr)
-            printf_P(PSTR("error deleting file: %S\n"), strlookup(fr_text, fr));
+    for (uint8_t i = 1; i < argc; i++) {
+        if (fr = f_findfirst(&dir, &fno, ".", argv[i]))
+            printf_P(PSTR("error deleting %s: %S\n"), argv[i], strlookup(fr_text, fr));
+        while (!fr && fno.fname[0] != 0) {
+            if (fr = f_unlink(fno.fname))
+                printf_P(PSTR("error deleting %s: %S\n"), fno.fname, strlookup(fr_text, fr));
+            if (fr = f_findnext(&dir, &fno))
+                printf_P(PSTR("error deleting %s: %S\n"), argv[i], strlookup(fr_text, fr));
+        }
+        if (fr = f_closedir(&dir))
+            printf_P(PSTR("error closing directory: %S\n"), strlookup(fr_text, fr));
+    }
+}
+
+/**
+ * Rename a file on the SD card
+ */
+void cli_ren(int argc, char *argv[])
+{
+ 	FRESULT fr;
+    DIR dir;
+    FILINFO fno;
+    char dest[256];
+
+    if (argc < 3) {
+        printf_P(PSTR("usage: ren <old>... <new>\n"
+                      "       mv <src>... <dest>\n"));
+        return;
+    }
+    if (fr = f_stat(argv[argc-1], &fno)) {
+        if (fr == FR_NO_FILE) {
+            if (fr = f_rename(argv[1], argv[2]))
+                    printf_P(PSTR("error renaming %s: %S\n"), argv[1], strlookup(fr_text, fr));        
+        } else {
+            printf_P(PSTR("error statting %s: %S\n"), argv[argc-1], strlookup(fr_text, fr));
+        }
+    } else if (fno.fattrib & AM_DIR) {
+        for (uint8_t i = 1; i < argc-1; i++) {
+            if (fr = f_findfirst(&dir, &fno, ".", argv[i]))
+                printf_P(PSTR("error moving %s: %S\n"), argv[i], strlookup(fr_text, fr));
+            while (!fr && fno.fname[0] != 0) {
+                strcpy(dest, argv[argc-1]);
+                strcat_P(dest, PSTR("/"));
+                strcat(dest, fno.fname);
+                if (fr = f_rename(fno.fname, dest))
+                    printf_P(PSTR("error moving %s: %S\n"), fno.fname, strlookup(fr_text, fr));
+                if (fr = f_findnext(&dir, &fno))
+                    printf_P(PSTR("error moving %s: %S\n"), argv[i], strlookup(fr_text, fr));
+            }
+            if (fr = f_closedir(&dir))
+                printf_P(PSTR("error closing directory: %S\n"), strlookup(fr_text, fr));
+        }
+    } else {
+        printf_P(PSTR("error renaming %s: %s already exists\n"), argv[1], argv[argc-1]);
     }
 }
 
@@ -1142,6 +1211,7 @@ const char cli_cmd_names[] PROGMEM =
     "break\0"
     "c\0"
     "cd\0"
+    "chdir\0"
     "clkdiv\0"
     "cls\0"
 #ifdef DS1306_RTC
@@ -1170,10 +1240,17 @@ const char cli_cmd_names[] PROGMEM =
     "loadbin\0"
     "loadhex\0"
     "ls\0"
+    "md\0"
+    "mkdir\0"
     "mount\0"
+    "move\0"
+    "mv\0"
     "out\0"
     "poke\0"
+    "rd\0"
+    "ren\0"
     "rm\0"
+    "rmdir\0"
     "run\0"
     "reset\0"
     "savebin\0"
@@ -1205,18 +1282,19 @@ const char cli_cmd_help[] PROGMEM =
     "set breakpoints\0"                             // break
     "\0"                                            // c
     "change directory\0"                            // cd
+    "\0"                                            // chdir
     "set Z80 clock divider\0"                       // clkdiv
     "clear screen\0"                                // cls
 #ifdef DS1306_RTC
     "display or set the date on the rtc\0"          // date
 #endif
     "debug code at address (alias c)\0"             // debug
-    "\0"                                            // del
-    "shows directory listing (alias ls)\0"          // dir
+    "erase a file (alias era, rm)\0"                // del
+    "shows directory listing in long format\0"      // dir
     "disassembles memory location\0"                // disasm
     "execute a batch file\0"                        // do
     "dump memory in hex and ascii\0"                // dump
-    "erase a file (alias del, rm)\0"                // era
+    "\0"                                            // era
 #ifdef SST_FLASH
     "erase flash ROM\0"                             // erase
 #endif
@@ -1232,11 +1310,18 @@ const char cli_cmd_help[] PROGMEM =
     "\0"                                            // ioxwrite
     "load binary file to memory\0"                  // loadbin
     "load intel hex file to memory\0"               // loadhex
-    "\0"                                            // ls
+    "shows directory listing in wide format\0"      // ls
+    "\0"                                            // md
+    "create a subdirectory (alias md)\0"            // mkdir
     "mount a disk image\0"                          // mount
+    "\0"                                            // move
+    "\0"                                            // mv
     "write a value to a port\0"                     // out
     "poke values into memory\0"                     // poke
+    "\0"                                            // rd
+    "rename/move a file or directory (alias mv)\0"  // ren
     "\0"                                            // rm
+    "\0"                                            // rmdir
     "execute code at address\0"                     // run
     "\0"                                            // reset
     "save binary file from memory\0"                // savebin
@@ -1269,19 +1354,20 @@ void * const cli_cmd_functions[] PROGMEM = {
     &cli_bus,
     &cli_breakwatch,
     &cli_debug,     // c
-    &cli_cd,
+    &cli_chdir,     // cd
+    &cli_chdir,
     &cli_clkdiv,
     &cli_cls,
 #ifdef DS1306_RTC
     &cli_date,
 #endif
     &cli_debug,
-    &cli_era,       // del
+    &cli_del,       // del
     &cli_dir,
     &cli_disasm,
     &cli_do,
     &cli_dump,
-    &cli_era,
+    &cli_del,       // era
 #ifdef SST_FLASH
     &cli_erase,
 #endif
@@ -1298,10 +1384,17 @@ void * const cli_cmd_functions[] PROGMEM = {
     &cli_loadbin,
     &cli_loadhex,
     &cli_dir,       // ls
+    &cli_mkdir,     // md
+    &cli_mkdir,
     &cli_mount,
+    &cli_ren,       // move
+    &cli_ren,       // mv
     &cli_out,
     &cli_poke,
-    &cli_era,       // rm
+    &cli_del,       // rd
+    &cli_ren,
+    &cli_del,       // rm
+    &cli_del,       // rmdir
     &cli_run,
     &cli_reset,
     &cli_savebin,
@@ -1376,6 +1469,7 @@ void cli_dispatch(char *buf)
                 uart_getc(0);
             z80_reset(start);
             z80_run();
+            putchar('\n');
         } else {
             printf_P(PSTR("unknown command: %s. type help for list.\n"), argv[0]);
         }
