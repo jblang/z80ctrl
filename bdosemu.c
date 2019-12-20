@@ -80,8 +80,11 @@ const char bdos_names[] PROGMEM = {
 };
 
 // BDOS return codes
-#define BDOS_ERROR 0xff
-#define BDOS_SUCCESS 0
+enum {
+    BDOS_SUCCESS = 0,
+    BDOS_EOF = 1,
+    BDOS_ERROR = 0xff
+};
 
 // FCB layout
 typedef struct {
@@ -269,6 +272,24 @@ uint8_t fcb_printfn(uint8_t *fn)
 }
 
 /**
+ * Print the FAT filename from an FCB
+ */
+uint8_t fcb_printfatfn(uint8_t *fn)
+{
+    for (uint8_t i = 0; i < 12; i++) {
+        if (fn[i] == 0) {
+            while (i++ < 12)
+                putchar(' ');
+            break;            
+        }
+        if (fn[i] >= 20)
+            putchar(fn[i]);
+        else
+            putchar(' ');
+    }
+}
+
+/**
  * Dump the contents of an FCB
  */
 uint8_t fcb_dump(fcb_t *f)
@@ -278,8 +299,8 @@ uint8_t fcb_dump(fcb_t *f)
     fcb_printfn(f->fn);
     printf_P(PSTR("   %02x %02x %02x"), f->cr, f->ex, f->s2);
     printf_P(PSTR("   %02x %02x %02x"), f->r0, f->r1, f->r2);    
-    printf_P(PSTR("   %02x %02x"), f->rc, f->s1);
-    printf_P(PSTR("   %-12s"), f->fatfn);
+    printf_P(PSTR("   %02x %02x   "), f->rc, f->s1);
+    fcb_printfatfn(f->fatfn);
     printf_P(PSTR("   %04x %02x\n"), f->seq, f->mode);
 }
 
@@ -399,7 +420,7 @@ uint8_t bdos_search(uint8_t mode)
         }
     }
 
-    // Check if more extents to return, and decrement bytes left by on extent
+    // Check if more extents to return, and decrement bytes left by one extent
     if (bytesleft > EXTSIZ && searchex == '?')
         bytesleft -= EXTSIZ;
     else
@@ -473,8 +494,8 @@ uint8_t bdos_open()
     // File will no longer be new next time it's opened
     curfcb.mode &= ~FA_CREATE_NEW;
 
-    // Save FCB back to memory
-    mem_write(params.fcbaddr, &curfcb, sizeof(fcb_t));
+    // Write back FCB except for random fields
+    mem_write(params.fcbaddr, &curfcb, sizeof(fcb_t)-3);
     return BDOS_SUCCESS;
 }
 
@@ -488,7 +509,8 @@ uint8_t bdos_close()
     curseq = 0; // no currently active file
     // Clear internal indentifiers from FCB
     memset(curfcb.fatfn, 0, 16);
-    mem_write(params.fcbaddr, &curfcb, sizeof(fcb_t));
+    // Write back FCB except for random fields
+    mem_write(params.fcbaddr, &curfcb, sizeof(fcb_t)-3);
     return BDOS_SUCCESS;
 }
 
@@ -511,6 +533,9 @@ uint8_t bdos_readwrite()
     } else {
         offset = fcb_randoffset(&curfcb); 
     }
+    // Don't seek past EOF when reading
+    if (offset >= f_size(&fil) && (dma_command == BDOS_READ || dma_command == BDOS_READRAND))
+        return BDOS_EOF;
     // Seek to calculated offset if different from current offset
     if (offset != f_tell(&fil))
         if ((fr = f_lseek(&fil, offset)) != FR_OK)
@@ -519,11 +544,8 @@ uint8_t bdos_readwrite()
     if (dma_command == BDOS_READRAND || dma_command == BDOS_READ) {
         if ((fr = f_read(&fil, buf, RECSIZ, &br)) != FR_OK)
             return bdos_error(fr);
-        // Return EOF if no bytes read
-        if (br == 0)
-            return 1;
-        // pad incomplete record with EOF
-        memset(buf+br, 0x1a, RECSIZ-br); 
+        // pad incomplete record with 0
+        memset(buf+br, 0x0, RECSIZ-br); 
         mem_write(params.dmaaddr, buf, RECSIZ);
     } else {
         mem_read(params.dmaaddr, buf, RECSIZ);
@@ -534,7 +556,8 @@ uint8_t bdos_readwrite()
     if (dma_command == BDOS_READ || dma_command == BDOS_WRITE)
         offset += RECSIZ;
     fcb_setseq(&curfcb, offset);
-    mem_write(params.fcbaddr, &curfcb, sizeof(fcb_t));
+    // Write back FCB except for random fields
+    mem_write(params.fcbaddr, &curfcb, sizeof(fcb_t)-3);
     // Indicate success
     return 0;
 }
@@ -633,6 +656,7 @@ void bdos_dma_execute()
             params.ret = bdos_rename();
             break;
         case BDOS_ATTRIB:
+            break; // currently unimplemented
         case BDOS_SIZE:
             params.ret = bdos_size();
             break;
