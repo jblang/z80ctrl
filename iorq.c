@@ -82,15 +82,21 @@ void iorq_dispatch(uint8_t logged)
             break;
         case IOX_VALPORT:
             if (!GET_WR) {
-                if (iox_dev == IOX_RTC)
+                if (iox_dev == IOX_RTC) {
+#ifdef DS1306_RTC
                     rtc_write1(iox_reg, GET_DATA);
-                else if (iox_dev >= IOX_GPIO_MIN && iox_dev <= IOX_GPIO_MAX)
+#endif
+                } else if (iox_dev >= IOX_GPIO_MIN && iox_dev <= IOX_GPIO_MAX) {
                     iox_write(iox_dev, iox_reg, GET_DATA);
+                }
             } else if (!GET_RD) {
-                if (iox_dev == IOX_RTC)
+                if (iox_dev == IOX_RTC) {
+#ifdef DS1306_RTC
                     SET_DATA(rtc_read1(iox_reg));
-                else if (iox_dev >= IOX_GPIO_MIN && iox_dev <= IOX_GPIO_MAX)
+#endif
+                } else if (iox_dev >= IOX_GPIO_MIN && iox_dev <= IOX_GPIO_MAX) {
                     SET_DATA(iox_read(iox_dev, iox_reg));
+                }
                 DATA_OUTPUT;
             }
             break;

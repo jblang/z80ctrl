@@ -24,6 +24,8 @@
  * @file rtc.c DS1306+ RTC functions
  */
 
+#include <time.h>
+
 #include "rtc.h"
 #include "spi.h"
 
@@ -46,7 +48,7 @@ void rtc_read(uint8_t start, uint8_t end, uint8_t values[])
     rtc_begin();
     spi_exchange(start);
     for (uint8_t reg = start; reg <= end; reg++)
-        values[reg - start] = spi_exchange(0);
+        *values++ = spi_exchange(0);
     rtc_end();
 }
 
@@ -55,7 +57,7 @@ void rtc_write(uint8_t start, uint8_t end, uint8_t values[])
     rtc_begin();
     spi_exchange(start | RTC_WRITE);
     for (uint8_t reg = start; reg <= end; reg++)
-        spi_exchange(values[reg - start]);
+        spi_exchange(*values++);
     rtc_end();
 }
 
@@ -71,40 +73,42 @@ void rtc_write1(uint8_t reg, uint8_t value)
     rtc_write(reg, reg, &value);
 }
 
-rtc_date_t rtc_get_date()
+#define frombcd(value) (((value) >> 4) * 10 + ((value) & 0xF))
+
+void rtc_get_date(struct tm *date)
 {
     uint8_t data[7];
-    rtc_date_t date;
 
     rtc_read(RTC_SEC, RTC_YEAR, data);
-    date.year = (data[RTC_YEAR] >> 4) * 10 + (data[RTC_YEAR] & 0xF);
-    date.month = (data[RTC_MONTH] >> 4) * 10 + (data[RTC_MONTH] & 0xF);
-    date.day = (data[RTC_DAY] >> 4) * 10 + (data[RTC_DAY] & 0xF);
-    date.weekday = data[RTC_WEEKDAY];
+    date->tm_year = frombcd(data[RTC_YEAR]);
+    date->tm_mon = frombcd(data[RTC_MONTH]);
+    date->tm_mday = frombcd(data[RTC_DAY]);
+    date->tm_wday = data[RTC_WEEKDAY];
     if ((data[RTC_HOUR] & (1 << RTC_1224))) {
         // 12-hour mode
-        date.hour = ((data[RTC_HOUR] >> 4) & 1) * 10 + (data[RTC_HOUR] & 0xF);
+        date->tm_hour = frombcd(data[RTC_HOUR] & 0x1F);
         if ((data[RTC_HOUR] & (1 << RTC_AMPM))) // PM
-            date.hour += 12;
+            date->tm_hour += 12;
     } else {
         // 24-hour mode
-        date.hour = ((data[RTC_HOUR] >> 4) & 3) * 10 + (data[RTC_HOUR] & 0xF);
+        date->tm_hour = frombcd(data[RTC_HOUR]);
     }
-    date.min = (data[RTC_MIN] >> 4) * 10 + (data[RTC_MIN] & 0xF);
-    date.sec = (data[RTC_SEC] >> 4) * 10 + (data[RTC_SEC] & 0xF);
-    return date;
+    date->tm_min = frombcd(data[RTC_MIN]);
+    date->tm_sec = frombcd(data[RTC_SEC]);
 }
 
-void rtc_set_date(rtc_date_t date)
+#define tobcd(value) (((value / 10) << 4) | (value % 10))
+
+void rtc_set_date(struct tm *date)
 {
     uint8_t data[7];
 
-    data[RTC_YEAR] = ((date.year / 10) << 4) | (date.year % 10);
-    data[RTC_MONTH] = ((date.month / 10) << 4) | (date.month % 10);
-    data[RTC_DAY] = ((date.day / 10) << 4) | (date.day % 10);
-    data[RTC_WEEKDAY] = date.weekday;
-    data[RTC_HOUR] = ((date.hour / 10) << 4) | (date.hour % 10);
-    data[RTC_MIN] = ((date.min / 10) << 4) | (date.min % 10);
-    data[RTC_SEC] = ((date.sec / 10) << 4) | (date.sec % 10);
+    data[RTC_YEAR] = tobcd(date->tm_year);
+    data[RTC_MONTH] = tobcd(date->tm_mon);
+    data[RTC_DAY] = tobcd(date->tm_mday);
+    data[RTC_WEEKDAY] = date->tm_wday;
+    data[RTC_HOUR] = tobcd(date->tm_hour);
+    data[RTC_MIN] = tobcd(date->tm_min);
+    data[RTC_SEC] = tobcd(date->tm_sec);
     rtc_write(RTC_SEC, RTC_YEAR, data);
 }

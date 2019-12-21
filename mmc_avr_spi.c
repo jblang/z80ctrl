@@ -18,6 +18,7 @@
 #include "mmc_avr.h"
 #include "spi.h"
 #include "iox.h"
+#include <time.h>
 #ifdef DS1306_RTC
 #include "rtc.h"
 #endif
@@ -99,17 +100,18 @@ void start_timer(void)
 DWORD get_fattime (void)
 {
 #ifdef DS1306_RTC
-	rtc_date_t date = rtc_get_date();
-
 	/* Pack date and time into a DWORD variable */
-	return	  ((DWORD)(date.year + 2000 - 1980) << 25)
-			| ((DWORD)date.month << 21)
-			| ((DWORD)date.day << 16)
-			| ((DWORD)date.hour << 11)
-			| ((DWORD)date.min << 5)
-			| ((DWORD)date.sec >> 1);
+	struct tm date;
+    rtc_get_date(&date);
+	return	  ((DWORD)(date.tm_year + 2000 - 1980) << 25)
+			| ((DWORD)date.tm_mon << 21)
+			| ((DWORD)date.tm_mday << 16)
+			| ((DWORD)date.tm_hour << 11)
+			| ((DWORD)date.tm_min << 5)
+			| ((DWORD)date.tm_sec >> 1);
 #else
-    return 0;
+    // 1/6/2018 7:38PM (first commit of z80ctrl)
+    return (38L << 25) | (1L << 21) | (6L << 16) | (19L << 11) | (38L << 5); 
 #endif
 }
 

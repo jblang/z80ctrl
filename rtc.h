@@ -28,6 +28,7 @@
 #define RTC_H
 
 #include <stdint.h>
+#include <time.h>
 
 #include "iox.h"
 
@@ -63,27 +64,13 @@
 #define RTC_SEL AUX1_SEL
 #define RTC_DESEL AUX2_SEL
 
-typedef struct {
-    uint8_t year;
-    uint8_t month;
-    uint8_t day;
-    uint8_t weekday;
-    uint8_t hour;
-    uint8_t min;
-    uint8_t sec;
-} rtc_date_t;
-
 void rtc_read(uint8_t start, uint8_t end, uint8_t values[]);
 void rtc_write(uint8_t start, uint8_t end, uint8_t values[]);
 
 uint8_t rtc_read1(uint8_t reg);
 void rtc_write1(uint8_t reg, uint8_t value);
 
-rtc_date_t rtc_get_date();
-void rtc_set_date(rtc_date_t date);
-
-void rtc_defreg(uint8_t regaddr);
-uint8_t rtc_readdef();
-void rtc_writedef(uint8_t data);
+void rtc_get_date(struct tm *date);
+void rtc_set_date(struct tm *date);
 
 #endif

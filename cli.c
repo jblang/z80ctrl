@@ -31,6 +31,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <time.h>
 
 #include "ff.h"
 #include "bus.h"
@@ -920,22 +921,23 @@ void cli_unmount(int argc, char *argv[])
 #ifdef DS1306_RTC
 void cli_date(int argc, char *argv[])
 {
+    struct tm date;
+    char datestr[30];
     if (argc < 8) {
-        rtc_date_t date = rtc_get_date();
-        printf_P(PSTR("The time is %d:%02d:%02d on %d/%d/%02d\n"), date.hour, date.min, date.sec, date.month, date.day, date.year);
+        rtc_get_date(&date);
+        printf_P(PSTR("The time is %d:%02d:%02d on %d/%d/%02d\n"), date.tm_hour, date.tm_min, date.tm_sec, date.tm_mon, date.tm_mday, date.tm_year);
         printf_P(PSTR("usage: date <yy mm dd wd hh mm ss>\n"));
         return;
     }
 
-    rtc_date_t date;
-    date.year = strtoul(argv[1], NULL, 10);
-    date.month = strtoul(argv[2], NULL, 10);
-    date.day = strtoul(argv[3], NULL, 10);
-    date.weekday = strtoul(argv[4], NULL, 10);
-    date.hour = strtoul(argv[5], NULL, 10);
-    date.min = strtoul(argv[6], NULL, 10);
-    date.sec = strtoul(argv[7], NULL, 10);
-    rtc_set_date(date);
+    date.tm_year = strtoul(argv[1], NULL, 10);
+    date.tm_mon = strtoul(argv[2], NULL, 10);
+    date.tm_mday = strtoul(argv[3], NULL, 10);
+    date.tm_wday = strtoul(argv[4], NULL, 10);
+    date.tm_hour = strtoul(argv[5], NULL, 10);
+    date.tm_min = strtoul(argv[6], NULL, 10);
+    date.tm_sec = strtoul(argv[7], NULL, 10);
+    rtc_set_date(&date);
 }
 #endif
 
