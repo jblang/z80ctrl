@@ -275,7 +275,7 @@ uint8_t mem_pages[] = {0, 0, 0, 0};
 void mem_page(uint8_t bank, uint8_t page)
 {
     uint8_t mreq = GET_MREQ;
-    uint8_t dataddr = DATA_DDR
+    uint8_t dataddr = DATA_DDR;
     io_out(PAGE_ENABLE, 1);
     io_out(PAGE_BASE + (bank & 3), page & 0x3f);
     mem_pages[bank] = page;
@@ -287,7 +287,6 @@ void mem_page(uint8_t bank, uint8_t page)
 /**
  * Page in the four pages starting ad the specified address
  */
-#define PAGE(addr) ((addr) >> 14)
 static void mem_page_addr(uint32_t addr)
 {
     addr += base_addr;

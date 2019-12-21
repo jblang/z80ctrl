@@ -219,6 +219,7 @@ uint8_t io_out(uint8_t addr, uint8_t value);
 uint8_t io_in(uint8_t addr);
 
 #ifdef PAGE_BASE
+#define PAGE(addr) ((addr) >> 14)
 void mem_page(uint8_t bank, uint8_t page);
 #endif
 uint8_t mem_read(uint32_t addr, void * buf, uint16_t len);
