@@ -277,6 +277,7 @@ void cli_xmrx(int argc, char *argv[])
     }
     char *filename =  argv[1];
     if ((fr = f_open(&fil, filename, FA_WRITE | FA_CREATE_ALWAYS)) == FR_OK) {
+        printf_P(PSTR("waiting for transfer to begin; press ^X twice to cancel\n"));
         xm_receive(&fil);
         if ((fr = f_close(&fil)) != FR_OK)
             printf_P(PSTR("error closing file: %S\n"), strlookup(fr_text, fr));
@@ -303,6 +304,7 @@ void cli_xmtx(int argc, char *argv[])
         printf_P(PSTR("error opening file: %S\n"), strlookup(fr_text, fr));
         return;
     } else {
+        printf_P(PSTR("beginning transmission; press ^X twice to cancel\n"));
         xm_transmit(&fil);
     }
     if ((fr = f_close(&fil)) != FR_OK)
@@ -632,46 +634,50 @@ void cli_del(int argc, char *argv[])
     }
 }
 
-/**
- * Rename a file on the SD card
- */
-void cli_ren(int argc, char *argv[])
+void cli_copy(int argc, char *argv[])
 {
  	FRESULT fr;
     DIR dir;
     FILINFO fno;
     char dest[256];
+    FRESULT (*f_operation)(const TCHAR* path_old, const TCHAR* path_new) = NULL;
 
     if (argc < 3) {
-        printf_P(PSTR("usage: ren <old>... <new>\n"
-                      "       mv <src>... <dest>\n"));
+        printf_P(PSTR("usage: %s <src>... <dest>\n"), argv[0]);
         return;
     }
+
+    if (!strcmp_P(argv[0], PSTR("copy")) || !strcmp_P(argv[0], PSTR("cp"))) {
+        f_operation = f_copy;
+    } else {
+        f_operation = f_rename;
+    }
+
     if (fr = f_stat(argv[argc-1], &fno)) {
         if (fr == FR_NO_FILE) {
-            if (fr = f_rename(argv[1], argv[2]))
-                    printf_P(PSTR("error renaming %s: %S\n"), argv[1], strlookup(fr_text, fr));        
+            if (fr = f_operation(argv[1], argv[2]))
+                    printf_P(PSTR("cannot %s '%s': %S\n"), argv[0], argv[1], strlookup(fr_text, fr));        
         } else {
-            printf_P(PSTR("error statting %s: %S\n"), argv[argc-1], strlookup(fr_text, fr));
+            printf_P(PSTR("cannot stat '%s': %S\n"), argv[argc-1], strlookup(fr_text, fr));
         }
     } else if (fno.fattrib & AM_DIR) {
         for (uint8_t i = 1; i < argc-1; i++) {
             if (fr = f_findfirst(&dir, &fno, ".", argv[i]))
-                printf_P(PSTR("error moving %s: %S\n"), argv[i], strlookup(fr_text, fr));
+                printf_P(PSTR("cannot find '%s': %S\n"), argv[0], argv[i], strlookup(fr_text, fr));
             while (!fr && fno.fname[0] != 0) {
                 strcpy(dest, argv[argc-1]);
                 strcat_P(dest, PSTR("/"));
                 strcat(dest, fno.fname);
-                if (fr = f_rename(fno.fname, dest))
-                    printf_P(PSTR("error moving %s: %S\n"), fno.fname, strlookup(fr_text, fr));
+                if (fr = f_operation(fno.fname, dest))
+                    printf_P(PSTR("cannot %s '%s': %S\n"), argv[0], fno.fname, strlookup(fr_text, fr));
                 if (fr = f_findnext(&dir, &fno))
-                    printf_P(PSTR("error moving %s: %S\n"), argv[i], strlookup(fr_text, fr));
+                    printf_P(PSTR("cannot %s '%s': %S\n"), argv[0], argv[i], strlookup(fr_text, fr));
             }
             if (fr = f_closedir(&dir))
-                printf_P(PSTR("error closing directory: %S\n"), strlookup(fr_text, fr));
+                printf_P(PSTR("cannot close directory: %S\n"), strlookup(fr_text, fr));
         }
     } else {
-        printf_P(PSTR("error renaming %s: %s already exists\n"), argv[1], argv[argc-1]);
+        printf_P(PSTR("cannot %s '%s': '%s' already exists\n"), argv[0], argv[1], argv[argc-1]);
     }
 }
 
@@ -1041,6 +1047,32 @@ void cli_cls(int argc, char *argv[])
 }
 
 /**
+ * Send an escape sequence
+ */
+void cli_esc(int argc, char *argv[])
+{
+    if (argc < 2) {
+        printf_P(PSTR("usage: %s <sequence>...\n"), argv[0]);
+    }
+    for (uint8_t i = 1; i < argc; i++)
+        printf_P(PSTR("\e%s"), argv[i]);    // undocumented feature to send escape code
+}
+
+/**
+ * Send an ascii character
+ */
+void cli_ascii(int argc, char *argv[])
+{
+    if (argc < 2) {
+        printf_P(PSTR("usage: %s <hex code>...\n"), argv[0]);
+    }
+    for (uint8_t i = 1; i < argc; i++) {
+        char c = strtoul(argv[i], NULL, 16);
+        printf_P(PSTR("%c"), c);
+    }
+}
+
+/**
  * Run a benchmark
  */
 void cli_bench(int argc, char *argv[])
@@ -1200,6 +1232,7 @@ void cli_do(int argc, char *argv[])
  * Lookup table of monitor command names
  */
 const char cli_cmd_names[] PROGMEM = 
+    "ascii\0"
     "attach\0"
 #ifdef PAGE_BASE
     "base\0"
@@ -1214,6 +1247,8 @@ const char cli_cmd_names[] PROGMEM =
     "chdir\0"
     "clkdiv\0"
     "cls\0"
+    "copy\0"
+    "cp\0"
 #ifdef DS1306_RTC
     "date\0"
 #endif
@@ -1227,6 +1262,7 @@ const char cli_cmd_names[] PROGMEM =
 #ifdef SST_FLASH
     "erase\0"
 #endif
+    "esc\0"
     "fill\0"
 #ifdef SST_FLASH
     "flash\0"
@@ -1271,6 +1307,7 @@ const char cli_cmd_names[] PROGMEM =
  * Lookup table of help text for monitor commands
  */
 const char cli_cmd_help[] PROGMEM =
+    "\0"                                            // ascii
     "attach virtual uart\0"                         // attach
 #ifdef PAGE_BASE
     "set the base memory address\0"                 // base
@@ -1285,6 +1322,8 @@ const char cli_cmd_help[] PROGMEM =
     "\0"                                            // chdir
     "set Z80 clock divider\0"                       // clkdiv
     "clear screen\0"                                // cls
+    "copy a file (alias cp)\0"                      // copy
+    "\0"                                            // cp
 #ifdef DS1306_RTC
     "display or set the date on the rtc\0"          // date
 #endif
@@ -1298,6 +1337,7 @@ const char cli_cmd_help[] PROGMEM =
 #ifdef SST_FLASH
     "erase flash ROM\0"                             // erase
 #endif
+    "\0"                                            // esc
     "fill memory with byte\0"                       // fill
 #ifdef SST_FLASH
     "flash file to ROM\0"                           // flash
@@ -1344,6 +1384,7 @@ void cli_help(int argc, char *argv[]);
  * Lookup table of function pointers for monitor commands
  */
 void * const cli_cmd_functions[] PROGMEM = {
+    &cli_ascii,
     &cli_attach,
 #ifdef PAGE_BASE
     &cli_base,
@@ -1358,6 +1399,8 @@ void * const cli_cmd_functions[] PROGMEM = {
     &cli_chdir,
     &cli_clkdiv,
     &cli_cls,
+    &cli_copy,       // copy
+    &cli_copy,       // cp
 #ifdef DS1306_RTC
     &cli_date,
 #endif
@@ -1371,6 +1414,7 @@ void * const cli_cmd_functions[] PROGMEM = {
 #ifdef SST_FLASH
     &cli_erase,
 #endif
+    &cli_esc,       // esc
     &cli_fill,
 #ifdef SST_FLASH
     &cli_loadbin,   // flash
@@ -1387,12 +1431,12 @@ void * const cli_cmd_functions[] PROGMEM = {
     &cli_mkdir,     // md
     &cli_mkdir,
     &cli_mount,
-    &cli_ren,       // move
-    &cli_ren,       // mv
+    &cli_copy,       // move
+    &cli_copy,       // mv
     &cli_out,
     &cli_poke,
     &cli_del,       // rd
-    &cli_ren,
+    &cli_copy,
     &cli_del,       // rm
     &cli_del,       // rmdir
     &cli_run,

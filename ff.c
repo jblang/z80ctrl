@@ -5019,6 +5019,44 @@ FRESULT f_rename (
     LEAVE_FF(fs, res);
 }
 
+
+/*-----------------------------------------------------------------------*/
+/* Copy a File/Directory                                                 */
+/*-----------------------------------------------------------------------*/
+
+FRESULT f_copy (
+    const TCHAR* src,	/* Pointer to the source file */
+    const TCHAR* dst	/* Pointer to the dest file */
+)
+{
+    FIL fsrc, fdst;      /* File objects */
+    BYTE buffer[FF_MAX_SS];   /* File copy buffer */
+    FRESULT fr;          /* FatFs function common result code */
+    UINT br, bw;         /* File read/write count */
+
+    /* Open source file on the drive 1 */
+    fr = f_open(&fsrc, src, FA_READ);
+    if (fr) return fr;
+
+    /* Create destination file on the drive 0 */
+    fr = f_open(&fdst, dst, FA_WRITE | FA_CREATE_ALWAYS);
+    if (fr) return fr;
+
+    /* Copy source to destination */
+    for (;;) {
+        fr = f_read(&fsrc, buffer, sizeof buffer, &br);  /* Read a chunk of source file */
+        if (fr || br == 0) break; /* error or eof */
+        fr = f_write(&fdst, buffer, br, &bw);            /* Write it to the destination file */
+        if (fr || bw < br) break; /* error or disk full */
+    }
+
+    /* Close open files */
+    f_close(&fsrc);
+    f_close(&fdst);
+
+    return fr;    
+}
+
 #endif /* !FF_FS_READONLY */
 #endif /* FF_FS_MINIMIZE == 0 */
 #endif /* FF_FS_MINIMIZE <= 1 */
