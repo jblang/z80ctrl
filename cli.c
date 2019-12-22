@@ -138,37 +138,43 @@ uint32_t loadbin(char *filename, uint8_t dest, int32_t start, uint32_t offset, u
     FIL fil;
     FRESULT fr;
     UINT br;
-    uint8_t buf[256];
-    uint16_t load = 0;
+    uint8_t buf[512];
+    uint16_t load = start;
     if (len == 0)
         len = 0x100000;
     if ((fr = f_open(&fil, filename, FA_READ)) != FR_OK) {
         printf_P(PSTR("error opening file: %S\n"), strlookup(fr_text, fr));
-        return 0;
-    } else if ((fr = f_lseek(&fil, offset)) != FR_OK) {
+        return -1;
+    }
+    if ((fr = f_lseek(&fil, offset)) != FR_OK) {
         printf_P(PSTR("seek error: %S\n"), strlookup(fr_text, fr));
     } else {
         if (start < 0) {
-            if (f_read(&fil, &load, 2, &br) == FR_OK)
-                start = load;
-            else
-                return 0;
+            // if starting address is not specified, get it from
+            // the first two bytes of file a la C64 PRG files
+            if (fr = f_read(&fil, &load, 2, &br)) {
+                printf_P(PSTR("read error: %S\n"), strlookup(fr_text, fr));
+                goto close;
+            }
+            start = load;
         }
-        while ((fr = f_read(&fil, buf, 256, &br)) == FR_OK) {
+        while ((fr = f_read(&fil, buf, sizeof buf, &br)) == FR_OK) {
             if (br > len)
                 br = len;
+            if (dest == MEM) {
+                mem_write(start, buf, br);
+            }
 #ifdef SST_FLASH
-            if (dest == FLASH)
+            else if (dest == FLASH) {
                 flash_write(start, buf, br);
-            else
+            }
 #endif
 #ifdef TMS_BASE
-            if (dest == TMS)
+            else if (dest == TMS) {
                 tms_write(start, buf, br);
-            else
+            }
 #endif
-                mem_write(start, buf, br);
-            if (br < 256)
+            if (br < sizeof buf)
                 break;
             start += br;
             len -= br;
@@ -176,6 +182,7 @@ uint32_t loadbin(char *filename, uint8_t dest, int32_t start, uint32_t offset, u
         if (fr != FR_OK)
             printf_P(PSTR("read error: %S\n"), strlookup(fr_text, fr));
     }
+close:
     if ((fr = f_close(&fil)) != FR_OK)
         printf_P(PSTR("error closing file: %S\n"), strlookup(fr_text, fr));
     return load;
@@ -1473,6 +1480,61 @@ void cli_help(int argc, char *argv[])
     }
 }
 
+#define endswith(str, suf) (strcmp((str) + strlen(str) - strlen(suf), (suf)) == 0)
+#define endswith_P(str, suf) (strcmp_P((str) + strlen(str) - strlen_P(suf), (suf)) == 0)
+
+/**
+ * Run a CP/M .COM file
+ */
+uint8_t cli_runcom(int argc, char *argv[])
+{
+    char filename[256];
+    strcpy(filename, argv[0]);
+    if (!endswith_P(filename, PSTR(".com")))
+        strcat_P(filename, PSTR(".com"));
+    if (f_stat(filename, NULL) == FR_OK) {
+        // Look for BDOS runtime file in current directory then root directory
+        uint16_t start;
+        if (f_stat("bdos.bin", NULL) == FR_OK) {
+            start = loadbin("bdos.bin", MEM, -1, 0, 0);
+        } else if (f_stat("/bdos.bin", NULL) == FR_OK) {
+            start = loadbin("/bdos.bin", MEM, -1, 0, 0);
+        } else {
+            // Last resort: warn and try to run the program without bdos loaded
+            printf_P(PSTR("warning: bdos.bin not found in current or root directory.\n"));
+            start = 0x100;
+        }
+        bdos_init(argc, argv);
+        loadbin(filename, MEM, 0x100, 0, 0);
+        z80_reset(start);
+        z80_run();
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+/**
+ * Run a .PRG file (binary with start address)
+ */
+uint8_t cli_runprg(int argc, char *argv[])
+{
+    char filename[256];
+    FILINFO fno;
+    strcpy(filename, argv[0]);
+    if (!endswith_P(filename, PSTR(".prg")))
+        strcat_P(filename, PSTR(".prg"));
+    if (f_stat(filename, NULL) == FR_OK) {
+        save_cli(argc, argv);
+        uint16_t start = loadbin(filename, MEM, -1, 0, 0);
+        z80_reset(start);
+        z80_run();
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
 /**
  * Dispatch a single command
  */
@@ -1480,8 +1542,6 @@ void cli_dispatch(char *buf)
 {
     char *cmd;
     char *argv[MAXARGS];
-    char filename[256];
-    FILINFO file;
     int argc;
     int i;
     void (*cmd_func)(int, char*[]);
@@ -1491,6 +1551,8 @@ void cli_dispatch(char *buf)
         if ((argv[argc] = strtok(NULL, WHITESPACE)) == NULL)
             break;
     }
+    for (i = 0; i < strlen(argv[0]); i++)
+        argv[0][i] = tolower(argv[0][i]);
     for (i = 0; i < NUM_CMDS; i++) {
         if (strcmp_P(argv[0], strlookup(cli_cmd_names, i)) == 0) {
             cmd_func = pgm_read_ptr(&cli_cmd_functions[i]);
@@ -1499,24 +1561,8 @@ void cli_dispatch(char *buf)
     }
     if (i < NUM_CMDS) {
         cmd_func(argc, argv);
-    } else {
-        strcpy(filename, argv[0]);
-        for (i = 0; i < strlen(filename); i++)
-            filename[i] = toupper(filename[i]);
-        if(strcmp(filename + strlen(filename) - strlen(".COM"), ".COM") != 0)
-            strcat_P(filename, PSTR(".COM"));
-        if (f_stat(filename, &file) == FR_OK) {
-            save_cli(argc, argv);
-            uint16_t start = loadbin("/bdos.prg", MEM, -1, 0, 0);
-            //printf_P(PSTR("bdos loaded at %04x\n"), start);
-            bdos_init(argc, argv);
-            loadbin(filename, MEM, 0x100, 0, 0);
-            while (uart_testrx(0))  // flush receive buffer
-                uart_getc(0);
-            z80_reset(start);
-            z80_run();
-            putchar('\n');
-        } else {
+    } else if (!cli_runcom(argc, argv)) {
+        if (!cli_runprg(argc, argv)) {
             printf_P(PSTR("unknown command: %s. type help for list.\n"), argv[0]);
         }
     }

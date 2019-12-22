@@ -53,9 +53,6 @@ void set_tcnt(uint8_t timer, uint16_t value);
 char *splitdir(char *path);
 
 extern uint8_t clibuf[256];
-
-FRESULT file_to_mem(FIL *fp, uint16_t base, UINT btr, UINT *br);
-FRESULT mem_to_file(FIL *fp, uint16_t base, UINT btw, UINT *bw);
 void save_cli(int argc, char *argv[]);
 
 #endif

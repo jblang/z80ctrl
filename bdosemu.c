@@ -24,7 +24,7 @@
  * Credit to RunCPM https://github.com/MockbaTheBorg/RunCPM for showing me
  * that emulating BDOS on a FAT filesystem was possible, and for serving as
  * a sanity check to help me understand BDOS behavior when I wasn't sure
- * I understoood the BDOS assembly code.  No code has been copied though.
+ * from reading the BDOS assembly code.  No code has been copied though.
  */
 
 /**
