@@ -43,7 +43,6 @@
 #include "ff.h"
 
 // Uncomment for debug messages
-//#define BDOS_DEBUG
 
 // CP/M constants
 #define RECSIZ 128L                 // # of bytes in a record (rc)
@@ -158,6 +157,8 @@ static dir_t dirfcb;            // Directory entry returned by the last search c
 static FIL fil;
 static DIR dir;
 static FILINFO fno;
+
+uint8_t bdos_debug = 0;
 
 /**
  * Get null-terminated filename.ext from fixed length FCB field
@@ -433,10 +434,10 @@ uint8_t bdos_search(uint8_t mode)
     else
         bytesleft = 0;
 
-#ifdef BDOS_DEBUG
-    printf_P(PSTR("Directory Entry:\n"));
-    dir_dump(&dirfcb);
-#endif
+    if (bdos_debug) {
+        printf_P(PSTR("Directory Entry:\n"));
+        dir_dump(&dirfcb);
+    }
 
     // Only write directory entry to dma buffer for actual search command
     if (dma_command == BDOS_SFIRST || dma_command == BDOS_SNEXT) {
@@ -574,7 +575,7 @@ uint8_t bdos_readwrite()
  */
 uint8_t bdos_randrec()
 {
-    fcb_setrand(&curfcb, fcb_seqoffset(&curfcb));
+    fcb_setrand(&curfcb, (fcb_seqoffset(&curfcb) + RECSIZ-1) / RECSIZ);
     mem_write(params.fcbaddr, &curfcb, sizeof(fcb_t));
     return 0;
 }
@@ -630,9 +631,8 @@ void bdos_dma_execute()
     if (dma_command != BDOS_SNEXT) {
         mem_read(params.fcbaddr, &curfcb, sizeof(fcb_t));
     }
-#ifdef BDOS_DEBUG
-    bdos_log(PSTR("Before"));
-#endif
+    if (bdos_debug)
+        bdos_log(PSTR("Before"));
 
     switch (dma_command) {
         case BDOS_TERMCPM:
@@ -674,10 +674,8 @@ void bdos_dma_execute()
             params.ret = bdos_error(FR_INVALID_PARAMETER);
             break;
     }
-
-#ifdef BDOS_DEBUG
-    bdos_log(PSTR("After"));
-#endif
+    if (bdos_debug)
+        bdos_log(PSTR("After"));
 
     // Write back return values
     mem_write(dma_mailbox, &params, sizeof(bdos_mailbox_t));

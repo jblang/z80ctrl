@@ -514,6 +514,23 @@ void cli_breakwatch(int argc, char *argv[])
 }
 
 /**
+ * Enable/disable BDOS debug messages
+ */
+void cli_bdosdbg(int argc, char *argv[])
+{
+    if (argc == 2) {
+        if (strcmp_P(argv[1], PSTR("on")) == 0)
+            bdos_debug = 1;
+        else if (strcmp_P(argv[1], PSTR("off")) == 0)
+            bdos_debug = 0;
+    }
+    if (bdos_debug)
+        printf("bdos debug is enabled\n");
+    else
+        printf("bdos debug is disabled\n");
+}
+
+/**
  * Change default directory
  */
 void cli_chdir(int argc, char *argv[])
@@ -1247,6 +1264,7 @@ const char cli_cmd_names[] PROGMEM =
     "base\0"
 #endif
     "baud\0"
+    "bdosdbg\0"
     "bench\0"
     "boot\0"
     "bus\0"
@@ -1322,6 +1340,7 @@ const char cli_cmd_help[] PROGMEM =
     "set the base memory address\0"                 // base
 #endif
     "configure UART baud rate\0"                    // baud
+    "\0"                                            // bdosdbg
     "\0"                                            // bench
     "boot from specified disk image\0"              // boot
     "display low-level bus status\0"                // bus
@@ -1399,6 +1418,7 @@ void * const cli_cmd_functions[] PROGMEM = {
     &cli_base,
 #endif
     &cli_baud,
+    &cli_bdosdbg,
     &cli_bench,
     &cli_boot,
     &cli_bus,
@@ -1508,6 +1528,7 @@ uint8_t cli_runcom(int argc, char *argv[])
         loadbin(filename, MEM, 0x100, 0, 0);
         z80_reset(start);
         z80_run();
+        putchar('\n');
         return 1;
     } else {
         return 0;
@@ -1529,6 +1550,7 @@ uint8_t cli_runprg(int argc, char *argv[])
         uint16_t start = loadbin(filename, MEM, -1, 0, 0);
         z80_reset(start);
         z80_run();
+        putchar('\n');
         return 1;
     } else {
         return 0;

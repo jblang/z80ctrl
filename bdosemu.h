@@ -13,4 +13,6 @@ void bdos_dma_command(uint8_t data);
 void bdos_dma_execute();
 void bdos_init(int argc, char *argv[]);
 
+extern uint8_t bdos_debug;
+
 #endif
