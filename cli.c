@@ -347,7 +347,7 @@ void cli_dump(int argc, char *argv[])
         printf_P(PSTR("usage: dump <start> [end]\n"));
         return;
     }
-    uint32_t start = strtoul(argv[1], NULL, 16) & ~0xF;
+    uint32_t start = strtoul(argv[1], NULL, 16);
     uint32_t end;
     if (argc < 3)
         end = start + 0xfful;
