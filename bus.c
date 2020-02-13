@@ -236,6 +236,9 @@ uint8_t io_out(uint8_t addr, uint8_t value)
     DATA_OUTPUT;
     IORQ_LO;
     WR_LO;
+    WR_LO;
+    WR_LO;
+    WR_LO;
     WR_HI;
     IORQ_HI;
     DATA_INPUT;
@@ -256,7 +259,9 @@ uint8_t io_in(uint8_t addr)
     DATA_INPUT;
     IORQ_LO;
     RD_LO;
-    _delay_us(2);
+    RD_LO;
+    RD_LO;
+    RD_LO;
     uint8_t value = GET_DATA;
     RD_HI;
     IORQ_HI;
