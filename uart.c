@@ -31,6 +31,9 @@
 #include <avr/interrupt.h>
 
 #include "uart.h"
+#ifdef TMS_BASE
+#include "tms.h"
+#endif
 
 #define	UART_BUFF  64
 #define LINE_BUFF  80
@@ -226,6 +229,9 @@ int uart_putchar(char c, FILE * stream)
         uart_putchar('\r', stream);
     uart_putc(0, c);
 
+#ifdef TMS_BASE
+    tms_putchar(c);
+#endif
     return 0;
 }
 

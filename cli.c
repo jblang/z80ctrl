@@ -1636,7 +1636,9 @@ int main(void)
 
     bus_init();
     iox_extcs_init(1);
-
+ #ifdef TMS_BASE
+    tms_init(TMS_TEXT);
+#endif
     cli_exec(AUTOEXEC);
     cli_loop();
 }

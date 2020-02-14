@@ -34,6 +34,9 @@
 #include "uart.h"
 #include "iorq.h"
 #include "util.h"
+#ifdef TMS_BASE
+#include "tms.h"
+#endif
 
 /**
  * Breakpoints and watch names
@@ -71,6 +74,9 @@ void z80_reset(uint32_t addr)
         mem_page(i, PAGE(addr + base_addr) + i);
 #endif
     bus_master();
+#ifdef TMS_BASE
+    tms_config();
+#endif
 }
 
 /**
