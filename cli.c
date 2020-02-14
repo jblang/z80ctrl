@@ -66,6 +66,8 @@ FATFS fs;
  */
 FILE uart_str = FDEV_SETUP_STREAM(uart_putchar, uart_getchar, _FDEV_SETUP_RW);
 
+uint8_t screenwidth = 80;
+uint8_t screenheight = 24;
 
 /**
  * Load an Intel HEX file from disk or stdin
@@ -344,38 +346,54 @@ void cli_dump(int argc, char *argv[])
 {
     uint8_t tms = (strcmp_P(argv[0], PSTR("tmsdump")) == 0);
     if (argc < 2) {
-        printf_P(PSTR("usage: dump <start> [end]\n"));
-        return;
+        printf_P(PSTR("usage: %s [start] [end]\n"), argv[0]);
     }
-    uint32_t start = strtoul(argv[1], NULL, 16);
-    uint32_t end;
-    if (argc < 3)
-        end = start + 0xfful;
-    else
+
+    static uint32_t start = 0;
+    uint32_t end = 0;
+    if (argc >= 2)
+        start = strtoul(argv[1], NULL, 16);
+    if (argc >= 3)
         end = strtoul(argv[2], NULL, 16);
     
     uint8_t buf[16];
-    uint8_t buflen = 16;
-    uint32_t i = start;
-    uint8_t j;
 
-    while (i <= end) {
-        if (((i - start) & 0xFF) == 0)
-            printf_P(PSTR("        +0 +1 +2 +3  +4 +5 +6 +7  +8 +9 +A +B  +C +D +E +F   0123456789ABCDEF\n"));
-        printf_P(PSTR("%05lX   "), base_addr + i);
+    uint8_t buflen = 16;
+    if (screenwidth < 80)
+        buflen = 8;
+
+    if (end == 0)
+        end = start + (screenheight - 3) * buflen;
+
+    printf_P(PSTR("ADDR   "));
+    for (uint8_t j = 0; j < buflen; j++) {
+        printf("+%X ", j);
+        if (j % 4 == 3 && screenwidth > 41)
+            printf_P(PSTR(" "));
+    }
+    if (screenwidth > 40)
+        printf_P(PSTR(" "));
+    for (uint8_t j = 0; j < buflen; j++)
+        printf_P(PSTR("%X"), j);
+    printf_P(PSTR("\n"));
+
+    
+    for (uint32_t i = start; i <= end;) {
+        printf_P(PSTR("%05lX  "), base_addr + i);
 #ifdef TMS_BASE
         if (tms)
             tms_read(i, buf, buflen);
         else
 #endif
             mem_read(i, buf, buflen);
-        for (j = 0; j < buflen; j++) {
+        for (uint8_t j = 0; j < buflen; j++) {
             printf_P(PSTR("%02X "), buf[j]);
-            if (j % 4 == 3)
+            if (j % 4 == 3 && screenwidth > 41)
                 printf_P(PSTR(" "));
         }
-        printf_P(PSTR(" "));
-        for (j = 0; j < buflen; j++, i++) {
+        if (screenwidth > 40)
+            printf_P(PSTR(" "));
+        for (uint8_t j = 0; j < buflen; j++, i++) {
             if (0x20 <= buf[j] && buf[j] <= 0x7e)
                 printf_P(PSTR("%c"), buf[j]);
             else
@@ -383,6 +401,7 @@ void cli_dump(int argc, char *argv[])
         }
         printf_P(PSTR("\n"));
     }
+    start = end + buflen;
 }
 
 /**
@@ -446,6 +465,25 @@ void cli_clkdiv(int argc, char *argv[])
         printf_P(PSTR("usage: clkdiv <divider>; minimum divider is 2\n"));
     uint16_t freq = F_CPU / clkdiv / 1000;
     printf_P(PSTR("current speed is %u.%03u MHz (clkdiv=%d)\n"), freq/1000, freq-(freq/1000)*1000, clkdiv);
+}
+
+/**
+ * Set screen size
+ */
+void cli_screen(int argc, char *argv[])
+{
+    uint8_t tmpwidth = 0, tmpheight = 0;
+    if (argc >= 2)
+        tmpwidth = strtoul(argv[1], NULL, 10);
+    if (argc >= 3)
+        tmpheight = strtoul(argv[2], NULL, 10);
+    if (tmpwidth >= 40)
+        screenwidth = tmpwidth;
+    if (tmpheight >= 24)
+        screenheight = tmpheight;
+        printf_P(PSTR("usage: screen <width> <height>\n"));
+    uint16_t freq = F_CPU / clkdiv / 1000;
+    printf_P(PSTR("current screen size is %dx%d\n"), screenwidth, screenheight);
 }
 
 /**
@@ -603,20 +641,22 @@ void cli_dir(int argc, char *argv[])
         fr = f_findfirst(&dir, &finfo, dirname, glob);
     }
 
+    uint8_t maxcnt = screenwidth / 13;
+
     cnt = 0;
     for(;;) {
         if (fr != FR_OK) {
             printf_P(PSTR("error reading directory: %S\n"), strlookup(fr_text, fr));
             break;
         }
-        if ((cnt % 5 == 0 && cnt != 0) || !finfo.fname[0])
+        if ((cnt % maxcnt == 0 && cnt != 0) || !finfo.fname[0])
             printf_P(PSTR("\n"));
         if (!finfo.fname[0]) 
             break;
         strcpy(buf, finfo.fname);
         if (finfo.fattrib & AM_DIR)
             strcat(buf, "/");
-        printf_P(PSTR("%-14s"), buf);
+        printf_P(PSTR("%-13s"), buf);
         cnt++;
         if (glob == NULL)
             fr = f_readdir(&dir, &finfo);
@@ -641,7 +681,7 @@ void cli_del(int argc, char *argv[])
     FILINFO fno;
 
     if (argc < 2) {
-        printf_P(PSTR("usage: del <filename>...\n"));
+        printf_P(PSTR("usage: %s <filename>...\n"), argv[0]);
         return;
     }
 
@@ -1285,6 +1325,7 @@ const char cli_cmd_names[] PROGMEM =
     "disasm\0"
     "do\0"
     "dump\0"
+    "d\0"
     "era\0"
 #ifdef SST_FLASH
     "erase\0"
@@ -1318,6 +1359,7 @@ const char cli_cmd_names[] PROGMEM =
     "reset\0"
     "savebin\0"
     "savehex\0"
+    "screen\0"
     "s\0"
     "step\0"
 #ifdef TMS_BASE
@@ -1360,7 +1402,8 @@ const char cli_cmd_help[] PROGMEM =
     "shows directory listing in long format\0"      // dir
     "disassembles memory location\0"                // disasm
     "execute a batch file\0"                        // do
-    "dump memory in hex and ascii\0"                // dump
+    "dump memory in hex and ascii (alias d)\0"      // dump
+    "\0"                                            // d
     "\0"                                            // era
 #ifdef SST_FLASH
     "erase flash ROM\0"                             // erase
@@ -1394,6 +1437,7 @@ const char cli_cmd_help[] PROGMEM =
     "\0"                                            // reset
     "save binary file from memory\0"                // savebin
     "save intel hex file from memory\0"             // savehex
+    "set screen size\0"                             // screen
     "\0"                                            // s
     "step processor N cycles (alias s)\0"           // step
 #ifdef TMS_BASE
@@ -1439,6 +1483,7 @@ void * const cli_cmd_functions[] PROGMEM = {
     &cli_disasm,
     &cli_do,
     &cli_dump,
+    &cli_dump,      // d
     &cli_del,       // era
 #ifdef SST_FLASH
     &cli_erase,
@@ -1472,6 +1517,7 @@ void * const cli_cmd_functions[] PROGMEM = {
     &cli_reset,
     &cli_savebin,
     &cli_savehex,
+    &cli_screen,
     &cli_step,      // s
     &cli_step,
 #ifdef TMS_BASE
