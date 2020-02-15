@@ -200,6 +200,8 @@ void iorq_dispatch(uint8_t logged)
         bus_slave();
     }
     DATA_INPUT;
+    if (bus_mode != BUS_SLAVE)
+        bus_slave();
     BUSRQ_HI;
     //sei();
 }

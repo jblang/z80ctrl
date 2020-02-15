@@ -38,8 +38,10 @@ uint16_t colortab;
 uint16_t pattab;
 uint16_t satab;
 uint16_t sptab;
-uint8_t fgcolor;
-uint8_t bgcolor;
+uint8_t textfg;
+uint8_t textbg;
+int16_t cursorpos;
+uint8_t undercursor;
 
 uint8_t _tms_write(uint16_t addr, const uint8_t *buf, uint16_t len, uint8_t pgmspace)
 {
@@ -121,7 +123,7 @@ void tms_config()
     }
     tms_writereg(5, satab / 0x80);
     tms_writereg(6, sptab / 0x800);
-    tms_writereg(7, (fgcolor << 4) | bgcolor);
+    tms_writereg(7, (textfg << 4) | textbg);
 }
 
 tms_stat tms_status(void)
@@ -178,8 +180,8 @@ void tms_init(uint16_t mode)
     modereg = 0x8000;
     tms_config();
     tms_fill(0, 0, 0x3fff);
-    fgcolor = 0xf;
-    bgcolor = 0;
+    textfg = 0xf;
+    textbg = 0;
     nametab = 0x3800;     
     colortab = 0x2000;
     pattab = 0;
@@ -188,7 +190,7 @@ void tms_init(uint16_t mode)
     switch (mode) {
         case TMS_TEXT:
             tms_loadfont(font);
-            bgcolor = 0x4;
+            textbg = 0x4;
             break;
         case TMS_BITMAP:
             tms_bitmapname();
@@ -198,6 +200,170 @@ void tms_init(uint16_t mode)
             break;
     }
     modereg = mode;
+    cursorpos = 0;
+    tms_config();
+}
+
+const uint8_t colormap[] PROGMEM = {
+    0x0, 0x6, 0xc, 0xa, 0x4, 0xd, 0x7, 0xe, 
+    0xe, 0x9, 0x3, 0xb, 0x5, 0xd, 0x7, 0xf
+};
+
+#define COLOR(i) (pgm_read_byte(&colormap[i]))
+
+void vdu_color(uint8_t c)
+{
+    if (c > 128)
+        textbg = COLOR(c & 0xf);
+    else
+        textfg = COLOR(c & 0xf);
+    tms_config();
+}
+
+void vdu_flash()
+{
+    uint8_t save = textbg;
+    textbg = ~textbg;
+    tms_config();
+    _delay_ms(100);
+    textbg = save;
+    tms_config();
+}
+
+void vdu_pos(uint8_t x, uint8_t y)
+{
+    x %= 40;
+    y %= 24;
+    tms_fill(nametab + cursorpos, 0, 1);
+    cursorpos = x * 40 + y;
+}
+
+void vdu_scroll(int16_t lines)
+{
+    uint8_t buf[1000];
+    if (lines > 0) {
+        tms_read(nametab + lines * 40, buf, 960 - lines * 40);
+        for (uint16_t i = 960 - lines * 40; i < 960; i++)
+            buf[i] = 0;
+        tms_write(nametab, buf, 960);
+    } else if (lines < 0) {
+        tms_read(nametab, buf, 960 + lines * 40);
+        for (uint16_t i = 960 - lines * 40; i < 960; i++)
+            buf[i] = 0;
+        tms_write(nametab, buf, 960);
+    }
+}
+
+void vdu_clearall()
+{
+    tms_fill(nametab, 0, 960);
+}
+
+void vdu_cleartostart()
+{
+    tms_fill(nametab, 0, cursorpos);
+}
+
+void vdu_cleartoend()
+{
+    tms_fill(nametab + cursorpos, 0, 960 - cursorpos);
+}
+
+void vdu_update()
+{
+    static int16_t prevpos;
+    uint8_t lines = 0;
+    if (cursorpos < 0) {
+        lines = (cursorpos - 40) / 40;
+        cursorpos = 40 - (cursorpos % 40);
+    } else if (cursorpos > 959) {
+        lines = (cursorpos - 920) / 40;
+        cursorpos = 920 + (cursorpos % 40);
+    }
+
+    tms_write(nametab + prevpos, &undercursor, 1);
+    vdu_scroll(lines);
+    tms_read(nametab + cursorpos, &undercursor, 1);
+    tms_fill(nametab + cursorpos, 0xde, 1);
+    prevpos = cursorpos;
+}
+
+void vdu_cursorup(uint8_t n)
+{
+    cursorpos -= 40 * n;
+}
+
+void vdu_cursordown(uint8_t n)
+{
+    cursorpos += 40 * n;
+}
+
+void vdu_cursorleft(uint8_t n)
+{
+    cursorpos -= n;
+}
+
+void vdu_cursorright(uint8_t n)
+{
+    cursorpos += n;
+}
+
+void vdu_startline()
+{
+    cursorpos = ((cursorpos / 40) * 40);
+}
+
+void vdu_tab()
+{
+    cursorpos = ((cursorpos / 4) * 4) + 4;
+}
+
+void vdu_delete()
+{
+    undercursor = 0;
+}
+
+void vdu_literal(uint8_t c)
+{
+    undercursor = c;
+    tms_write(nametab + cursorpos, &c, 1);
+    cursorpos++;
+}
+
+void ansi_pos(uint8_t m, uint8_t n)
+{
+    if (n > 0)
+        n--;
+    if (m > 0)
+        m--;
+    vdu_pos(n, m);
+}
+
+void ansi_clear(uint8_t n)
+{
+    if (n == 0) {
+        vdu_cleartoend();
+    } else if (n == 1) {
+        vdu_cleartostart();
+    } else if (n == 2 || n == 3) {
+        vdu_clearall();
+    }
+}
+
+void ansi_color(uint8_t n)
+{
+    if (30 <= n && n <= 37)
+        textfg = COLOR(n - 30);
+    else if (n == 38)
+        textfg = 0;
+    else if (40 <= n && n <= 47)
+        textbg = COLOR(n - 40);
+    else if (n == 48)
+        textbg = 0;
+    else if (90 <= n && n <= 97)
+        textfg = COLOR(n - 90 + 8);
+    else if (100 <= n && n <= 107)
+        textbg = COLOR(n - 100 + 8);
     tms_config();
 }
 
@@ -205,124 +371,78 @@ void tms_init(uint16_t mode)
 #define TERM_ESC 1
 #define TERM_CSI 2
 
-uint8_t colormap[] = {
-    0x1, 0x6, 0xc, 0xa, 0x4, 0xd, 0x7, 0xe, 
-    0xe, 0x9, 0x3, 0xb, 0x5, 0xd, 0x7, 0xf
-};
+#define MAXESC 16
 
 void tms_putchar(char c)
 {
-    static uint16_t pos = 0;
     static uint8_t mode = TERM_NORMAL;
     static uint8_t escidx = 0;
-    static char escbuf[16];
-    static char prev;
+    static uint8_t escbuf[MAXESC];
 
-    uint8_t prev_bus = bus_mode;
     if (bus_mode != BUS_MASTER)
         bus_master();
 
     if (mode == TERM_ESC) {
-        if (c == 'c')
-            tms_init(TMS_TEXT); // reset terminal
-        if (c == '[') 
+        if (c == '[') {
+            escbuf[0] = 0;
+            escidx = 0;
             mode = TERM_CSI;
-        else
-            mode = TERM_NORMAL;
-    } else if (mode == TERM_CSI) {
-        if (0x30 <= c && c <= 0x3B && escidx < 15) {
-            escbuf[escidx++] = c;
         } else {
-            escbuf[escidx] = 0;
-            char *end;
+            if (c == 'c')
+                tms_init(TMS_TEXT); // reset terminal
+            else 
+                vdu_literal(c);
+            mode = TERM_NORMAL;
+        }
+    } else if (mode == TERM_CSI) {
+        if ('0' <= c && c <= '9') {
+            escbuf[escidx] = escbuf[escidx] * 10 + c - '0';
+        } else if ((c == ':' || c == ';') && escidx < MAXESC-1) {
+            escidx++;
+        } else {
             if (c == 'J') {
-                int n = strtoul(escbuf, &end, 10);
-                if (n == 1) {
-                    // clear to beginning
-                    tms_fill(nametab, 0, pos);
-                } else if (n == 2 || n == 3) {
-                    // clear all
-                    tms_fill(nametab, 0, 0x3c0);
-                } else {
-                    // clear to end
-                    tms_fill(nametab + pos, 0, 0x3c0 - pos);
-                }
+                ansi_clear(escbuf[0]);
             } else if (c == 'H') {
-                int n = strtoul(escbuf, &end, 10) % 24;
-                if (*end != 0) {
-                    char *next = end + 1;
-                    int m = strtoul(next, &end, 10) % 40;
-                    tms_fill(nametab + pos, 0, 1);
-                    pos = n * 40 + m;
-                }
+                ansi_pos(escbuf[0], escbuf[1]);
             } else if (c == 'm') {
-                char *next = escbuf;
-                do {
-                    int m = strtoul(next, &end, 10);
-                    next = end + 1;
-                    if (30 <= m && m <= 37)
-                        fgcolor = colormap[m - 30];
-                    else if (40 <= m && m <= 47)
-                        bgcolor = colormap[m - 40];
-                    else if (90 <= m && m <= 97)
-                        fgcolor = colormap[m - 90 + 8];
-                    else if (100 <= m && m <= 107)
-                        bgcolor = colormap[m - 100 + 8];
-                } while (*end != 0);
-                tms_config();
+                for (uint8_t i = 0; i <= escidx; i++)
+                    ansi_color(escbuf[i]);
             }
             mode = TERM_NORMAL;
         }
     } else {
         switch (c) {
+            case 0: // null, ignore
+                break;
             case '\r':
+                vdu_startline();
                 break;
             case '\n':
-                tms_fill(nametab + pos, 0, 1);
-                // go to start of next line
-                pos = ((pos / 40) * 40) + 40;
+                vdu_cursordown(1);
                 break;
-            case '\f':  // clear screen
-                tms_fill(nametab, 0, 0x3c0);
-                pos = 0;
+            case '\f':
+                vdu_clearall();
+                cursorpos = 0;
                 break;
             case '\t':
-                tms_fill(nametab + pos, 0, 1);
-                pos = ((pos / 4) * 4) + 4;
+                vdu_tab();
                 break;
-            case '\b':  // backspace
+            case '\a':
+                vdu_flash();
+                break;
+            case '\b':
+                vdu_cursorleft(1);
+                break;
             case 0x7f:  // delete
-                tms_fill(nametab + pos, 0, 1);
-                pos--;
+                vdu_delete();
                 break;
             case '\e':
                 mode = TERM_ESC;
-                escidx = 0;
                 break;
             default:    // normal character
-                // CR without LF moves to start of current line
-                if (prev == '\r')
-                    pos = ((pos / 40) * 40);
-                tms_write(nametab + pos, &c, 1);
-                pos++;
+                vdu_literal(c);
                 break;       
         }
     }
-
-    // scroll the screen if necessary
-    if (pos >= 960) {
-        uint8_t buf[1000];
-        tms_read(nametab + 40, buf, 920);
-        for (uint16_t i = 920; i < 960; i++)
-            buf[i] = 0;
-        tms_write(nametab, buf, 960);
-        pos = 920;
-    }
-    prev = c;
-
-    // show cursor
-    tms_fill(nametab + pos, 0xde, 1);
-
-    if (prev_bus != BUS_MASTER)
-        bus_slave();
+    vdu_update();
 }
