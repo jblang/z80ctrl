@@ -42,6 +42,9 @@ uint8_t textfg;
 uint8_t textbg;
 int16_t cursorpos;
 uint8_t undercursor;
+uint8_t pixelfg;
+uint8_t pixelbg;
+uint8_t pixelmode;
 
 uint8_t _tms_write(uint16_t addr, const uint8_t *buf, uint16_t len, uint8_t pgmspace)
 {
@@ -204,20 +207,46 @@ void tms_init(uint16_t mode)
     tms_config();
 }
 
-const uint8_t colormap[] PROGMEM = {
+const uint8_t defcolors[] PROGMEM = {
     0x0, 0x6, 0xc, 0xa, 0x4, 0xd, 0x7, 0xe, 
     0xe, 0x9, 0x3, 0xb, 0x5, 0xd, 0x7, 0xf
 };
 
-#define COLOR(i) (pgm_read_byte(&colormap[i]))
+uint8_t colormap[] = {
+    0x0, 0x6, 0xc, 0xa, 0x4, 0xd, 0x7, 0xe, 
+    0xe, 0x9, 0x3, 0xb, 0x5, 0xd, 0x7, 0xf
+};
+
+#define DEFCOLOR(i) (pgm_read_byte(&defcolors[i]))
 
 void vdu_color(uint8_t c)
 {
-    if (c > 128)
-        textbg = COLOR(c & 0xf);
+    if (c >= 128)
+        textbg = colormap[c & 0xf];
     else
-        textfg = COLOR(c & 0xf);
+        textfg = colormap[c & 0xf];
     tms_config();
+}
+
+void vdu_gcolor(uint8_t m, uint8_t c)
+{
+    pixelmode = m % 5;
+    if (c >= 128)
+        pixelbg = colormap[c & 0xf];
+    else
+        pixelfg = colormap[c & 0xf];
+    tms_config();
+}
+
+void vdu_lcolor(uint8_t l, uint8_t p)
+{
+    colormap[l & 0xf] = p & 0xf;
+}
+
+void vdu_dcolor()
+{
+    for (uint8_t i = 0; i < 16; i++)
+        colormap[i] = DEFCOLOR(i);
 }
 
 void vdu_flash()
@@ -269,6 +298,11 @@ void vdu_cleartoend()
     tms_fill(nametab + cursorpos, 0, 960 - cursorpos);
 }
 
+void vdu_cleargraph()
+{
+    
+}
+
 void vdu_update()
 {
     static int16_t prevpos;
@@ -313,14 +347,57 @@ void vdu_startline()
     cursorpos = ((cursorpos / 40) * 40);
 }
 
-void vdu_tab()
-{
-    cursorpos = ((cursorpos / 4) * 4) + 4;
-}
-
 void vdu_delete()
 {
     undercursor = 0;
+}
+
+void vdu_mode(uint8_t m)
+{
+    switch (m) {
+        case 0:
+            tms_init(TMS_TEXT);
+            break;
+        case 1:
+            tms_init(TMS_TILE);
+            break;
+        case 2:
+            tms_init(TMS_BITMAP);
+            break;
+        case 3:
+            tms_init(TMS_MULTICOLOR);
+            break;
+    }
+}
+
+void vdu_program(uint8_t *b)
+{
+
+}
+
+void vdu_plot(uint8_t m, uint16_t x, uint16_t y)
+{
+
+}
+
+void vdu_gwindow(uint16_t lx, uint16_t by, uint16_t rx, uint16_t ty)
+{
+    
+}
+
+void vdu_dwindow()
+{
+
+}
+
+void vdu_twindow(uint8_t lx, uint8_t by, uint8_t rx, uint8_t ty)
+{
+
+}
+
+void vdu_origin(uint16_t x, uint16_t y)
+{
+
 }
 
 void vdu_literal(uint8_t c)
@@ -353,48 +430,166 @@ void ansi_clear(uint8_t n)
 void ansi_color(uint8_t n)
 {
     if (30 <= n && n <= 37)
-        textfg = COLOR(n - 30);
+        textfg = DEFCOLOR(n - 30);
     else if (n == 38)
         textfg = 0;
     else if (40 <= n && n <= 47)
-        textbg = COLOR(n - 40);
+        textbg = DEFCOLOR(n - 40);
     else if (n == 48)
         textbg = 0;
     else if (90 <= n && n <= 97)
-        textfg = COLOR(n - 90 + 8);
+        textfg = DEFCOLOR(n - 90 + 8);
     else if (100 <= n && n <= 107)
-        textbg = COLOR(n - 100 + 8);
+        textbg = DEFCOLOR(n - 100 + 8);
     tms_config();
 }
 
-#define TERM_NORMAL 0
-#define TERM_ESC 1
-#define TERM_CSI 2
+enum { 
+    VDU_NORMAL,
+    VDU_ESC,
+    VDU_CSI,
+    VDU_TCOLOR,
+    VDU_GCOLOR,
+    VDU_LCOLOR,
+    VDU_DCOLOR,
+    VDU_DISABLED,
+    VDU_MODE,
+    VDU_PROGRAM,
+    VDU_GWINDOW,
+    VDU_PLOT,
+    VDU_TWINDOW,
+    VDU_ORIGIN,
+    VDU_POS
+};
 
 #define MAXESC 16
 
 void tms_putchar(char c)
 {
-    static uint8_t mode = TERM_NORMAL;
+    static uint8_t mode = VDU_NORMAL;
     static uint8_t escidx = 0;
+    static uint8_t esclen = 0;
     static uint8_t escbuf[MAXESC];
+
+    if (mode == VDU_DISABLED) {
+        if (c == 6) {
+            mode = VDU_NORMAL;
+            return;
+        } else {
+            return;
+        }
+    }
 
     if (bus_mode != BUS_MASTER)
         bus_master();
 
-    if (mode == TERM_ESC) {
+    if (mode == VDU_NORMAL) {
+        escidx = 0;
+        switch (c) {
+            case 0: // null, ignore
+                break;
+            case 7:
+                vdu_flash();
+                break;
+            case 8:
+                vdu_cursorleft(1);
+                break;
+            case 9:
+                vdu_cursorright(1);
+                break;
+            case 10:
+                vdu_cursordown(1);
+                break;
+            case 11:
+                vdu_cursorup(1);
+                break;
+            case 12:
+                vdu_clearall();
+                vdu_pos(0, 0);
+                break;
+            case 13:
+                vdu_startline();
+                break;
+            case 16:
+                vdu_cleargraph();
+                break;
+            case 17:
+                mode = VDU_TCOLOR;
+                esclen = 1;
+                break;
+            case 18:
+                mode = VDU_GCOLOR;
+                esclen = 2;
+                break;
+            case 19:
+                mode = VDU_LCOLOR;
+                esclen = 3;
+                break;
+            case 20:
+                mode = VDU_DCOLOR;
+                esclen = 4;
+                break;
+            case 21:
+                mode = VDU_DISABLED;
+                break;
+            case 22:
+                mode = VDU_MODE;
+                esclen = 1;
+                break;
+            case 23:
+                mode = VDU_PROGRAM;
+                esclen = 9;
+                break;
+            case 24:
+                mode = VDU_GWINDOW;
+                esclen = 8;
+                break;
+            case 25:
+                mode = VDU_PLOT;
+                esclen = 5;
+                break;
+            case 26:
+                vdu_dwindow();
+                break;
+            case 27:
+                mode = VDU_ESC;
+                break;
+            case 28:
+                mode = VDU_TWINDOW;
+                esclen = 4;
+                break;
+            case 29:
+                mode = VDU_ORIGIN;
+                esclen = 4;
+                break;
+            case 30:
+                vdu_pos(0, 0);
+                break;
+            case 31:
+                mode = VDU_POS;
+                esclen = 2;
+                break;
+            case 127:
+                vdu_delete();
+                break;
+            default:
+                vdu_literal(c);
+                break;       
+        }
+    } else if (mode == VDU_ESC) {
         if (c == '[') {
-            escbuf[0] = 0;
+            for (uint8_t i = 0; i < MAXESC; i++)
+                escbuf[i] = 0;
             escidx = 0;
-            mode = TERM_CSI;
+            mode = VDU_CSI;
         } else {
             if (c == 'c')
                 tms_init(TMS_TEXT); // reset terminal
             else 
                 vdu_literal(c);
-            mode = TERM_NORMAL;
+            mode = VDU_NORMAL;
         }
-    } else if (mode == TERM_CSI) {
+    } else if (mode == VDU_CSI) {
         if ('0' <= c && c <= '9') {
             escbuf[escidx] = escbuf[escidx] * 10 + c - '0';
         } else if ((c == ':' || c == ';') && escidx < MAXESC-1) {
@@ -408,41 +603,49 @@ void tms_putchar(char c)
                 for (uint8_t i = 0; i <= escidx; i++)
                     ansi_color(escbuf[i]);
             }
-            mode = TERM_NORMAL;
+            mode = VDU_NORMAL;
         }
+    } else if (escidx < esclen - 1) {
+        escbuf[escidx++] = c;
     } else {
-        switch (c) {
-            case 0: // null, ignore
+        escbuf[escidx] = c;
+        switch (mode) {
+            case VDU_TCOLOR:
+                vdu_color(escbuf[0]);
                 break;
-            case '\r':
-                vdu_startline();
+            case VDU_GCOLOR:
+                vdu_gcolor(escbuf[0], escbuf[1]);
                 break;
-            case '\n':
-                vdu_cursordown(1);
+            case VDU_LCOLOR:
+                vdu_lcolor(escbuf[0], escbuf[1]);
                 break;
-            case '\f':
-                vdu_clearall();
-                cursorpos = 0;
+            case VDU_DCOLOR:
+                vdu_dcolor();
                 break;
-            case '\t':
-                vdu_tab();
+            case VDU_MODE:
+                vdu_mode(escbuf[0]);
                 break;
-            case '\a':
-                vdu_flash();
+            case VDU_PROGRAM:
+                vdu_program(escbuf);
                 break;
-            case '\b':
-                vdu_cursorleft(1);
+            case VDU_GWINDOW:
+                vdu_gwindow(escbuf[0] | escbuf[1] << 8, escbuf[2] | escbuf[3] << 8, escbuf[4] | escbuf[5] << 8, escbuf[6] | escbuf[7] << 8);
                 break;
-            case 0x7f:  // delete
-                vdu_delete();
+            case VDU_PLOT:
+                vdu_plot(escbuf[0], escbuf[1] | escbuf[2] << 8, escbuf[3] | escbuf[4] << 8);
                 break;
-            case '\e':
-                mode = TERM_ESC;
+            case VDU_TWINDOW:
+                vdu_twindow(escbuf[0], escbuf[1], escbuf[2], escbuf[3]);
                 break;
-            default:    // normal character
-                vdu_literal(c);
-                break;       
+            case VDU_ORIGIN:
+                vdu_origin(escbuf[0] | escbuf[1] << 8, escbuf[2] | escbuf[3] << 8);
+                break;
+            case VDU_POS:
+                vdu_pos(escbuf[0], escbuf[1]);
+                break;
         }
+        mode = VDU_NORMAL;
     }
+    
     vdu_update();
 }
