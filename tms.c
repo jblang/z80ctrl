@@ -23,12 +23,12 @@
 
 #include <avr/pgmspace.h>
 #include <util/delay.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "tms.h"
 #include "bus.h"
 #include "font.h"
-#include "stdlib.h"
-
 #define TMS_RAM TMS_BASE
 #define TMS_REG TMS_BASE+1
 
@@ -223,8 +223,9 @@ void tms_scroll(int16_t lines)
             buf[i] = 0;
         tms_write(nametab, buf, 960);
     } else if (lines < 0) {
-        tms_read(nametab, buf, 960 + lines * 40);
-        for (uint16_t i = 960 - lines * 40; i < 960; i++)
+        lines = -lines;
+        tms_read(nametab, buf + lines * 40, 960 - lines * 40);
+        for (uint16_t i = 0; i < lines * 40; i++)
             buf[i] = 0;
         tms_write(nametab, buf, 960);
     }
@@ -253,6 +254,52 @@ void tms_delete()
 {
     cursorpos--;
     undercursor = 0;
+}
+
+void tms_home()
+{
+    cursorpos = 0;
+}
+
+void tms_cleartext()
+{
+    tms_fill(nametab, 0, 960);
+}
+
+void tms_cleargraph()
+{
+}
+
+void tms_cursorup(uint8_t c)
+{
+    cursorpos -= 40 * c;
+}
+
+void tms_cursordown(uint8_t c)
+{
+    cursorpos += 40 * c;
+}
+
+void tms_cursorleft(uint8_t c)
+{
+    cursorpos -= c;
+}
+
+void tms_cursorright(uint8_t c)
+{
+    cursorpos += c;
+}
+
+void tms_startline()
+{
+    cursorpos = ((cursorpos / 40) * 40);
+}
+
+void tms_pos(uint8_t x, uint8_t y)
+{
+    x %= 40;
+    y %= 24;
+    cursorpos = y * 40 + x;
 }
 
 const uint8_t defcolors[] PROGMEM = {
@@ -309,14 +356,12 @@ void vdu_flash(uint8_t *p)
 
 void vdu_pos(uint8_t *p)
 {
-    p[1] %= 40;
-    p[2] %= 24;
-    cursorpos = p[1] * 40 + p[2];
+    tms_pos(p[1], p[2]);
 }
 
 void vdu_home(uint8_t *p)
 {
-    cursorpos = 0;
+    tms_home();
 }
 
 void vdu_cleartext(uint8_t *p)
@@ -330,27 +375,27 @@ void vdu_cleargraph(uint8_t *p)
 
 void vdu_cursorup(uint8_t *p)
 {
-    cursorpos -= 40;
+    tms_cursorup(1);
 }
 
 void vdu_cursordown(uint8_t *p)
 {
-    cursorpos += 40;
+    tms_cursordown(1);
 }
 
 void vdu_cursorleft(uint8_t *p)
 {
-    cursorpos--;
+    tms_cursorleft(1);
 }
 
 void vdu_cursorright(uint8_t *p)
 {
-    cursorpos++;
+    tms_cursorright(1);
 }
 
 void vdu_startline(uint8_t *p)
 {
-    cursorpos = ((cursorpos / 40) * 40);
+    tms_startline();
 }
 
 void vdu_mode(uint8_t *p)
@@ -401,25 +446,27 @@ void vdu_origin(uint8_t *p)
 
 }
 
-void ansi_pos(uint8_t m, uint8_t n)
-{
-    if (n > 0)
-        n--;
-    if (m > 0)
-        m--;
-    n %= 40;
-    m %= 24;
-    cursorpos = m * 40 + n;
-}
-
-void ansi_clear(uint8_t n)
+void ansi_clearscreen(uint8_t n)
 {
     if (n == 0) {
         tms_fill(nametab + cursorpos, 0, 960 - cursorpos);
     } else if (n == 1) {
-        tms_fill(nametab, 0, 960);
+        tms_fill(nametab, 0, cursorpos);
     } else if (n == 2 || n == 3) {
         tms_fill(nametab, 0, 960);
+    }
+}
+
+void ansi_clearline(uint8_t n)
+{
+    int startline = (cursorpos / 40) * 40;
+    int column = cursorpos % 40;
+    if (n == 0) {
+        tms_fill(nametab + cursorpos, 0, 40 - column);
+    } else if (n == 1) {
+        tms_fill(nametab + startline, 0, column);
+    } else if (n == 2) {
+        tms_fill(nametab + startline, 0, 40);
     }
 }
 
@@ -438,6 +485,56 @@ void ansi_color(uint8_t n)
     else if (100 <= n && n <= 107)
         textbg = DEFCOLOR(n - 100 + 8);
     tms_config();
+}
+
+void ansi_command(uint8_t command, uint8_t paramcnt, uint8_t params[])
+{
+    uint8_t cnt = params[0] == 0 ? 1 : params[0];
+    uint8_t cnt2 = params[1] == 0 ? 1 : params[1];
+    switch (command) {
+        case 'A':
+            tms_cursorup(cnt);
+            break;
+        case 'B':
+            tms_cursordown(cnt);
+            break;
+        case 'C':
+            tms_cursorright(cnt);
+            break;
+        case 'D':
+            tms_cursorleft(cnt);
+            break;
+        case 'E':
+            tms_startline();
+            tms_cursordown(cnt);
+            break;
+        case 'F':
+            tms_startline();
+            tms_cursorup(cnt);
+            break;
+        case 'G':
+            tms_startline();
+            tms_cursorright(cnt - 1);
+        case 'H':
+            tms_pos(cnt2 - 1, cnt - 1);
+            break;
+        case 'J':
+            ansi_clearscreen(params[0]);
+            break;
+        case 'K':
+            ansi_clearline(params[0]);
+            break;
+        case 'S':
+            tms_scroll(cnt);
+            break;
+        case 'T':
+            tms_scroll(-cnt);
+            break;
+        case 'm':
+            for (uint8_t i = 0; i <= paramcnt; i++)
+                ansi_color(params[i]);
+            break;
+    }
 }
 
 uint8_t const vdu_length[] PROGMEM = {
@@ -507,7 +604,8 @@ void tms_putchar(char c)
         bus_master();
 
     if (mode == VDU_NORMAL) {
-        if (c == '\e') {
+        if (c == 21) {
+        } else if (c == '\e') {
             mode = VDU_ESC;
         } else if (c == 0x7f) {
             tms_delete();
@@ -520,8 +618,7 @@ void tms_putchar(char c)
         }
     } else if (mode == VDU_ESC) {
         if (c == '[') {
-            for (uint8_t i = 0; i < MAXPARAM; i++)
-                parambuf[i] = 0;
+            memset(parambuf, 0, MAXPARAM);
             paramidx = 0;
             mode = VDU_CSI;
         } else {
@@ -538,14 +635,7 @@ void tms_putchar(char c)
         } else if ((c == ':' || c == ';') && paramidx < MAXPARAM-1) {
             paramidx++;
         } else {
-            if (c == 'J') {
-                ansi_clear(parambuf[0]);
-            } else if (c == 'H') {
-                ansi_pos(parambuf[0], parambuf[1]);
-            } else if (c == 'm') {
-                for (uint8_t i = 0; i <= paramidx; i++)
-                    ansi_color(parambuf[i]);
-            }
+            ansi_command(c, paramidx, parambuf);
             mode = VDU_NORMAL;
         }
     }
