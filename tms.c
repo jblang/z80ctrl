@@ -45,6 +45,7 @@ uint8_t undercursor;
 uint8_t pixelfg;
 uint8_t pixelbg;
 uint8_t pixelmode;
+uint8_t cursor[8];
 
 uint8_t _tms_write(uint16_t addr, const uint8_t *buf, uint16_t len, uint8_t pgmspace)
 {
@@ -244,9 +245,13 @@ void tms_update()
     }
 
     tms_write(nametab + prevpos, &undercursor, 1);
-    tms_read(nametab + cursorpos, &undercursor, 1);
     tms_scroll(lines);
-    tms_fill(nametab + cursorpos, 0xde, 1);
+    tms_read(nametab + cursorpos, &undercursor, 1);
+    tms_read(pattab + undercursor * 8, cursor, 8);
+    for (uint8_t i = 0; i < 8; i++)
+        cursor[i] = ~cursor[i];
+    tms_write(pattab + 0xff * 8, cursor, 8);
+    tms_fill(nametab + cursorpos, 0xff, 1);
     prevpos = cursorpos;
 }
 
@@ -587,7 +592,7 @@ enum vdu_mode {
     VDU_CSI
 };
 
-void tms_putchar(char c)
+void tms_putchar(uint8_t c)
 {
     static uint8_t mode = VDU_NORMAL;
     static uint8_t paramidx = 0;

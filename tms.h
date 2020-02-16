@@ -55,7 +55,7 @@ uint8_t _tms_write(uint16_t addr, const uint8_t *buf, uint16_t len, uint8_t pgms
 #define tms_write(addr, buf, len) _tms_write((addr), (buf), (len), 0)
 #define tms_write_P(addr, buf, len) _tms_write((addr), (buf), (len), 1)
 void tms_init(uint16_t mode);
-void tms_putchar(char c);
+void tms_putchar(uint8_t c);
 
 
 #endif
