@@ -234,18 +234,18 @@ void tms_scroll(int16_t lines)
 void tms_update()
 {
     static int16_t prevpos;
-    uint8_t lines = 0;
+    int8_t lines = 0;
     if (cursorpos < 0) {
-        lines = (cursorpos - 40) / 40;
-        cursorpos = 40 - (cursorpos % 40);
+        lines = cursorpos / 40;
+        cursorpos = -cursorpos % 40;
     } else if (cursorpos > 959) {
         lines = (cursorpos - 920) / 40;
         cursorpos = 920 + (cursorpos % 40);
     }
 
     tms_write(nametab + prevpos, &undercursor, 1);
-    tms_scroll(lines);
     tms_read(nametab + cursorpos, &undercursor, 1);
+    tms_scroll(lines);
     tms_fill(nametab + cursorpos, 0xde, 1);
     prevpos = cursorpos;
 }
