@@ -45,7 +45,6 @@ uint8_t undercursor;
 uint8_t pixelfg;
 uint8_t pixelbg;
 uint8_t pixelmode;
-uint8_t cursor[8];
 
 uint8_t _tms_write(uint16_t addr, const uint8_t *buf, uint16_t len, uint8_t pgmspace)
 {
@@ -218,23 +217,24 @@ void tms_literal(uint8_t c)
 void tms_scroll(int16_t lines)
 {
     uint8_t buf[1000];
+    static uint16_t prevpos;
+    tms_write(nametab + prevpos, &undercursor, 1);
     if (lines > 0) {
         tms_read(nametab + lines * 40, buf, 960 - lines * 40);
-        for (uint16_t i = 960 - lines * 40; i < 960; i++)
-            buf[i] = 0;
+        memset(buf + 960 - lines * 40, 0, lines * 40);
         tms_write(nametab, buf, 960);
     } else if (lines < 0) {
         lines = -lines;
         tms_read(nametab, buf + lines * 40, 960 - lines * 40);
-        for (uint16_t i = 0; i < lines * 40; i++)
-            buf[i] = 0;
+        memset(buf, 0, lines * 40);
         tms_write(nametab, buf, 960);
     }
+    prevpos = cursorpos;
 }
 
 void tms_update()
 {
-    static int16_t prevpos;
+    uint8_t cursor[8];
     int8_t lines = 0;
     if (cursorpos < 0) {
         lines = cursorpos / 40;
@@ -244,7 +244,6 @@ void tms_update()
         cursorpos = 920 + (cursorpos % 40);
     }
 
-    tms_write(nametab + prevpos, &undercursor, 1);
     tms_scroll(lines);
     tms_read(nametab + cursorpos, &undercursor, 1);
     tms_read(pattab + undercursor * 8, cursor, 8);
@@ -252,7 +251,6 @@ void tms_update()
         cursor[i] = ~cursor[i];
     tms_write(pattab + 0xff * 8, cursor, 8);
     tms_fill(nametab + cursorpos, 0xff, 1);
-    prevpos = cursorpos;
 }
 
 void tms_delete()
@@ -297,14 +295,12 @@ void tms_cursorright(uint8_t c)
 
 void tms_startline()
 {
-    cursorpos = ((cursorpos / 40) * 40);
+    cursorpos = (cursorpos / 40) * 40;
 }
 
 void tms_pos(uint8_t x, uint8_t y)
 {
-    x %= 40;
-    y %= 24;
-    cursorpos = y * 40 + x;
+    cursorpos = (y % 24) * 40 + (x % 40);
 }
 
 const uint8_t defcolors[] PROGMEM = {
@@ -610,6 +606,7 @@ void tms_putchar(uint8_t c)
 
     if (mode == VDU_NORMAL) {
         if (c == 21) {
+            mode = VDU_DISABLED;
         } else if (c == '\e') {
             mode = VDU_ESC;
         } else if (c == 0x7f) {
