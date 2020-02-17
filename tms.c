@@ -246,11 +246,15 @@ void tms_update()
 
     tms_scroll(lines);
     tms_read(nametab + cursorpos, &undercursor, 1);
-    tms_read(pattab + undercursor * 8, cursor, 8);
-    for (uint8_t i = 0; i < 8; i++)
-        cursor[i] = ~cursor[i];
-    tms_write(pattab + 0xff * 8, cursor, 8);
-    tms_fill(nametab + cursorpos, 0xff, 1);
+    if (undercursor == 0 || undercursor == 32) {
+        tms_fill(nametab + cursorpos, 0xdb, 1);
+    } else {
+        tms_read(pattab + undercursor * 8, cursor, 8);
+        for (uint8_t i = 0; i < 8; i++)
+            cursor[i] = ~cursor[i];
+        tms_write(pattab + 0xff * 8, cursor, 8);
+        tms_fill(nametab + cursorpos, 0xff, 1);
+    }
 }
 
 void tms_delete()
@@ -456,6 +460,7 @@ void ansi_clearscreen(uint8_t n)
     } else if (n == 2 || n == 3) {
         tms_fill(nametab, 0, 960);
     }
+    undercursor = 0;
 }
 
 void ansi_clearline(uint8_t n)
@@ -469,6 +474,7 @@ void ansi_clearline(uint8_t n)
     } else if (n == 2) {
         tms_fill(nametab + startline, 0, 40);
     }
+    undercursor = 0;
 }
 
 void ansi_color(uint8_t n)
@@ -488,8 +494,39 @@ void ansi_color(uint8_t n)
     tms_config();
 }
 
+
+void ansi_insertlines(uint8_t lines)
+{
+    uint8_t buf[1000];
+    uint16_t start = cursorpos / 40;
+    if (lines > 24 - start)
+        lines = 24 - start;
+    start *= 40;
+    lines *= 40;
+    tms_read(nametab + start, buf + lines, 960 - start - lines);
+    buf[lines] = undercursor;
+    memset(buf, 0, lines);
+    tms_write(nametab + start, buf, 960 - start);
+    undercursor = 0;
+}
+
+void ansi_deletelines(uint8_t lines)
+{
+    uint8_t buf[1000];
+    uint16_t start = cursorpos / 40;
+    if (lines > 24 - start)
+        lines = 24 - start;
+    start *= 40;
+    lines *= 40;
+    tms_read(nametab + start + lines, buf, 960 - start - lines);
+    memset(buf + 960 - start - lines, 0, lines);
+    tms_write(nametab + start, buf, 960 - start);
+    undercursor = buf[0];
+}
+
 void ansi_command(uint8_t command, uint8_t paramcnt, uint8_t params[])
 {
+    static uint16_t savepos;
     uint8_t cnt = params[0] == 0 ? 1 : params[0];
     uint8_t cnt2 = params[1] == 0 ? 1 : params[1];
     switch (command) {
@@ -525,6 +562,12 @@ void ansi_command(uint8_t command, uint8_t paramcnt, uint8_t params[])
         case 'K':
             ansi_clearline(params[0]);
             break;
+        case 'L':
+            ansi_insertlines(cnt);
+            break;
+        case 'M':
+            ansi_deletelines(cnt);
+            break;
         case 'S':
             tms_scroll(cnt);
             break;
@@ -534,6 +577,12 @@ void ansi_command(uint8_t command, uint8_t paramcnt, uint8_t params[])
         case 'm':
             for (uint8_t i = 0; i <= paramcnt; i++)
                 ansi_color(params[i]);
+            break;
+        case 's':
+            savepos = cursorpos;
+            break;
+        case 'u':
+            cursorpos = savepos;
             break;
     }
 }
