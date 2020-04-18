@@ -97,30 +97,6 @@ void cli_assign(int argc, char *argv[])
     DEVICE *dev;    
     int dev_index = -1;    
 
-    //debug
-    /*    
-    printf("Debug info:\n");
-    for(int i=0; i<NUM_DEVS; i++){
-        printf("Dev index:%d name:%s id:0x%X addr:0x%X uart:0x%X rp:0x%X wr:0x%X\n",
-            i, 
-            device_registry[i]->name,            
-            device_registry[i]->id,
-            device_registry[i]->addr,
-            device_registry[i]->uart,
-            device_registry[i]->p_read,
-            device_registry[i]->p_write);
-    }
-    printf("\n");
-    */
-    if ((strcmp_P(argv[1], PSTR("-d")) == 0)||(strcmp_P(argv[1], PSTR("-D")) == 0)){
-        printf_P(PSTR("arrays\n"));
-        for(int i=0; i<256; i++){                
-            printf("wr_tbl dev:0x%X  rd_tbl dev:0x%X  \n",write_dev_tbl[i]==NULL?0:write_dev_tbl[i]->addr, write_dev_tbl[i]==NULL?0:write_dev_tbl[i]->addr);
-        }
-        return;
-    }
-    //ends
-    
     if ((strcmp_P(argv[1], PSTR("-l")) == 0)||(strcmp_P(argv[1], PSTR("-L")) == 0)){
         printf_P(PSTR("Device  Address   Extra(uart)\n"));
         for(int i=0; i<NUM_DEVS; i++){                
@@ -170,40 +146,6 @@ void cli_assign(int argc, char *argv[])
     read_dev_tbl[addr] = NULL;
     read_dev_tbl[requested_addr] = dev;
     dev->addr = requested_addr;
-
-
-    
-
-
-
-
-
-
-/*
-    new_port = argv[1];
-    dev = write_port_tbl[new_port];
-    if(dev == NULL){
-        //lets add the device
-        write_port_tbl[new_port] = 
-    }
-
-
-    if (strcmp_P(argv[2], PSTR("read")) == 0)
-        dir = SIO_INPUT;
-    else
-        dir = SIO_OUTPUT;
-
-    uint8_t virtual = strtoul(argv[1], NULL, 10) & 1;
-    if (strcmp_P(argv[3], PSTR("uart0")) == 0)
-        mode = SIO_UART0;
-    else if (strcmp_P(argv[3], PSTR("uart1")) == 0)
-        mode = SIO_UART1;
-    else { 
-        mode = SIO_FILE;
-        filename = argv[3];
-    }
-    sio_attach(virtual, dir, mode, filename);
- */
 }
 
 /**
