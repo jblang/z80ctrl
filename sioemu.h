@@ -28,13 +28,13 @@
 #define SIOEMU_H
 
 #ifndef SIO_BASE
-#define SIO_BASE 0x10
+//#define SIO_BASE 0x80 /*0x10*/
 #endif
 
-#define SIO0_STATUS SIO_BASE
-#define SIO0_DATA SIO_BASE+1
-#define SIO1_STATUS SIO_BASE+2
-#define SIO1_DATA SIO_BASE+3
+//#define SIO0_STATUS SIO_BASE+2
+//#define SIO0_DATA SIO_BASE+3
+//#define SIO1_STATUS SIO_BASE
+//#define SIO1_DATA SIO_BASE+1
 
 
 #define SIO_UART0 0
@@ -45,9 +45,33 @@
 #define SIO_OUTPUT 0
 #define SIO_INPUT 1
 
+typedef uint8_t (*port_rd)(uint8_t);
+typedef void (*port_wr)(uint8_t, uint8_t);
+
+typedef struct tag_device{
+	char *name;
+	char *desc;
+	uint8_t id;
+	uint8_t addr;
+	uint8_t uart;  //used to map the given periphetal to any atmega uart. 0=UART0 on z80ctlr, 1=UART1 on z80ctrl
+	port_rd p_read;   
+    port_wr p_write;   
+}DEVICE;
+
+//Device Type IDs
+enum{
+	SIO0_STATUS,
+	SIO0_DATA,
+	SIO1_STATUS,
+	SIO1_DATA
+};
+
 void sio_attach(uint8_t port, uint8_t dir, uint8_t mode, char *filename) ;
 uint8_t sio_read(uint8_t port);
 void sio_write(uint8_t port, uint8_t data);
 uint8_t sio_status(uint8_t port);
+
+extern DEVICE *write_dev_tbl[256];
+extern DEVICE *read_dev_tbl[256];
 
 #endif

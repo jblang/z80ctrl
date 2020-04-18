@@ -5,7 +5,7 @@
 #
 
 # Hardware revision (Important: must be set to correct value)
-BOARD_REV?=3
+BOARD_REV?=4
 
 # Base address for RomWBW-style paging; comment out to disable support
 # PAGE_BASE=0x78
@@ -37,7 +37,7 @@ F_CPU?=20000000L
 
 # Programmer options
 PROGRAMMER?=arduino
-PORT?=/dev/ttyS3
+PORT?=/dev/ttyUSB0
 BAUD?=115200
 
 AVRCC?=avr-gcc
@@ -106,7 +106,7 @@ $(BIN).elf: $(OBJS)
 	$(AVRCC) $(CFLAGS) $(LDFLAGS) -o $@ $^
 
 install: $(BIN).hex
-	$(AVRDUDE) -c $(PROGRAMMER) -p $(MCU) -P $(PORT) -b $(BAUD) -U flash:w:$<
+	$(AVRDUDE) -V -c $(PROGRAMMER) -p $(MCU) -P $(PORT) -b $(BAUD) -U flash:w:$<
 
 clean:
 	rm -f $(BIN).elf $(BIN).hex $(OBJS)

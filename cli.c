@@ -69,6 +69,143 @@ FILE uart_str = FDEV_SETUP_STREAM(uart_putchar, uart_getchar, _FDEV_SETUP_RW);
 uint8_t screenwidth = 80;
 uint8_t screenheight = 24;
 
+DEVICE *write_dev_tbl[256];
+DEVICE *read_dev_tbl[256];
+
+DEVICE sio0_status = {"SIO0_STATUS", "sio0 status reg", SIO0_STATUS, 0x10, 0, sio_status, NULL};
+DEVICE sio0_data =   {"SIO0_DATA",   "sio0 data reg",   SIO0_DATA,   0x11, 0, sio_read,   sio_write};
+DEVICE sio1_status = {"SIO1_STATUS", "sio1 status reg", SIO1_STATUS, 0x12, 1, sio_status, NULL};
+DEVICE sio1_data = {"SIO1_DATA",     "sio1 data reg",   SIO1_DATA,   0x13, 1, sio_read,   sio_write};
+
+DEVICE *device_registry[] = {
+    &sio0_status,
+    &sio0_data,
+    &sio1_status,
+    &sio1_data          
+};
+
+#define NUM_DEVS (sizeof(device_registry)/sizeof(DEVICE*))
+
+
+
+/**
+ * Assign a device to a specific port
+ */
+void cli_assign(int argc, char *argv[])
+{
+    uint8_t addr, requested_addr;
+    DEVICE *dev;    
+    int dev_index = -1;    
+
+    //debug
+    /*    
+    printf("Debug info:\n");
+    for(int i=0; i<NUM_DEVS; i++){
+        printf("Dev index:%d name:%s id:0x%X addr:0x%X uart:0x%X rp:0x%X wr:0x%X\n",
+            i, 
+            device_registry[i]->name,            
+            device_registry[i]->id,
+            device_registry[i]->addr,
+            device_registry[i]->uart,
+            device_registry[i]->p_read,
+            device_registry[i]->p_write);
+    }
+    printf("\n");
+    */
+    if ((strcmp_P(argv[1], PSTR("-d")) == 0)||(strcmp_P(argv[1], PSTR("-D")) == 0)){
+        printf_P(PSTR("arrays\n"));
+        for(int i=0; i<256; i++){                
+            printf("wr_tbl dev:0x%X  rd_tbl dev:0x%X  \n",write_dev_tbl[i]==NULL?0:write_dev_tbl[i]->addr, write_dev_tbl[i]==NULL?0:write_dev_tbl[i]->addr);
+        }
+        return;
+    }
+    //ends
+    
+    if ((strcmp_P(argv[1], PSTR("-l")) == 0)||(strcmp_P(argv[1], PSTR("-L")) == 0)){
+        printf_P(PSTR("Device  Address   Extra(uart)\n"));
+        for(int i=0; i<NUM_DEVS; i++){                
+            printf(   "%s      0x%X      %d\n",device_registry[i]->name, device_registry[i]->addr, device_registry[i]->uart);
+        }
+        return;
+    }
+    if ((argc == 1)||(argc > 3)) {
+        printf_P(PSTR("usage: assign ["));        
+        for(int i=0;i<NUM_DEVS;i++){
+            printf("%s", device_registry[i]->name);            
+            if((i+1)<NUM_DEVS) printf_P(PSTR("|")); //add | separator if there are more devices to show
+        }
+        printf_P(PSTR("] [addr]\n"));
+        printf_P(PSTR("options without other arguments:\n"));
+        printf_P(PSTR("    -l   list assigned devices\n\n"));
+        return;
+    }    
+    requested_addr = strtoul(argv[2], NULL, 16) & 0xff;    
+    //search for existing device by name
+    for (int i=0; i<NUM_DEVS; i++){
+        if(strcmp(argv[1], device_registry[i]->name) == 0){
+            //printf_P(PSTR("device found!\n"));      
+            dev = device_registry[i];      
+            dev_index = i;
+            addr = dev->addr;            
+        }
+    }
+    if(dev_index == -1) {
+        printf_P(PSTR("device not found!\n"));
+        return;
+    }    
+    if(requested_addr == addr){
+        printf_P(PSTR("The device is already assigned to that port!\n"));
+        return;
+    }
+    //check if the requested port is already in use
+    for(int i=0; i<NUM_DEVS; i++){
+        if(requested_addr == device_registry[i]->addr){
+            printf_P(PSTR("This port is in use!\n"));
+            return;
+        }
+    }
+    //finally we can move the device
+    write_dev_tbl[addr] = NULL;
+    write_dev_tbl[requested_addr] = dev;    
+    read_dev_tbl[addr] = NULL;
+    read_dev_tbl[requested_addr] = dev;
+    dev->addr = requested_addr;
+
+
+    
+
+
+
+
+
+
+/*
+    new_port = argv[1];
+    dev = write_port_tbl[new_port];
+    if(dev == NULL){
+        //lets add the device
+        write_port_tbl[new_port] = 
+    }
+
+
+    if (strcmp_P(argv[2], PSTR("read")) == 0)
+        dir = SIO_INPUT;
+    else
+        dir = SIO_OUTPUT;
+
+    uint8_t virtual = strtoul(argv[1], NULL, 10) & 1;
+    if (strcmp_P(argv[3], PSTR("uart0")) == 0)
+        mode = SIO_UART0;
+    else if (strcmp_P(argv[3], PSTR("uart1")) == 0)
+        mode = SIO_UART1;
+    else { 
+        mode = SIO_FILE;
+        filename = argv[3];
+    }
+    sio_attach(virtual, dir, mode, filename);
+ */
+}
+
 /**
  * Load an Intel HEX file from disk or stdin
  */
@@ -1299,6 +1436,7 @@ void cli_do(int argc, char *argv[])
  */
 const char cli_cmd_names[] PROGMEM = 
     "ascii\0"
+    "assign\0"
     "attach\0"
 #ifdef PAGE_BASE
     "base\0"
@@ -1377,6 +1515,7 @@ const char cli_cmd_names[] PROGMEM =
  */
 const char cli_cmd_help[] PROGMEM =
     "\0"                                            // ascii
+    "bind device to port"                           // assign
     "attach virtual uart\0"                         // attach
 #ifdef PAGE_BASE
     "set the base memory address\0"                 // base
@@ -1457,6 +1596,7 @@ void cli_help(int argc, char *argv[]);
  */
 void * const cli_cmd_functions[] PROGMEM = {
     &cli_ascii,
+    &cli_assign,
     &cli_attach,
 #ifdef PAGE_BASE
     &cli_base,
@@ -1637,6 +1777,22 @@ void cli_dispatch(char *buf)
 }
 
 /**
+ * Init arrays of ports
+ * Read device_registry and initialize port arrays of device pointers
+ */
+void init_devs()
+{
+    for(int i=0; i<256; i++){
+        write_dev_tbl[i] = NULL;
+        read_dev_tbl[i] = NULL;
+    }
+    for(int i=0; i<NUM_DEVS; i++){
+        write_dev_tbl[device_registry[i]->addr] = device_registry[i];
+        read_dev_tbl[device_registry[i]->addr] = device_registry[i];
+    }
+}
+
+/**
  * Main command-line loop for monitor
  */
 void cli_loop(void) 
@@ -1675,6 +1831,8 @@ int main(void)
     uart_init(0, UBRR115200);
     uart_init(1, UBRR115200);
     stdout = stdin = &uart_str;
+
+    init_devs();
 
     disk_initialize(DRV_MMC);
     if ((fr = f_mount(&fs, "", 1)) != FR_OK)

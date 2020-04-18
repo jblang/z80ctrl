@@ -67,8 +67,45 @@ static uint8_t iox_reg = 0;
  */
 void iorq_dispatch(uint8_t logged)
 {
+    DEVICE *device;
+    uint8_t addrlo;
     //cli();
-    switch (GET_ADDRLO) {
+    
+    addrlo = GET_ADDRLO; //keep the value locally
+    device = read_dev_tbl[addrlo];    
+    if(device != NULL){  
+        switch(device->id){
+            case SIO0_STATUS:
+                if (!GET_RD) {
+                    SET_DATA(device->p_read(0));
+                    DATA_OUTPUT;
+                }
+                break;
+            case SIO1_STATUS:
+                if (!GET_RD) {
+                    SET_DATA(device->p_read(1));
+                    DATA_OUTPUT;
+                }
+                break;
+            case SIO0_DATA:
+                if (!GET_RD) {
+                    SET_DATA(device->p_read(0));
+                    DATA_OUTPUT;
+                } else if (!GET_WR) {
+                    device->p_write(0, GET_DATA);
+                }
+                break;
+            case SIO1_DATA:
+                if (!GET_RD) {
+                    SET_DATA(device->p_read(1));
+                    DATA_OUTPUT;
+                } else if (!GET_WR) {
+                    device->p_write(1, GET_DATA);
+                }
+                break;
+        }//switch
+    }    
+    else switch(addrlo){
 #ifdef IOX_BASE
         case IOX_DEVPORT:
             if (!GET_WR) {
@@ -101,34 +138,6 @@ void iorq_dispatch(uint8_t logged)
             }
             break;
 #endif
-        case SIO0_STATUS:
-            if (!GET_RD) {
-                SET_DATA(sio_status(0));
-                DATA_OUTPUT;
-            }
-            break;
-        case SIO1_STATUS:
-            if (!GET_RD) {
-                SET_DATA(sio_status(1));
-                DATA_OUTPUT;
-            }
-            break;
-        case SIO0_DATA:
-            if (!GET_RD) {
-                SET_DATA(sio_read(0));
-                DATA_OUTPUT;
-            } else if (!GET_WR) {
-                sio_write(0, GET_DATA);
-            }
-            break;
-        case SIO1_DATA:
-            if (!GET_RD) {
-                SET_DATA(sio_read(1));
-                DATA_OUTPUT;
-            } else if (!GET_WR) {
-                sio_write(1, GET_DATA);
-            }
-            break;
         case DRIVE_STATUS:
             if (!GET_RD) {
                 SET_DATA(drive_status());
@@ -186,7 +195,8 @@ void iorq_dispatch(uint8_t logged)
             if (!GET_RD) {
                 SET_DATA(0xFF);
             }
-    }
+    }//switch
+    
     if (logged) {
         iorq_stat = bus_status_fast();
     }
