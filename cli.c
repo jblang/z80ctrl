@@ -1457,7 +1457,7 @@ const char cli_cmd_names[] PROGMEM =
  */
 const char cli_cmd_help[] PROGMEM =
     "\0"                                            // ascii
-    "bind device to port"                           // assign
+    "map device to address\0"                       // assign
     "attach virtual uart\0"                         // attach
 #ifdef PAGE_BASE
     "set the base memory address\0"                 // base
