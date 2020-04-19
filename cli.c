@@ -72,10 +72,14 @@ uint8_t screenheight = 24;
 DEVICE *write_dev_tbl[256];
 DEVICE *read_dev_tbl[256];
 
-DEVICE sio0_status = {"SIO0_STATUS", "sio0 status reg", SIO0_STATUS, 0x10, 0, sio_status, NULL};
-DEVICE sio0_data =   {"SIO0_DATA",   "sio0 data reg",   SIO0_DATA,   0x11, 0, sio_read,   sio_write};
-DEVICE sio1_status = {"SIO1_STATUS", "sio1 status reg", SIO1_STATUS, 0x12, 1, sio_status, NULL};
-DEVICE sio1_data = {"SIO1_DATA",     "sio1 data reg",   SIO1_DATA,   0x13, 1, sio_read,   sio_write};
+/**
+ * Reassignable Devices
+ * Name field: 15characters max
+ */
+DEVICE sio0_status = {"SIO0_STATUS", "sio0 status reg", SIO0_STATUS, 0x10, sio_status, NULL};
+DEVICE sio0_data =   {"SIO0_DATA", "sio0 data reg", SIO0_DATA, 0x11, sio_read, sio_write};
+DEVICE sio1_status = {"SIO1_STATUS", "sio1 status reg", SIO1_STATUS, 0x12, sio_status, NULL};
+DEVICE sio1_data =   {"SIO1_DATA", "sio1 data reg", SIO1_DATA,   0x13, sio_read,   sio_write};
 
 DEVICE *device_registry[] = {
     &sio0_status,
@@ -98,9 +102,9 @@ void cli_assign(int argc, char *argv[])
     int dev_index = -1;    
 
     if ((strcmp_P(argv[1], PSTR("-l")) == 0)||(strcmp_P(argv[1], PSTR("-L")) == 0)){
-        printf_P(PSTR("Device  Address   Extra(uart)\n"));
+        printf_P(PSTR("Device  Address\n"));
         for(int i=0; i<NUM_DEVS; i++){                
-            printf(   "%s      0x%X      %d\n",device_registry[i]->name, device_registry[i]->addr, device_registry[i]->uart);
+            printf("%-15s 0x%X\n",device_registry[i]->name, device_registry[i]->addr);
         }
         return;
     }

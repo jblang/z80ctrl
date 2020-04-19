@@ -52,8 +52,7 @@ typedef struct tag_device{
 	char *name;
 	char *desc;
 	uint8_t id;
-	uint8_t addr;
-	uint8_t uart;  //used to map the given periphetal to any atmega uart. 0=UART0 on z80ctlr, 1=UART1 on z80ctrl
+	uint8_t addr;	
 	port_rd p_read;   
     port_wr p_write;   
 }DEVICE;
