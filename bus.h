@@ -219,9 +219,13 @@ uint8_t io_out(uint8_t addr, uint8_t value);
 uint8_t io_in(uint8_t addr);
 
 #ifdef PAGE_BASE
-#define PAGE(addr) ((addr) >> 14)
 void mem_page(uint8_t bank, uint8_t page);
+void mem_page_addr(uint32_t addr);
+#else
+#define mem_page(bank, page)
+#define mem_page_addr(addr)
 #endif
+
 uint8_t mem_read(uint32_t addr, void * buf, uint16_t len);
 uint8_t _mem_write(uint32_t addr, const void *buf, uint16_t len, uint8_t pgmspace);
 #define mem_write(addr, buf, len) _mem_write((addr), (buf), (len), 0);

@@ -51,7 +51,7 @@ uint8_t flash_write(uint32_t addr, uint8_t *buf, uint32_t len)
     // first two banks must be physical pages 0 and 1
     mem_page(0, 0);
     mem_page(1, 1);
-    mem_page(2, PAGE(addr));
+    mem_page(2, addr >> 14);
     MREQ_LO;
     for (uint32_t i = 0; i < len; i++) {
         // Send byte program command sequence
@@ -65,7 +65,7 @@ uint8_t flash_write(uint32_t addr, uint8_t *buf, uint32_t len)
         if ((addr & 0x3fff) == 0) {
             // Load page to write into bank 3
             MREQ_HI;
-            mem_page(2, PAGE(addr));
+            mem_page(2, addr >> 14);
             MREQ_LO;
         }
         SET_ADDR((addr & 0x3fff) + 0x8000);
@@ -113,7 +113,7 @@ uint8_t flash_erase(uint32_t addr)
     } else {
         // Erase 4KB sector
         MREQ_HI;
-        mem_page(0, PAGE(addr));
+        mem_page(0, addr >> 14);
         MREQ_LO;
         SET_ADDR(addr & 0x3000);
         SET_DATA(0x30);

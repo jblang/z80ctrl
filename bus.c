@@ -231,15 +231,16 @@ uint8_t io_out(uint8_t addr, uint8_t value)
     if (bus_mode != BUS_MASTER)
         return 0;
     MREQ_HI;
+    RD_HI;
+    _delay_us(10);
     SET_ADDRLO(addr);
     SET_DATA(value);
     DATA_OUTPUT;
     IORQ_LO;
     WR_LO;
-    WR_LO;
-    WR_LO;
-    WR_LO;
+    _delay_us(10);
     WR_HI;
+    _delay_us(10);
     IORQ_HI;
     DATA_INPUT;
     return 1;
@@ -255,13 +256,13 @@ uint8_t io_in(uint8_t addr)
     if (bus_mode != BUS_MASTER)
         return 0;
     MREQ_HI;
+    WR_HI;
+    _delay_ms(10);
     SET_ADDRLO(addr);
     DATA_INPUT;
     IORQ_LO;
     RD_LO;
-    RD_LO;
-    RD_LO;
-    RD_LO;
+    _delay_ms(10);
     uint8_t value = GET_DATA;
     RD_HI;
     IORQ_HI;
@@ -279,31 +280,31 @@ uint8_t mem_pages[] = {0, 0, 0, 0};
  */
 void mem_page(uint8_t bank, uint8_t page)
 {
-    uint8_t mreq = GET_MREQ;
-    uint8_t dataddr = DATA_DDR;
+    bank &= 3;
+    page &= 0x3f;
     io_out(PAGE_ENABLE, 1);
-    io_out(PAGE_BASE + (bank & 3), page & 0x3f);
+    io_out(PAGE_BASE + bank, page);
     mem_pages[bank] = page;
-    if (!mreq)
-        MREQ_LO;
-    dataddr = DATA_DDR;
 }
 
 /**
- * Page in the four pages starting ad the specified address
+ * Bank in the page at the specified address
  */
-static void mem_page_addr(uint32_t addr)
+void mem_page_addr(uint32_t addr)
 {
     addr += base_addr;
-    if ((addr & 0xFFFF) == 0) {
-        mem_page(0, PAGE(addr & 0xF0000));
-        mem_page(1, PAGE(addr & 0xF0000)+1);
-        mem_page(2, PAGE(addr & 0xF0000)+2);
-        mem_page(3, PAGE(addr & 0xF0000)+3);
-    }
+    uint8_t mreq = GET_MREQ;
+    uint8_t rd = GET_RD;
+    uint8_t dataddr = DATA_DDR;
+    uint8_t page = (addr >> 14) & 0x3f;
+    uint8_t bank = page & 3;
+    mem_page(bank, page);
+    if (!mreq)
+        MREQ_LO;
+    if (!rd)
+        RD_LO;
+    DATA_DDR = dataddr;
 }
-#else
-#define mem_page_addr(addr)
 #endif
 
 /**
@@ -322,7 +323,8 @@ uint8_t mem_read(uint32_t addr, void *buf, uint16_t len)
     for (uint16_t i = 0; i < len; i++) {
         cbuf[i] = GET_DATA;
         addr++;
-        mem_page_addr(addr);
+        if ((addr & 0xFFFF) == 0)
+            mem_page_addr(addr);
         if ((addr & 0xFF) == 0) {
             SET_ADDR(addr & 0xFFFF);
         } else {
@@ -354,7 +356,8 @@ uint8_t _mem_write(uint32_t addr, const void *buf, uint16_t len, uint8_t pgmspac
         WR_LO;
         WR_HI;
         addr++;
-        mem_page_addr(addr);
+        if ((addr & 0xFFFF) == 0)
+            mem_page_addr(addr);
         if ((addr & 0xFF) == 0) {
             SET_ADDR(addr & 0xFFFF);
         } else {

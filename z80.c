@@ -69,11 +69,11 @@ void z80_reset(uint32_t addr)
     RESET_LO;
     clk_cycle(3);
     RESET_HI;
+    bus_master();
 #ifdef PAGE_BASE
     for (uint8_t i = 0; i < 4; i++)
-        mem_page(i, PAGE(addr + base_addr) + i);
+        mem_page(i, (base_addr >> 14) + i);
 #endif
-    bus_master();
 #ifdef TMS_BASE
     tms_config();
 #endif

@@ -924,9 +924,14 @@ void cli_ioxwrite(int argc, char *argv[])
  */
 void cli_base(int argc, char *argv[])
 {
-    if (argc == 2)
-        base_addr = strtoul(argv[1], NULL, 16) & 0xFC000;
-    printf_P(PSTR("current base address is %05lX\n"), base_addr);
+    if (argc == 2) {
+        if (base_addr & 0xFFFF != 0)
+            printf_P(PSTR("base address must be a multiple of 0x10000"));
+        else
+            base_addr = strtoul(argv[1], NULL, 16) & 0xF0000;
+    } else {
+        printf_P(PSTR("current base address is %05lX\n"), base_addr);
+    }
 }
 #endif
 
