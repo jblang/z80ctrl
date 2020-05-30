@@ -257,12 +257,12 @@ uint8_t io_in(uint8_t addr)
         return 0;
     MREQ_HI;
     WR_HI;
-    _delay_ms(10);
+    _delay_us(10);
     SET_ADDRLO(addr);
     DATA_INPUT;
     IORQ_LO;
     RD_LO;
-    _delay_ms(10);
+    _delay_us(10);
     uint8_t value = GET_DATA;
     RD_HI;
     IORQ_HI;
