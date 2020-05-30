@@ -151,7 +151,7 @@ void uart_putc (uint8_t uart, uint8_t d)
 	*UCSRB[uart] = _BV(RXEN0)|_BV(RXCIE0)|_BV(TXEN0)|_BV(UDRIE0);
 	sei();
 	TxFifo[uart].wi = (i + 1) % sizeof TxFifo[uart].buff;
-#ifdef TMS_BASE
+#ifdef VDU_ANSI_EMU
     tms_putchar(d);
 #endif
 }

@@ -307,6 +307,9 @@ void tms_pos(uint8_t x, uint8_t y)
     cursorpos = (y % 24) * 40 + (x % 40);
 }
 
+
+#ifdef ANSI_VDU_EMU
+
 const uint8_t defcolors[] PROGMEM = {
     0x0, 0x6, 0xc, 0xa, 0x4, 0xd, 0x7, 0xe, 
     0xe, 0x9, 0x3, 0xb, 0x5, 0xd, 0x7, 0xf
@@ -703,3 +706,5 @@ void tms_putchar(uint8_t c)
 
     tms_update();
 }
+
+#endif
