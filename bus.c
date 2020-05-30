@@ -270,7 +270,7 @@ uint8_t io_in(uint8_t addr)
 }
 
 #ifdef PAGE_BASE
-#define PAGE_ENABLE (PAGE_BASE + 4)     // enable paging
+#define PAGE_ENABLE (PAGE_BASE + 4)
 
 uint8_t mem_pages[] = {0, 0, 0, 0};
 
@@ -282,8 +282,16 @@ void mem_page(uint8_t bank, uint8_t page)
 {
     bank &= 3;
     page &= 0x3f;
+    uint8_t mreq = GET_MREQ;
+    uint8_t rd = GET_RD;
+    uint8_t dataddr = DATA_DDR;
     io_out(PAGE_ENABLE, 1);
     io_out(PAGE_BASE + bank, page);
+    if (!mreq)
+        MREQ_LO;
+    if (!rd)
+        RD_LO;
+    DATA_DDR = dataddr;
     mem_pages[bank] = page;
 }
 
@@ -293,17 +301,9 @@ void mem_page(uint8_t bank, uint8_t page)
 void mem_page_addr(uint32_t addr)
 {
     addr += base_addr;
-    uint8_t mreq = GET_MREQ;
-    uint8_t rd = GET_RD;
-    uint8_t dataddr = DATA_DDR;
     uint8_t page = (addr >> 14) & 0x3f;
     uint8_t bank = page & 3;
     mem_page(bank, page);
-    if (!mreq)
-        MREQ_LO;
-    if (!rd)
-        RD_LO;
-    DATA_DDR = dataddr;
 }
 #endif
 
