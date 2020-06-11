@@ -70,8 +70,6 @@ void clk_stop()
     OCR2B = 0;
 }
 
-uint8_t bus_mode = BUS_SLAVE;
-
 /**
  *  Request control of the bus from the Z80
  */
@@ -86,7 +84,6 @@ uint8_t bus_master(void)
         if (i-- == 0) {
             printf_P(PSTR("bus master request timed out\n"));
             BUSRQ_HI;
-            bus_mode = BUS_SLAVE;
             return 0;
         }
     }
@@ -100,7 +97,6 @@ uint8_t bus_master(void)
     WR_OUTPUT;
     ADDR_OUTPUT;
     DATA_INPUT;
-    bus_mode = BUS_MASTER;
     return 1;
 }
 
@@ -120,7 +116,6 @@ void bus_slave(void)
     SET_DATA(0); // Disable pullups on data and address lines
     SET_ADDRLO(0);
     BUSRQ_HI;
-    bus_mode = BUS_SLAVE;
 
     // Clock the Z80 until it takes back control of the bus
     while (!GET_BUSACK)  {
@@ -223,12 +218,32 @@ void bus_init(void)
     bus_master();
 }
 
+void bus_ioscan()
+{
+    if (GET_BUSACK)
+        return;
+
+    DATA_INPUT;
+    SET_DATA(0xFF);
+    IORQ_LO;
+    for (uint16_t i = 0; i <= 0xff; i++) {
+        SET_ADDRLO(i);
+        RD_LO;
+        _delay_us(10);
+        if (GET_DATA != 0xFF)
+            printf_P(PSTR("Something is responding on %xh\n"), i);
+        RD_HI;
+        _delay_us(10);
+    }
+    IORQ_HI;
+}
+
 /**
  * Output value to an IO register
  */
 uint8_t io_out(uint8_t addr, uint8_t value)
 {
-    if (bus_mode != BUS_MASTER)
+    if (GET_BUSACK)
         return 0;
     MREQ_HI;
     RD_HI;
@@ -253,7 +268,7 @@ uint32_t base_addr = 0;
  */
 uint8_t io_in(uint8_t addr)
 {
-    if (bus_mode != BUS_MASTER)
+    if (GET_BUSACK)
         return 0;
     MREQ_HI;
     WR_HI;
@@ -313,7 +328,7 @@ void mem_page_addr(uint32_t addr)
 uint8_t mem_read(uint32_t addr, void *buf, uint16_t len)
 {
     uint8_t *cbuf = buf;
-    if (bus_mode != BUS_MASTER)
+    if (GET_BUSACK)
         return 0;
     mem_page_addr(addr);
     DATA_INPUT;
@@ -342,7 +357,7 @@ uint8_t mem_read(uint32_t addr, void *buf, uint16_t len)
 uint8_t _mem_write(uint32_t addr, const void *buf, uint16_t len, uint8_t pgmspace)
 {
     const uint8_t *cbuf = buf;
-    if (bus_mode != BUS_MASTER)
+    if (GET_BUSACK)
         return 0;
     mem_page_addr(addr);
     DATA_OUTPUT;
@@ -375,7 +390,7 @@ uint8_t _mem_write(uint32_t addr, const void *buf, uint16_t len, uint8_t pgmspac
 void sn76489_mute()
 {
     #ifdef SN76489_PORT
-    if (bus_mode != BUS_MASTER)
+    if (GET_BUSACK)
         return;
     uint8_t oldclkdiv = clkdiv;
     clkdiv = 4;

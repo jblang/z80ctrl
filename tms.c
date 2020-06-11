@@ -653,7 +653,7 @@ void tms_putchar(uint8_t c)
         return;
     }
 
-    if (bus_mode != BUS_MASTER)
+    if (GET_BUSACK)
         bus_master();
 
     if (mode == VDU_NORMAL) {

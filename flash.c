@@ -45,7 +45,7 @@ static void flash_cmd_prefix(void)
 
 uint8_t flash_write(uint32_t addr, uint8_t *buf, uint32_t len)
 {
-    if (bus_mode != BUS_MASTER)
+    if (GET_BUSACK)
         return 0;
     DATA_OUTPUT;
     // first two banks must be physical pages 0 and 1
@@ -89,7 +89,7 @@ uint8_t flash_write(uint32_t addr, uint8_t *buf, uint32_t len)
  */
 uint8_t flash_erase(uint32_t addr)
 {
-    if (bus_mode != BUS_MASTER)
+    if (GET_BUSACK)
         return 0;
     DATA_OUTPUT;
     // first two banks must be physical pages 0 and 1

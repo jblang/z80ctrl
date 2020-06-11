@@ -192,14 +192,8 @@ typedef struct {
         uint8_t data;
 } bus_stat;
 
-enum {
-    BUS_MASTER,
-    BUS_SLAVE
-};
-
 #define FLAG(b, f) ((b) & (1<<f))
 
-extern uint8_t bus_mode;
 extern uint8_t clkdiv;
 extern uint32_t base_addr;
 
