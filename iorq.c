@@ -47,9 +47,15 @@
  */
 void (*dma_function)(void) = NULL;
 
+/**
+ * Currently assigned ports
+ */
 static uint8_t write_port[256];
 static uint8_t read_port[256];
 
+/**
+ * Device name for assign command
+ */
 const char device_name[] PROGMEM =
     "none\0"
 
@@ -85,6 +91,9 @@ const char device_name[] PROGMEM =
 
     "sn76489\0";
 
+/**
+ * Device descriptions shown during listing
+ */
 const char device_description[] PROGMEM = 
     "Unassigned\0"
 
@@ -120,6 +129,9 @@ const char device_description[] PROGMEM =
 
     "SN76489\0";
 
+/**
+ * Device read functions
+ */
 void * const device_read[] PROGMEM = {
     NULL,               // DEV_UNASSIGNED
 
@@ -149,6 +161,9 @@ void * const device_read[] PROGMEM = {
     NULL                // EXT_UNKNOWN
 };
 
+/**
+ * Device write functions
+ */
 void * const device_write[] PROGMEM = {
     NULL,               // DEV_UNASSIGNED
 
@@ -178,6 +193,9 @@ void * const device_write[] PROGMEM = {
     NULL                // EXT_UNKNOWN
 };
 
+/**
+ * Lists devices assigned to each port
+ */
 void iorq_list()
 {
     uint16_t start;
@@ -209,6 +227,9 @@ void iorq_list()
     }
 }
 
+/**
+ * Returns device ID given a device name
+ */
 uint8_t iorq_deviceid(char *name)
 {
     for (uint8_t i = 0; i < DEV_INVALID; i++) {
@@ -218,6 +239,9 @@ uint8_t iorq_deviceid(char *name)
     return DEV_INVALID;
 }
 
+/**
+ * Assign a device to a port
+ */
 uint8_t iorq_assign(uint8_t port, device_mode mode, device_type device)
 {
     if (mode & IORQ_READ) {
@@ -232,6 +256,9 @@ uint8_t iorq_assign(uint8_t port, device_mode mode, device_type device)
     return device;
 }
 
+/**
+ * Default ports for internal devices
+ */
 const uint8_t default_ports[] PROGMEM = {
 #ifdef IOX_BASE
     0x00, Z80CTRL_SPI_DEV,
@@ -263,6 +290,10 @@ const uint8_t default_ports[] PROGMEM = {
 
 #define NUM_DEFAULTS (sizeof(default_ports) / sizeof(uint8_t))
 
+
+/**
+ * Initialize I/O map
+ */
 void iorq_init()
 {
     if (GET_BUSACK)
@@ -327,15 +358,19 @@ void iorq_dispatch(uint8_t logged)
     if (logged) {
         iorq_stat = bus_status_fast();
     }
+
+    // Asserting busrq deasserts wait while pausing further Z80 exeuction
     BUSRQ_LO;
     while (!GET_IORQ)
         CLK_TOGGLE;
+
     if (dma_function) {
         if (bus_master())
             dma_function();
         dma_function = NULL;
         bus_slave();
     }
+
     DATA_INPUT;
     BUSRQ_HI;
 }
