@@ -46,8 +46,11 @@
 #define SIO_INPUT 1
 
 void sio_attach(uint8_t port, uint8_t dir, uint8_t mode, char *filename) ;
-uint8_t sio_read(uint8_t port);
-void sio_write(uint8_t port, uint8_t data);
-uint8_t sio_status(uint8_t port);
+uint8_t sio0_read();
+uint8_t sio1_read();
+void sio0_write(uint8_t data);
+void sio1_write(uint8_t data);
+uint8_t sio0_status();
+uint8_t sio1_status();
 
 #endif

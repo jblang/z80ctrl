@@ -35,6 +35,7 @@
 
 #include "ff.h"
 #include "bus.h"
+#include "iorq.h"
 #include "z80.h"
 #include "ihex.h"
 #include "util.h"
@@ -1011,6 +1012,38 @@ void cli_date(int argc, char *argv[])
 #endif
 
 /**
+ * Assign a device to a port
+ */
+void cli_assign(int argc, char *argv[])
+{
+    if (argc < 3) {
+        iorq_list();
+        printf_P(PSTR("\n\nusage: %s <port> <r|w|rw> <device>\n"), argv[0]);
+        return;
+    }
+    uint8_t port = strtoul(argv[1], NULL, 16) & 0xff;
+    uint8_t mode;
+    if (strcmp_P(argv[2], PSTR("r")) == 0)
+        mode = IORQ_READ;
+    else if (strcmp_P(argv[2], PSTR("w")) == 0)
+        mode = IORQ_WRITE;
+    else if (strcmp_P(argv[2], PSTR("rw")) == 0)
+        mode = IORQ_RW;
+    else {
+        printf_P(PSTR("usage: %s <port> <r|w|rw> <device>\n"), argv[0]);
+        return;
+    }
+    uint8_t device = iorq_deviceid(argv[3]);
+    if (device == DEV_INVALID) {
+        printf_P(PSTR("error: invalid device name\n"));
+        return;
+    }
+
+    if (iorq_assign(port, mode, device) != device)
+        printf_P(PSTR("error: port in use by external device\n"));
+}
+
+/**
  * Attach a virtual UART to a physical one
  */
 void cli_attach(int argc, char *argv[])
@@ -1304,6 +1337,7 @@ void cli_do(int argc, char *argv[])
  */
 const char cli_cmd_names[] PROGMEM = 
     "ascii\0"
+    "assign\0"
     "attach\0"
 #ifdef PAGE_BASE
     "base\0"
@@ -1382,6 +1416,7 @@ const char cli_cmd_names[] PROGMEM =
  */
 const char cli_cmd_help[] PROGMEM =
     "\0"                                            // ascii
+    "assign a device to a port\0"                   // assign
     "attach virtual uart\0"                         // attach
 #ifdef PAGE_BASE
     "set the base memory address\0"                 // base
@@ -1462,6 +1497,7 @@ void cli_help(int argc, char *argv[]);
  */
 void * const cli_cmd_functions[] PROGMEM = {
     &cli_ascii,
+    &cli_assign,
     &cli_attach,
 #ifdef PAGE_BASE
     &cli_base,
@@ -1687,6 +1723,7 @@ int main(void)
 
     bus_init();
     iox_extcs_init(1);
+    iorq_init();
  #ifdef TMS_BASE
     tms_init(TMS_TEXT);
 #endif

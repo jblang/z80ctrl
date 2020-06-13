@@ -100,4 +100,10 @@ void iox_extcs_init(uint8_t addr);
 void iox_extcs_lo(uint8_t c);
 void iox_extcs_hi(uint8_t c);
 
+void iox_setdev(uint8_t dev);
+uint8_t iox_getdev();
+void iox_setreg(uint8_t reg);
+uint8_t iox_getreg();
+void iox_writeval(uint8_t data);
+uint8_t iox_readval();
 #endif

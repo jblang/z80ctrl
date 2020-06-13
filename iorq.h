@@ -30,7 +30,55 @@
 #include <stdint.h>
 #include "bus.h"
 
-void iorq_dispatch(uint8_t logged); 
+typedef enum {
+    DEV_UNASSIGNED,
+
+    EMU_ACIA0_STATUS,
+    EMU_ACIA0_DATA,
+    EMU_ACIA1_STATUS,
+    EMU_ACIA1_DATA,
+
+    EMU_88DSK_STATUS,
+    EMU_88DSK_CONTROL,
+    EMU_88DSK_DATA,
+
+#ifdef MSX_KEY_BASE
+    EMU_MSXKEY_COL,
+    EMU_MSXKEY_ROW,
+#endif
+
+#ifdef IOX_BASE
+    Z80CTRL_SPI_DEV,
+    Z80CTRL_SPI_REG,
+    Z80CTRL_SPI_DATA,
+#endif
+
+    Z80CTRL_FATFS_DMA,
+    Z80CTRL_BDOS_EMU,
+
+    EXT_UNKNOWN,
+
+    EXT_WBW_RAM,
+
+    EXT_TMS_RAM,
+    EXT_TMS_REG,
+
+    EXT_SN76489,
+
+    DEV_INVALID
+} device_type;
+
+typedef enum {
+    IORQ_READ = 1,
+    IORQ_WRITE,
+    IORQ_RW
+} device_mode;
+
+void iorq_init();
+void iorq_list();
+void iorq_dispatch(uint8_t logged);
+uint8_t iorq_deviceid(char *name);
+uint8_t iorq_assign(uint8_t port, device_mode mode, device_type device);
 
 typedef enum {
     DMA_MAILBOX_UNSET = 0,
@@ -40,6 +88,6 @@ typedef enum {
 
 extern void (*dma_function)(void);
 
-bus_stat iorq_stat ;
+bus_stat iorq_stat;
 
  #endif

@@ -122,6 +122,14 @@ uint8_t sio_read(uint8_t port)
     }
     return 0;
 }
+uint8_t sio0_read()
+{
+    return sio_read(0);
+}
+uint8_t sio1_read()
+{
+    return sio_read(1);
+}
 
 /**
  * Write to serial port
@@ -143,6 +151,14 @@ void sio_write(uint8_t port, uint8_t data)
         uart_putc(sio_writemode[port], data);
     }
 }
+void sio0_write(uint8_t data)
+{
+    sio_write(0, data);
+}
+void sio1_write(uint8_t data)
+{
+    sio_write(1, data);
+}
 
 /**
  * Get serial port status
@@ -151,7 +167,7 @@ uint8_t sio_status(uint8_t port)
 {
     UINT bw;
     FRESULT fr;
-    uint8_t status = 0;
+    uint8_t status;
     if (port > 1) {
         printf_P(PSTR("error: valid port numbers are 0-1\n"));
         return 0;
@@ -166,4 +182,12 @@ uint8_t sio_status(uint8_t port)
     else if (sio_readmode[port] != SIO_UNATTACHED)
         status |= (uart_testrx(sio_readmode[port]) > 0);
     return status;
+}
+uint8_t sio0_status()
+{
+    return sio_status(0);
+}
+uint8_t sio1_status()
+{
+    return sio_status(1);
 }

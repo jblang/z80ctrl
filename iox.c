@@ -25,6 +25,7 @@
  */
 
 #include "iox.h"
+#include "rtc.h"
 #include "spi.h"
 
 void iox_init(void)
@@ -91,3 +92,60 @@ void iox_extcs_hi(uint8_t c)
     uint8_t pin = (c % 4) + 4;
     iox_write(addr, GPIOB0, iox_read(addr, GPIOA0) | (1 << pin));
 }
+
+/**
+ * IO registers exposed to Z80
+ */
+#ifdef IOX_BASE
+#define IOX_DEVPORT IOX_BASE
+#define IOX_REGPORT IOX_BASE+1
+#define IOX_VALPORT IOX_BASE+2
+#define IOX_RTC 0
+#define IOX_GPIO_MIN 1
+#define IOX_GPIO_MAX 7
+
+static uint8_t iox_dev = 0;
+static uint8_t iox_reg = 0;
+
+void iox_setdev(uint8_t dev)
+{
+    iox_dev = dev;
+}
+
+uint8_t iox_getdev()
+{
+    return iox_dev;
+}
+
+void iox_setreg(uint8_t reg)
+{
+    iox_reg = reg;
+}
+
+uint8_t iox_getreg()
+{
+    return iox_reg;
+}
+
+void iox_writeval(uint8_t data)
+{
+    if (iox_dev == IOX_RTC) {
+#ifdef DS1306_RTC
+        rtc_write1(iox_reg, data);
+#endif
+    } else if (iox_dev >= IOX_GPIO_MIN && iox_dev <= IOX_GPIO_MAX) {
+        iox_write(iox_dev, iox_reg, data);
+    }
+}
+
+uint8_t iox_readval()
+{
+    if (iox_dev == IOX_RTC) {
+#ifdef DS1306_RTC
+        return rtc_read1(iox_reg);
+#endif
+    } else if (iox_dev >= IOX_GPIO_MIN && iox_dev <= IOX_GPIO_MAX) {
+        return iox_read(iox_dev, iox_reg);
+    }
+}
+#endif
