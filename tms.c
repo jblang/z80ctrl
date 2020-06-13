@@ -1,4 +1,3 @@
-#include <stdio.h>
 /* z80ctrl (https://github.com/jblang/z80ctrl)
  * Copyright 2018 J.B. Langston
  *
@@ -21,6 +20,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <stdio.h>
 #include <avr/pgmspace.h>
 #include <util/delay.h>
 #include <stdlib.h>
@@ -29,38 +29,59 @@
 #include "tms.h"
 #include "bus.h"
 #include "font.h"
-#define TMS_RAM TMS_BASE
-#define TMS_REG TMS_BASE+1
 
-uint16_t modereg;
-uint16_t nametab;
-uint16_t colortab;
-uint16_t pattab;
-uint16_t satab;
-uint16_t sptab;
-uint8_t textfg;
-uint8_t textbg;
-int16_t cursorpos;
-uint8_t undercursor;
-uint8_t pixelfg;
-uint8_t pixelbg;
-uint8_t pixelmode;
+uint8_t tms_base;
+uint16_t control_bits;
+uint16_t name_table;
+uint16_t color_table;
+uint16_t pattern_table;
+uint16_t sprite_attribute_table;
+uint16_t sprite_pattern_table;
+uint8_t screen_colors;
+uint8_t pixel_colors;
+uint8_t last_status;
+uint8_t last_reg_write;
+uint8_t reg_high_byte;
+
+
+enum {
+    // TMS9918A registers
+    TMS_CONTROL0 = 0,
+    TMS_CONTROL1,
+    TMS_NAME_TABLE,
+    TMS_COLOR_TABLE,
+    TMS_PATTERN_TABLE,
+    TMS_SPRITE_ATTRIBUTE_TABLE,
+    TMS_SPRITE_PATTERN_TABLE,
+    TMS_SCREEN_COLORS,
+
+    // TMS9918A control register bits
+    TMS_M3 = 2,
+    TMS_EXT_VIDEO = 1,
+    TMS_16K = 0x8000,
+    TMS_DISPLAY_ENABLE = 0x4000,
+    TMS_INT_ENABLE = 0x2000,
+    TMS_M1 = 0x1000,
+    TMS_M2 = 0x800,
+    TMS_SPRITE_32X32 = 0x200,
+    TMS_SPRITE_MAG = 0x100
+};
 
 uint8_t _tms_write(uint16_t addr, const uint8_t *buf, uint16_t len, uint8_t pgmspace)
 {
     addr &= 0x3fff;
     addr |= 0x4000;
     DATA_OUTPUT;
-    io_out(TMS_REG, addr & 0xff);
+    io_out(tms_base + 1, addr & 0xff);
     _delay_us(2);
-    io_out(TMS_REG, addr >> 8);
+    io_out(tms_base + 1, addr >> 8);
     _delay_us(2);
     for (uint16_t i = 0; i < len; i++) {
         if (pgmspace)
-            io_out(TMS_RAM, pgm_read_byte(&buf[i]));
+            io_out(tms_base, pgm_read_byte(&buf[i]));
         else
-            io_out(TMS_RAM, buf[i]);
-        if (modereg & 0x40)
+            io_out(tms_base, buf[i]);
+        if (control_bits & 0x40)
             _delay_us(8);
         else
             _delay_us(2);
@@ -72,14 +93,14 @@ uint8_t tms_read(uint16_t addr, uint8_t *buf, uint16_t len)
 {
     DATA_OUTPUT;
     addr &= 0x3fff;
-    io_out(TMS_REG, addr & 0xff);
+    io_out(tms_base + 1, addr & 0xff);
     _delay_us(2);
-    io_out(TMS_REG, addr >> 8);
+    io_out(tms_base + 1, addr >> 8);
     _delay_us(2);
     DATA_INPUT;
     for (uint16_t i = 0; i < len; i++) {
-        buf[i] = io_in(TMS_RAM);
-        if (modereg & 0x40)
+        buf[i] = io_in(tms_base);
+        if (control_bits & 0x40)
             _delay_us(8);
         else
             _delay_us(2);
@@ -89,85 +110,126 @@ uint8_t tms_read(uint16_t addr, uint8_t *buf, uint16_t len)
 
 uint8_t tms_readreg()
 {
-    return io_in(TMS_REG);
+    return io_in(tms_base + 1);
 }
 
 void tms_writereg(uint8_t reg, uint8_t data)
 {
     reg &= 0x07;
     reg |= 0x80;
-    io_out(TMS_REG, data);
+    io_out(tms_base + 1, data);
     _delay_us(2);
-    io_out(TMS_REG, reg);
+    io_out(tms_base + 1, reg);
     _delay_us(2);
 }
 
 void tms_config()
 {
-    nametab &= 0x3c00;
-    if (modereg & 2) {
-        colortab &= 0x2000;
-        pattab &= 0x2000;
+    // Mask off unused bits in table addresses
+    name_table &= 0x3c00;
+    if (control_bits & TMS_M3) {
+        color_table &= 0x2000;
+        pattern_table &= 0x2000;
     } else {
-        colortab &= 0x3fc0;
-        pattab &= 0x3800;
+        color_table &= 0x3fc0;
+        pattern_table &= 0x3800;
     }
-    satab &= 0x3f80;
-    sptab &= 0x3800;
-    tms_writereg(0, modereg & 0xff);
-    tms_writereg(1, modereg >> 8);
-    tms_writereg(2, nametab / 0x400);
-    if (modereg & 2) {
-        tms_writereg(3, colortab / 0x40 + 0x7f);
-        tms_writereg(4, pattab / 0x800 + 3);
+    sprite_attribute_table &= 0x3f80;
+    sprite_pattern_table &= 0x3800;
+
+    // Write registers for current configuration
+    tms_writereg(TMS_CONTROL0, control_bits & 0xff);
+    tms_writereg(TMS_CONTROL1, control_bits >> 8);
+    tms_writereg(TMS_NAME_TABLE, name_table / 0x400);
+    if (control_bits & 2) {
+        tms_writereg(TMS_COLOR_TABLE, color_table / 0x40 + 0x7f);
+        tms_writereg(TMS_PATTERN_TABLE, pattern_table / 0x800 + 3);
     } else {
-        tms_writereg(3, colortab / 0x40);
-        tms_writereg(4, pattab / 0x800);
+        tms_writereg(TMS_COLOR_TABLE, color_table / 0x40);
+        tms_writereg(TMS_PATTERN_TABLE, pattern_table / 0x800);
     }
-    tms_writereg(5, satab / 0x80);
-    tms_writereg(6, sptab / 0x800);
-    tms_writereg(7, (textfg << 4) | textbg);
+    tms_writereg(TMS_SPRITE_ATTRIBUTE_TABLE, sprite_attribute_table / 0x80);
+    tms_writereg(TMS_SPRITE_PATTERN_TABLE, sprite_pattern_table / 0x800);
+    tms_writereg(TMS_SCREEN_COLORS, screen_colors);
 }
 
-tms_stat tms_status(void)
+void tms_save_reg(uint8_t data)
 {
-    tms_stat s;
-    uint8_t data = tms_readreg();
-    s.interrupt = data >> 7;
-    s.fifthsprite = (data >> 6) & 1;
-    s.coincidence = (data >> 5) & 1;
-    s.spriteno = data & 0x1f;
-    return s;
+    if (reg_high_byte) {
+        if (data & 0x80) {
+            switch(data & 0x7) {
+                case TMS_CONTROL0:
+                    control_bits &= 0xff;
+                    control_bits |= last_reg_write;
+                    break;
+                case TMS_CONTROL1:
+                    control_bits &= 0xff00;
+                    control_bits |= (last_reg_write << 8);
+                    break;
+                case TMS_NAME_TABLE:
+                    name_table = last_reg_write * 0x400;
+                    break;
+                case TMS_COLOR_TABLE:
+                    color_table = last_reg_write * 0x40;
+                    break;
+                case TMS_PATTERN_TABLE:
+                    pattern_table = last_reg_write * 0x800;
+                    break;
+                case TMS_SPRITE_ATTRIBUTE_TABLE:
+                    sprite_attribute_table = last_reg_write * 0x80;
+                    break;
+                case TMS_SPRITE_PATTERN_TABLE:
+                    sprite_pattern_table = last_reg_write * 0x800;
+                    break;
+                case TMS_SCREEN_COLORS:
+                    screen_colors = last_reg_write;
+                    break;
+            }
+        }
+        reg_high_byte = 0;
+    } else {
+        reg_high_byte = 1;
+    }
+    if (control_bits & TMS_M3) {
+        color_table &= 0x2000;
+        pattern_table &= 0x2000;
+    }
+}
+
+void tms_save_status(uint8_t data)
+{
+    reg_high_byte = 0;
+    last_status = data;
 }
 
 void tms_fill(uint16_t addr, uint8_t val, uint16_t len)
 {
     addr &= 0x3fff;
     addr |= 0x4000;
-    io_out(TMS_REG, addr & 0xff);
+    io_out(tms_base + 1, addr & 0xff);
     _delay_us(2);
-    io_out(TMS_REG, addr >> 8);
+    io_out(tms_base + 1, addr >> 8);
     _delay_us(2);
     for (uint16_t i = 0; i < len; i++) {
-        io_out(TMS_RAM, val);
-        if (modereg & 0x40)
+        io_out(tms_base, val);
+        if (control_bits & 0x40)
             _delay_us(8);
         else
             _delay_us(2);
     }
 }
 
-#define tms_loadfont(font) tms_write_P(pattab, (font), 0x800);
+#define tms_loadfont(font) tms_write_P(pattern_table, (font), 0x800);
 
-void tms_bitmapname()
+void tms_bitmap_name()
 {
     uint8_t buf[768];
     for (uint16_t i = 0; i < 768; i++)
         buf[i] = i & 0xff;
-    tms_write(nametab, buf, 768);
+    tms_write(name_table, buf, 768);
 }
 
-void tms_multicolorname()
+void tms_multicolor_name()
 {
     uint8_t buf[768];
     uint8_t i = 0;
@@ -175,536 +237,50 @@ void tms_multicolorname()
         for (uint8_t l = 0; l < 4; l++)
             for (uint8_t b = 0; b < 32; b++)
                 buf[i++] = 32 * s + b;
-    tms_write(nametab, buf, 768);
+    tms_write(name_table, buf, 768);
 }
 
 void tms_init(uint16_t mode)
 {
-    modereg = 0x8000;
+    control_bits = TMS_16K;
     tms_config();
     tms_fill(0, 0, 0x3fff);
-    textfg = 0xf;
-    textbg = 0;
-    nametab = 0x3800;     
-    colortab = 0x2000;
-    pattab = 0;
-    satab = 0x3bc0;
-    sptab = 0x1800;
+    screen_colors = 0xf0;
+    name_table = 0x3800;     
+    color_table = 0x2000;
+    pattern_table = 0;
+    sprite_attribute_table = 0x3bc0;
+    sprite_pattern_table = 0x1800;
     switch (mode) {
         case TMS_TEXT:
             tms_loadfont(font);
-            textbg = 0x4;
             break;
         case TMS_BITMAP:
-            tms_bitmapname();
+            tms_bitmap_name();
             break;
         case TMS_MULTICOLOR:
-            tms_multicolorname();
+            tms_multicolor_name();
             break;
     }
-    modereg = mode;
-    cursorpos = 0;
+    control_bits = mode;
     tms_config();
 }
 
-void tms_literal(uint8_t c)
+uint8_t tms_detect()
 {
-    undercursor = c;
-    tms_write(nametab + cursorpos, &c, 1);
-    cursorpos++;
-}
-
-void tms_scroll(int16_t lines)
-{
-    uint8_t buf[1000];
-    static uint16_t prevpos;
-    tms_write(nametab + prevpos, &undercursor, 1);
-    if (lines > 0) {
-        tms_read(nametab + lines * 40, buf, 960 - lines * 40);
-        memset(buf + 960 - lines * 40, 0, lines * 40);
-        tms_write(nametab, buf, 960);
-    } else if (lines < 0) {
-        lines = -lines;
-        tms_read(nametab, buf + lines * 40, 960 - lines * 40);
-        memset(buf, 0, lines * 40);
-        tms_write(nametab, buf, 960);
-    }
-    prevpos = cursorpos;
-}
-
-void tms_update()
-{
-    uint8_t cursor[8];
-    int8_t lines = 0;
-    if (cursorpos < 0) {
-        lines = cursorpos / 40;
-        cursorpos = -cursorpos % 40;
-    } else if (cursorpos > 959) {
-        lines = (cursorpos - 920) / 40;
-        cursorpos = 920 + (cursorpos % 40);
-    }
-
-    tms_scroll(lines);
-    tms_read(nametab + cursorpos, &undercursor, 1);
-    if (undercursor == 0 || undercursor == 32) {
-        tms_fill(nametab + cursorpos, 0xdb, 1);
-    } else {
-        tms_read(pattab + undercursor * 8, cursor, 8);
-        for (uint8_t i = 0; i < 8; i++)
-            cursor[i] = ~cursor[i];
-        tms_write(pattab + 0xff * 8, cursor, 8);
-        tms_fill(nametab + cursorpos, 0xff, 1);
-    }
-}
-
-void tms_delete()
-{
-    cursorpos--;
-    undercursor = 0;
-}
-
-void tms_home()
-{
-    cursorpos = 0;
-}
-
-void tms_cleartext()
-{
-    tms_fill(nametab, 0, 960);
-}
-
-void tms_cleargraph()
-{
-}
-
-void tms_cursorup(uint8_t c)
-{
-    cursorpos -= 40 * c;
-}
-
-void tms_cursordown(uint8_t c)
-{
-    cursorpos += 40 * c;
-}
-
-void tms_cursorleft(uint8_t c)
-{
-    cursorpos -= c;
-}
-
-void tms_cursorright(uint8_t c)
-{
-    cursorpos += c;
-}
-
-void tms_startline()
-{
-    cursorpos = (cursorpos / 40) * 40;
-}
-
-void tms_pos(uint8_t x, uint8_t y)
-{
-    cursorpos = (y % 24) * 40 + (x % 40);
-}
-
-
-#ifdef ANSI_VDU_EMU
-
-const uint8_t defcolors[] PROGMEM = {
-    0x0, 0x6, 0xc, 0xa, 0x4, 0xd, 0x7, 0xe, 
-    0xe, 0x9, 0x3, 0xb, 0x5, 0xd, 0x7, 0xf
-};
-
-uint8_t colormap[] = {
-    0x0, 0x6, 0xc, 0xa, 0x4, 0xd, 0x7, 0xe, 
-    0xe, 0x9, 0x3, 0xb, 0x5, 0xd, 0x7, 0xf
-};
-
-#define DEFCOLOR(i) (pgm_read_byte(&defcolors[i]))
-
-void vdu_color(uint8_t *p)
-{
-    if (p[1] >= 128)
-        textbg = colormap[p[1] & 0xf];
-    else
-        textfg = colormap[p[1] & 0xf];
-    tms_config();
-}
-
-void vdu_gcolor(uint8_t *p)
-{
-    pixelmode = p[1] % 5;
-    if (p[2] >= 128)
-        pixelbg = colormap[p[2] & 0xf];
-    else
-        pixelfg = colormap[p[2] & 0xf];
-    tms_config();
-}
-
-void vdu_lcolor(uint8_t *p)
-{
-    colormap[p[1] & 0xf] = p[2] & 0xf;
-}
-
-void vdu_dcolor(uint8_t *p)
-{
-    for (uint8_t i = 0; i < 16; i++)
-        colormap[i] = DEFCOLOR(i);
-}
-
-void vdu_flash(uint8_t *p)
-{
-    uint8_t save = textbg;
-    textbg = ~textbg;
-    tms_config();
-    _delay_ms(100);
-    textbg = save;
-    tms_config();
-}
-
-void vdu_pos(uint8_t *p)
-{
-    tms_pos(p[1], p[2]);
-}
-
-void vdu_home(uint8_t *p)
-{
-    tms_home();
-}
-
-void vdu_cleartext(uint8_t *p)
-{
-    tms_fill(nametab, 0, 960);
-}
-
-void vdu_cleargraph(uint8_t *p)
-{
-}
-
-void vdu_cursorup(uint8_t *p)
-{
-    tms_cursorup(1);
-}
-
-void vdu_cursordown(uint8_t *p)
-{
-    tms_cursordown(1);
-}
-
-void vdu_cursorleft(uint8_t *p)
-{
-    tms_cursorleft(1);
-}
-
-void vdu_cursorright(uint8_t *p)
-{
-    tms_cursorright(1);
-}
-
-void vdu_startline(uint8_t *p)
-{
-    tms_startline();
-}
-
-void vdu_mode(uint8_t *p)
-{
-    switch (p[1]) {
-        case 0:
-            tms_init(TMS_TEXT);
-            break;
-        case 1:
-            tms_init(TMS_TILE);
-            break;
-        case 2:
-            tms_init(TMS_BITMAP);
-            break;
-        case 3:
-            tms_init(TMS_MULTICOLOR);
-            break;
-    }
-}
-
-void vdu_program(uint8_t *p)
-{
-
-}
-
-void vdu_plot(uint8_t *p)
-{
-
-}
-
-void vdu_gwindow(uint8_t *p)
-{
-    
-}
-
-void vdu_dwindow(uint8_t *p)
-{
-
-}
-
-void vdu_twindow(uint8_t *p)
-{
-
-}
-
-void vdu_origin(uint8_t *p)
-{
-
-}
-
-void ansi_clearscreen(uint8_t n)
-{
-    if (n == 0) {
-        tms_fill(nametab + cursorpos, 0, 960 - cursorpos);
-    } else if (n == 1) {
-        tms_fill(nametab, 0, cursorpos);
-    } else if (n == 2 || n == 3) {
-        tms_fill(nametab, 0, 960);
-    }
-    undercursor = 0;
-}
-
-void ansi_clearline(uint8_t n)
-{
-    int startline = (cursorpos / 40) * 40;
-    int column = cursorpos % 40;
-    if (n == 0) {
-        tms_fill(nametab + cursorpos, 0, 40 - column);
-    } else if (n == 1) {
-        tms_fill(nametab + startline, 0, column);
-    } else if (n == 2) {
-        tms_fill(nametab + startline, 0, 40);
-    }
-    undercursor = 0;
-}
-
-void ansi_color(uint8_t n)
-{
-    if (30 <= n && n <= 37)
-        textfg = DEFCOLOR(n - 30);
-    else if (n == 38)
-        textfg = 0;
-    else if (40 <= n && n <= 47)
-        textbg = DEFCOLOR(n - 40);
-    else if (n == 48)
-        textbg = 0;
-    else if (90 <= n && n <= 97)
-        textfg = DEFCOLOR(n - 90 + 8);
-    else if (100 <= n && n <= 107)
-        textbg = DEFCOLOR(n - 100 + 8);
-    tms_config();
-}
-
-
-void ansi_insertlines(uint8_t lines)
-{
-    uint8_t buf[1000];
-    uint16_t start = cursorpos / 40;
-    if (lines > 24 - start)
-        lines = 24 - start;
-    start *= 40;
-    lines *= 40;
-    tms_read(nametab + start, buf + lines, 960 - start - lines);
-    buf[lines] = undercursor;
-    memset(buf, 0, lines);
-    tms_write(nametab + start, buf, 960 - start);
-    undercursor = 0;
-}
-
-void ansi_deletelines(uint8_t lines)
-{
-    uint8_t buf[1000];
-    uint16_t start = cursorpos / 40;
-    if (lines > 24 - start)
-        lines = 24 - start;
-    start *= 40;
-    lines *= 40;
-    tms_read(nametab + start + lines, buf, 960 - start - lines);
-    memset(buf + 960 - start - lines, 0, lines);
-    tms_write(nametab + start, buf, 960 - start);
-    undercursor = buf[0];
-}
-
-void ansi_command(uint8_t command, uint8_t paramcnt, uint8_t params[])
-{
-    static uint16_t savepos;
-    uint8_t cnt = params[0] == 0 ? 1 : params[0];
-    uint8_t cnt2 = params[1] == 0 ? 1 : params[1];
-    switch (command) {
-        case 'A':
-            tms_cursorup(cnt);
-            break;
-        case 'B':
-            tms_cursordown(cnt);
-            break;
-        case 'C':
-            tms_cursorright(cnt);
-            break;
-        case 'D':
-            tms_cursorleft(cnt);
-            break;
-        case 'E':
-            tms_startline();
-            tms_cursordown(cnt);
-            break;
-        case 'F':
-            tms_startline();
-            tms_cursorup(cnt);
-            break;
-        case 'G':
-            tms_startline();
-            tms_cursorright(cnt - 1);
-        case 'H':
-            tms_pos(cnt2 - 1, cnt - 1);
-            break;
-        case 'J':
-            ansi_clearscreen(params[0]);
-            break;
-        case 'K':
-            ansi_clearline(params[0]);
-            break;
-        case 'L':
-            ansi_insertlines(cnt);
-            break;
-        case 'M':
-            ansi_deletelines(cnt);
-            break;
-        case 'S':
-            tms_scroll(cnt);
-            break;
-        case 'T':
-            tms_scroll(-cnt);
-            break;
-        case 'm':
-            for (uint8_t i = 0; i <= paramcnt; i++)
-                ansi_color(params[i]);
-            break;
-        case 's':
-            savepos = cursorpos;
-            break;
-        case 'u':
-            cursorpos = savepos;
-            break;
-    }
-}
-
-uint8_t const vdu_length[] PROGMEM = {
-    0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 1, 2, 3, 4, 0, 1, 9, 8, 5, 0, 1, 4, 4, 0, 2
-};
-
-void * const vdu_functions[] PROGMEM = {
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    vdu_flash,
-    vdu_cursorleft,
-    vdu_cursorright,
-    vdu_cursordown,
-    vdu_cursorup,
-    vdu_cleartext,
-    vdu_startline,
-    NULL,
-    NULL,
-    vdu_cleargraph,
-    vdu_color,
-    vdu_gcolor,
-    vdu_lcolor,
-    vdu_dcolor,
-    NULL,
-    vdu_mode,
-    vdu_program,
-    vdu_gwindow,
-    vdu_plot,
-    vdu_dwindow,
-    NULL,
-    vdu_twindow,
-    vdu_origin,
-    vdu_home,
-    vdu_pos
-};
-
-#define MAXPARAM 10
-
-enum vdu_mode {
-    VDU_NORMAL,
-    VDU_COMMAND,
-    VDU_DISABLED,
-    VDU_ESC,
-    VDU_CSI
-};
-
-void tms_putchar(uint8_t c)
-{
-    static uint8_t mode = VDU_NORMAL;
-    static uint8_t paramidx = 0;
-    static uint8_t paramlen = 0;
-    static uint8_t parambuf[MAXPARAM];
-
-    if (mode == VDU_DISABLED) {
-        if (c == 6)
-            mode = VDU_NORMAL;
-        return;
-    }
-
-    if (GET_BUSACK)
-        bus_master();
-
-    if (mode == VDU_NORMAL) {
-        if (c == 21) {
-            mode = VDU_DISABLED;
-        } else if (c == '\e') {
-            mode = VDU_ESC;
-        } else if (c == 0x7f) {
-            tms_delete();
-        } else if (c < 32) {
-            paramidx = 0;
-            paramlen = pgm_read_byte(&vdu_length[c]);
-            mode = VDU_COMMAND;
-        } else {
-            tms_literal(c);
-        }
-    } else if (mode == VDU_ESC) {
-        if (c == '[') {
-            memset(parambuf, 0, MAXPARAM);
-            paramidx = 0;
-            mode = VDU_CSI;
-        } else {
-            if (c == 'c') {   // reset terminal
-                tms_init(TMS_TEXT);
-            } else {
-                tms_literal(c);
-            }
-            mode = VDU_NORMAL;
-        }
-    } else if (mode == VDU_CSI) {
-        if ('0' <= c && c <= '9') {
-            parambuf[paramidx] = parambuf[paramidx] * 10 + c - '0';
-        } else if ((c == ':' || c == ';') && paramidx < MAXPARAM-1) {
-            paramidx++;
-        } else {
-            ansi_command(c, paramidx, parambuf);
-            mode = VDU_NORMAL;
+    uint8_t addresses[] = {0xbe, 0x98, 0x10, 8};
+    for (uint8_t i = 0; i < sizeof(addresses); i++) {
+        tms_base = addresses[i];
+        tms_readreg();  // clear vsync bit
+        uint8_t reg = tms_readreg(); // confirm that it's cleared
+        if (reg & 0x80)
+            continue;               // if not, check next port
+        uint16_t j = 0xffff;
+        while (j--) {
+            reg = tms_readreg();    // wait for vsync to be set again
+            if (reg & 0x80)
+                return tms_base;    // if set, we found TMS9918A
         }
     }
-
-    if (mode == VDU_COMMAND) {
-        parambuf[paramidx++] = c;
-        if (paramidx > paramlen) {
-            void (*vdu_func)(uint8_t[]) = pgm_read_ptr(&vdu_functions[parambuf[0]]);
-            if (vdu_func)
-                vdu_func(parambuf);
-            mode = VDU_NORMAL;
-        }
-    }
-
-    tms_update();
+    return 1;   // indicate failure (base address cannot be odd)
 }
-
-#endif

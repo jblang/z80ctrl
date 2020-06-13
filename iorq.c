@@ -33,6 +33,9 @@
 #include "sioemu.h"
 #include "filedma.h"
 #include "bdosemu.h"
+#ifdef TMS_BASE
+#include "tms.h"
+#endif
 #ifdef MSX_KEY_BASE
 #include "msxkey.h"
 #endif
@@ -86,8 +89,10 @@ const char device_name[] PROGMEM =
 
     "wbwpage\0"
 
+#ifdef TMS_BASE
     "tmsram\0"
     "tmsreg\0"
+#endif
 
     "sn76489\0";
 
@@ -124,8 +129,10 @@ const char device_description[] PROGMEM =
 
     "512K ROM/RAM page\0"
 
+#ifdef TMS_BASE
     "TMS9918A RAM\0"
     "TMS9918A register\0"
+#endif
 
     "SN76489\0";
 
@@ -158,7 +165,12 @@ void * const device_read[] PROGMEM = {
     &file_dma_reset,    // Z80CTRL_FATFS_DMA
     &bdos_dma_reset,    // Z80CTRL_BDOS_EMU
 
-    NULL                // EXT_UNKNOWN
+    NULL,               // EXT_UNKNOWN
+
+#ifdef TMS_BASE
+    NULL,               // EXT_TMS_RAM
+    &tms_save_status    // EXT_TMS_REG
+#endif
 };
 
 /**
@@ -190,7 +202,12 @@ void * const device_write[] PROGMEM = {
     &file_dma_command,  // Z80CTRL_FATFS_DMA 
     &bdos_dma_command,  // Z80CTRL_BDOS_EMU 
 
-    NULL                // EXT_UNKNOWN
+    NULL,               // EXT_UNKNOWN
+
+#ifdef TMS_BASE
+    NULL,               // EXT_TMS_RAM
+    &tms_save_reg       // EXT_TMS_REG
+#endif
 };
 
 /**
@@ -302,12 +319,14 @@ void iorq_init()
     // Search for external devices
     clk_run();
     DATA_INPUT;
-    SET_DATA(0xFF);
+    SET_DATA(0xFF); // set pullups
     IORQ_LO;
     for (uint16_t i = 0; i <= 0xff; i++) {
         SET_ADDRLO(i);
         RD_LO;
         _delay_us(10);
+        // if no device responds, pullups will force data bus to 0xff
+        // so if the data bus is not 0xff, we know a device is there
         if (GET_DATA != 0xFF) {
             read_port[i] = EXT_UNKNOWN;
             write_port[i] = EXT_UNKNOWN;
@@ -330,6 +349,17 @@ void iorq_init()
             write_port[port] = device;
         }
     }
+
+#ifdef TMS_BASE
+    uint8_t tms_port = tms_detect();
+    if (tms_port != 1)
+    {
+        read_port[tms_port] = EXT_TMS_RAM;
+        write_port[tms_port] = EXT_TMS_RAM;
+        read_port[tms_port+1] = EXT_TMS_REG;
+        write_port[tms_port+1] = EXT_TMS_REG;
+    }
+#endif
 }
 
 /**
@@ -338,15 +368,21 @@ void iorq_init()
 void iorq_dispatch(uint8_t logged)
 {
     if (!GET_RD) {
+        // set pullups in case no device is present
+        SET_DATA(0xFF);
         uint8_t devid = read_port[GET_ADDRLO];
         if (devid < EXT_UNKNOWN) {
+            // output data from internal device
             uint8_t (*read_func)() = pgm_read_ptr(&device_read[devid]);
             if (read_func != NULL) {
                 SET_DATA(read_func());
                 DATA_OUTPUT;
-            } else {
-                SET_DATA(0xFF);
             }
+        } else {
+            // capture data from external device
+            void (*save_func)(uint8_t data) = pgm_read_ptr(&device_read[devid]);
+            if (save_func != NULL)
+                save_func(GET_DATA);                
         }
     } else if (!GET_WR) {
         uint8_t devid = write_port[GET_ADDRLO];
@@ -355,9 +391,8 @@ void iorq_dispatch(uint8_t logged)
             write_func(GET_DATA);
         }
     }
-    if (logged) {
+    if (logged)
         iorq_stat = bus_status_fast();
-    }
 
     // Asserting busrq deasserts wait while pausing further Z80 exeuction
     BUSRQ_LO;

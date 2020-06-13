@@ -218,26 +218,6 @@ void bus_init(void)
     bus_master();
 }
 
-void bus_ioscan()
-{
-    if (GET_BUSACK)
-        return;
-
-    DATA_INPUT;
-    SET_DATA(0xFF);
-    IORQ_LO;
-    for (uint16_t i = 0; i <= 0xff; i++) {
-        SET_ADDRLO(i);
-        RD_LO;
-        _delay_us(10);
-        if (GET_DATA != 0xFF)
-            printf_P(PSTR("Something is responding on %xh\n"), i);
-        RD_HI;
-        _delay_us(10);
-    }
-    IORQ_HI;
-}
-
 /**
  * Output value to an IO register
  */
@@ -247,15 +227,15 @@ uint8_t io_out(uint8_t addr, uint8_t value)
         return 0;
     MREQ_HI;
     RD_HI;
-    _delay_us(10);
+    _delay_us(1);
     SET_ADDRLO(addr);
     SET_DATA(value);
     DATA_OUTPUT;
     IORQ_LO;
     WR_LO;
-    _delay_us(10);
+    _delay_us(1);
     WR_HI;
-    _delay_us(10);
+    _delay_us(1);
     IORQ_HI;
     DATA_INPUT;
     return 1;
@@ -272,12 +252,12 @@ uint8_t io_in(uint8_t addr)
         return 0;
     MREQ_HI;
     WR_HI;
-    _delay_us(10);
+    _delay_us(1);
     SET_ADDRLO(addr);
     DATA_INPUT;
     IORQ_LO;
     RD_LO;
-    _delay_us(10);
+    _delay_us(1);
     uint8_t value = GET_DATA;
     RD_HI;
     IORQ_HI;

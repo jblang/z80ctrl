@@ -37,7 +37,7 @@ F_CPU?=20000000L
 
 # Programmer options
 PROGRAMMER?=arduino
-PORT?=/dev/ttyS3
+PORT?=COM3
 BAUD?=115200
 
 AVRCC?=avr-gcc
