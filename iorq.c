@@ -62,17 +62,21 @@ const char device_name[] PROGMEM =
     "dskctrl\0"
     "dskdata\0"
 
+#ifdef MSX_KEY_BASE
     "msxcol\0"
     "msxrow\0"
+#endif
 
+#ifdef IOX_BASE
     "spidev\0"
     "spireg\0"
     "spidata\0"
+#endif
 
     "fatfs\0"
     "bdos\0"
 
-    "unknown\0"
+    "extern\0"
 
     "wbwpage\0"
 
@@ -228,6 +232,37 @@ uint8_t iorq_assign(uint8_t port, device_mode mode, device_type device)
     return device;
 }
 
+const uint8_t default_ports[] PROGMEM = {
+#ifdef IOX_BASE
+    0x00, Z80CTRL_SPI_DEV,
+    0x01, Z80CTRL_SPI_REG,
+    0x02, Z80CTRL_SPI_DATA,
+#endif
+
+    0x10, EMU_ACIA0_STATUS,
+    0x11, EMU_ACIA0_DATA,
+    0x12, EMU_ACIA1_STATUS,
+    0x13, EMU_ACIA1_DATA,
+    0x80, EMU_ACIA0_STATUS,
+    0x81, EMU_ACIA0_DATA,
+    0x40, EMU_ACIA1_STATUS,
+    0x41, EMU_ACIA1_DATA,
+
+    0x08, EMU_88DSK_STATUS,
+    0x09, EMU_88DSK_CONTROL,
+    0x0A, EMU_88DSK_DATA,
+
+    0x0B, Z80CTRL_FATFS_DMA,
+    0x0C, Z80CTRL_BDOS_EMU,
+
+#ifdef MSX_KEY_BASE
+    0xA9, EMU_MSXKEY_COL,
+    0xAA, EMU_MSXKEY_ROW
+#endif
+};
+
+#define NUM_DEFAULTS (sizeof(default_ports) / sizeof(uint8_t))
+
 void iorq_init()
 {
     if (GET_BUSACK)
@@ -239,82 +274,31 @@ void iorq_init()
     SET_DATA(0xFF);
     IORQ_LO;
     for (uint16_t i = 0; i <= 0xff; i++) {
-        write_port[i] = DEV_UNASSIGNED;
-        read_port[i] = DEV_UNASSIGNED;
         SET_ADDRLO(i);
         RD_LO;
         _delay_us(10);
-        if (GET_DATA != 0xFF)
+        if (GET_DATA != 0xFF) {
             read_port[i] = EXT_UNKNOWN;
+            write_port[i] = EXT_UNKNOWN;
+        } else {
+            read_port[i] = DEV_UNASSIGNED;
+            write_port[i] = DEV_UNASSIGNED;
+        }
         RD_HI;
         _delay_us(10);
     }
     IORQ_HI;
     clk_stop();
 
-    // Assign default ports for SPI peripherals
-#ifdef IOX_BASE
-    if (read_port[IOX_BASE] == DEV_UNASSIGNED
-            && read_port[IOX_BASE+1] == DEV_UNASSIGNED
-            && read_port[IOX_BASE+2] == DEV_UNASSIGNED) {
-        read_port[IOX_BASE] = Z80CTRL_SPI_DEV;
-        write_port[IOX_BASE] = Z80CTRL_SPI_DEV;
-        read_port[IOX_BASE+1] = Z80CTRL_SPI_REG;
-        write_port[IOX_BASE+1] = Z80CTRL_SPI_REG;
-        read_port[IOX_BASE+2] = Z80CTRL_SPI_DATA;
-        write_port[IOX_BASE+2] = Z80CTRL_SPI_DATA;
+    // Assign default ports to devices as long as they are unused
+    for (uint16_t i = 0; i < NUM_DEFAULTS; i += 2) {
+        uint8_t port = pgm_read_byte(&default_ports[i]);
+        uint8_t device = pgm_read_byte(&default_ports[i+1]);
+        if (read_port[port] == DEV_UNASSIGNED && write_port[port] == DEV_UNASSIGNED) {
+            read_port[port] = device;
+            write_port[port] = device;
+        }
     }
-#endif
-
-    // Assign default ports for emulated 88-SIO
-    if (read_port[SIO0_DATA] == DEV_UNASSIGNED
-            && read_port[SIO0_STATUS] == DEV_UNASSIGNED) {
-        read_port[SIO0_DATA] = EMU_ACIA0_DATA;
-        write_port[SIO0_DATA] = EMU_ACIA0_DATA;
-        read_port[SIO0_STATUS] = EMU_ACIA0_STATUS;
-        write_port[SIO0_STATUS] = EMU_ACIA0_STATUS;
-    }
-    if (read_port[SIO1_DATA] == DEV_UNASSIGNED
-            && read_port[SIO1_STATUS] == DEV_UNASSIGNED) {
-        read_port[SIO1_DATA] = EMU_ACIA1_DATA;
-        write_port[SIO1_DATA] = EMU_ACIA1_DATA;
-        read_port[SIO1_STATUS] = EMU_ACIA1_STATUS;
-        write_port[SIO1_STATUS] = EMU_ACIA1_STATUS;
-    }
-
-    // Assign default ports for emulated 88-DSK
-    if (read_port[DRIVE_STATUS] == DEV_UNASSIGNED
-            && read_port[DRIVE_CONTROL] == DEV_UNASSIGNED
-            && read_port[DRIVE_DATA] == DEV_UNASSIGNED) {
-        read_port[DRIVE_STATUS] = EMU_88DSK_STATUS;
-        write_port[DRIVE_STATUS] = EMU_88DSK_STATUS;
-        read_port[DRIVE_CONTROL] = EMU_88DSK_CONTROL;
-        write_port[DRIVE_CONTROL] = EMU_88DSK_CONTROL;
-        read_port[DRIVE_DATA] = EMU_88DSK_DATA;
-        write_port[DRIVE_DATA] = EMU_88DSK_DATA;
-    }
-
-    // Assign default DMA control ports
-    if (read_port[FILE_DMA] == DEV_UNASSIGNED) {
-        read_port[FILE_DMA] = Z80CTRL_FATFS_DMA;
-        write_port[FILE_DMA] = Z80CTRL_FATFS_DMA;
-    }
-    if (read_port[BDOS_DMA] == DEV_UNASSIGNED) {
-        read_port[BDOS_DMA] = Z80CTRL_BDOS_EMU;
-        write_port[BDOS_DMA] = Z80CTRL_BDOS_EMU;
-    }
-
-    // Assign default MSX keyboard ports
-#ifdef MSX_KEY_BASE
-    if (read_port[MSX_KEY_COL] == DEV_UNASSIGNED
-            && read_port[MSX_KEY_ROW] == DEV_UNASSIGNED) {
-        read_port[MSX_KEY_COL] = EMU_MSXKEY_COL;
-        write_port[MSX_KEY_COL] = EMU_MSXKEY_COL;
-        read_port[MSX_KEY_ROW] = EMU_MSXKEY_ROW;
-        write_port[MSX_KEY_ROW] = EMU_MSXKEY_ROW;
-    }
-#endif
-
 }
 
 /**
@@ -353,7 +337,5 @@ void iorq_dispatch(uint8_t logged)
         bus_slave();
     }
     DATA_INPUT;
-    if (!GET_BUSACK)
-        bus_slave();
     BUSRQ_HI;
 }
