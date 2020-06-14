@@ -365,7 +365,7 @@ void iorq_init()
 /**
  * Handle Z80 IO request
  */
-void iorq_dispatch(uint8_t logged)
+uint8_t iorq_dispatch()
 {
     if (!GET_RD) {
         // set pullups in case no device is present
@@ -391,8 +391,7 @@ void iorq_dispatch(uint8_t logged)
             write_func(GET_DATA);
         }
     }
-    if (logged)
-        iorq_stat = bus_status_fast();
+    uint8_t data = GET_DATA;
 
     // Asserting busrq deasserts wait while pausing further Z80 exeuction
     BUSRQ_LO;
@@ -408,4 +407,5 @@ void iorq_dispatch(uint8_t logged)
 
     DATA_INPUT;
     BUSRQ_HI;
+    return data;
 }

@@ -438,7 +438,7 @@ void cli_debug(int argc, char *argv[])
         uint32_t addr = strtoul(argv[1], NULL, 16) & 0xfffff;
         z80_reset(addr);
     }
-    z80_debug(0);
+    z80_debug(1);
 }
 
 /**

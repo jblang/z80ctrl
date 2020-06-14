@@ -76,7 +76,7 @@ typedef enum {
 
 void iorq_init();
 void iorq_list();
-void iorq_dispatch(uint8_t logged);
+uint8_t iorq_dispatch();
 uint8_t iorq_deviceid(char *name);
 uint8_t iorq_assign(uint8_t port, device_mode mode, device_type device);
 

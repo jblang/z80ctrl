@@ -90,7 +90,7 @@ void z80_run(void)
         if (uart_peek(0) == halt_key && halt_key != 0)
             break;
         if (!GET_IORQ)
-            iorq_dispatch(0);
+            iorq_dispatch();
         if (do_halt && !GET_HALT)
             break;
     }
@@ -99,140 +99,90 @@ void z80_run(void)
     bus_request();
 }
 
-/**
- * Do a single T cycle, optionally logging and breaking on the bus status
- */
-uint8_t z80_tick()
-{
-    // Save previous RD and WR values to detect falling edge
-    uint8_t lastrd = GET_RD;
-    uint8_t lastwr = GET_WR;
-
-    uint8_t logged = 0;
-
-    CLK_LO;
-    CLK_HI;
-
-    if (!GET_MREQ && (ENABLED(watches, MEMRD) || ENABLED(breaks, MEMRD) || 
-                     ENABLED(watches, MEMWR) || ENABLED(breaks, MEMWR))) {
-        if (lastrd && !GET_RD) {
-            bus_stat status = bus_status();
-            if (logged = INRANGE(watches, MEMRD, status.addr)) {
-                bus_log(status);
-                uart_flush();
-            }
-            if (INRANGE(breaks, MEMRD, status.addr)) {
-                printf_P(PSTR("memrd break at %04X\n"), status.addr);
-                uart_flush();
-                return 1;
-            }
-        } else if (lastwr && !GET_WR) {
-            bus_stat status = bus_status();
-            if (logged = INRANGE(watches, MEMWR, status.addr)) {
-                bus_log(status);
-                uart_flush();
-            }
-            if (INRANGE(breaks, MEMWR, status.addr)) {
-                printf_P(PSTR("memwr break at %04X\n"), status.addr);
-                uart_flush();
-                return 1;
-            };
-        }
-    } 
-    
-    if (!GET_IORQ) {
-        if (lastrd && !GET_RD) {
-            logged = INRANGE(watches, IORD, GET_ADDRLO);
-            if (INRANGE(breaks, IORD, GET_ADDRLO)) {
-                printf_P(PSTR("iord break at %02x\n"), GET_ADDRLO);
-                uart_flush();
-                return 1;
-            }
-        } else if (lastwr && !GET_WR) {
-            logged = INRANGE(watches, IOWR, GET_ADDRLO);
-            if (INRANGE(breaks, IOWR, GET_ADDRLO)) {
-                printf_P(PSTR("iowr break at %02x\n"), GET_ADDRLO);
-                uart_flush();
-                return 1;
-            }
-        }
-    }
-
-    if (ENABLED(watches, BUS) && !logged) {
-        bus_stat status = bus_status();
-        if (INRANGE(watches, BUS, status.addr)) {
-            bus_log(status);
-            uart_flush();
-        }
-    }
-
-    if (!GET_IORQ) {
-        set_tcnt(1, 0);
-        iorq_dispatch(logged);
-        if (logged) {
-            uint16_t tcnt = get_tcnt(1);
-            printf_P(PSTR("\t%d us"), TCNT_TO_US(tcnt, F_CPU));
-            bus_log(iorq_stat);
-            uart_flush();
-        }
-    }
-        
-    return 0;
-}
-
-uint8_t disasmbrk = 0;
-
-/**
- * Clock the Z80 until it completes a memory read cycle and return the value read
- */
-uint8_t z80_read()
-{
-    uint8_t data;
-    while (GET_RD || GET_MREQ)
-        disasmbrk |= z80_tick();
-    data = GET_DATA;
-    while (!GET_RD && !GET_MREQ)
-        disasmbrk |= z80_tick();
-    return data;
-}
+#define MULTIBYTE(op) ((op) == 0xCB || (op) == 0xDD || (op) == 0xED || (op) == 0xFD);
 
 /**
  * Run the Z80 with watches and breakpoints for a specified number of instructions
  */
 void z80_debug(uint32_t cycles)
 {
-    char mnemonic[255];
-    uint32_t c = 0;
-    static uint8_t brkonce = 0;
-    config_timer(1, CLKDIV1);
-    
+    uint8_t last_rd;
+    uint8_t last_wr;
+    static uint8_t ignore_m1;
+
+    if (cycles > 0)
+        cycles--;   // 0 based counter makes comparison cheaper
+
     bus_release();
-    while (GET_HALT && (cycles == 0 || c < cycles)) {
-        if (uart_peek(0) == halt_key && halt_key != 0)
-            break;
-        if ((ENABLED(watches, OPFETCH) || ENABLED(breaks, OPFETCH) || cycles)) {
-            if (!GET_RD && !GET_MREQ && !GET_M1) {
-                uint16_t addr = GET_ADDR;
-                if (INRANGE(breaks, OPFETCH, addr) && !cycles && !brkonce) {
-                    printf_P(PSTR("opfetch break at %04x\n"), addr);
-                    brkonce = 1;
-                    break;
+    for (;;) {
+        last_rd = GET_RD;
+        last_wr = GET_WR;
+        CLK_HI;
+        CLK_LO;
+        if ((last_rd && !GET_RD) || (last_wr && !GET_WR)) {
+            bus_stat status = bus_status();
+            if (!FLAG(status.xflags, HALT) && do_halt)
+                break;
+            if (!FLAG(status.flags, IORQ)) {
+                status.data = iorq_dispatch();
+                if (!FLAG(status.flags, RD)) {
+                    if (INRANGE(watches, IORD, status.addr & 0xff)) {
+                        bus_log(status);
+                        uart_flush();
+                    }
+                    if (INRANGE(breaks, IORD, status.addr & 0xff) && cycles-- == 0) {
+                        printf_P(PSTR("iord break at %04x\n"), status.addr);
+                        break;
+                    }
+                } else { // IORQ WR
+                    if (INRANGE(watches, IOWR, status.addr & 0xff)) {
+                        bus_log(status);
+                        uart_flush();
+                    }
+                    if (INRANGE(breaks, IOWR, status.addr & 0xff) && cycles-- == 0) {
+                        printf_P(PSTR("iowr break at %04x\n"), status.addr);
+                        break;
+                    }
                 }
-                brkonce = 0;
-                disasmbrk = 0;
-                disasm(z80_read, mnemonic);
-                if (INRANGE(watches, OPFETCH, addr)) {
-                    printf_P(PSTR("\t%04x\t%s\n"), addr, mnemonic);
-                    uart_flush();
+            } else { // MREQ
+                if (!FLAG(status.flags, RD)) {
+                    if (INRANGE(watches, MEMRD, status.addr)) {
+                        bus_log(status);
+                        uart_flush();
+                    }
+                    if (!FLAG(status.xflags, M1)) {
+                        if (!ignore_m1) {
+                            if (INRANGE(watches, OPFETCH, status.addr)) {
+                                bus_request();
+                                disasm_mem(status.addr, status.addr);
+                                uart_flush();
+                            }
+                            if (INRANGE(breaks, OPFETCH, status.addr) && cycles-- == 0) {
+                                printf_P(PSTR("opfetch break at %04x\n"), status.addr);
+                                ignore_m1 = MULTIBYTE(status.data)
+                                break;
+                            }
+                            if (INRANGE(watches, OPFETCH, status.addr))
+                                bus_release();
+                        }
+                        ignore_m1 = MULTIBYTE(status.data);
+                    }
+                    if (INRANGE(breaks, MEMRD, status.addr) && cycles-- == 0) {
+                        printf_P(PSTR("memrd break at %04x\n"), status.addr);
+                        break;
+                    }
+                } else { // MREQ WR
+                    if (INRANGE(watches, MEMWR, status.addr)) {
+                        bus_log(status);
+                        uart_flush();
+                    }
+                    if (INRANGE(breaks, MEMWR, status.addr) && cycles-- == 0) {
+                        printf_P(PSTR("memwr break at %04x\n"), status.addr);
+                        break;
+                    }
                 }
-                c++;
-                if (disasmbrk && !cycles)
-                    break;
             }
         }
-        if(z80_tick())
-            break;
     }
     bus_request();
-    config_timer(1, CLKOFF);
 }
