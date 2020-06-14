@@ -1214,12 +1214,12 @@ void cli_bench(int argc, char *argv[])
         uint16_t busfastt = TCNT1;
 
         TCNT1 = 0;
-        bus_slave();
-        uint16_t busslavet = TCNT1;
+        bus_release();
+        uint16_t busreleaset = TCNT1;
 
         TCNT1 = 0;
-        bus_master();
-        uint16_t busmastert = TCNT1;
+        bus_request();
+        uint16_t busrequestt = TCNT1;
 
         uint8_t buf[1024];
 
@@ -1267,8 +1267,8 @@ void cli_bench(int argc, char *argv[])
         printf_P(PSTR("\tget_addrhi %d us\n"), TCNT_TO_US(addrhit, F_CPU));
         printf_P(PSTR("\tbus_status %d us\n"), TCNT_TO_US(bust, F_CPU));
         printf_P(PSTR("\tbus_status_fast %d us\n"), TCNT_TO_US(busfastt, F_CPU));
-        printf_P(PSTR("\tbus_master %d us\n"), TCNT_TO_US(busmastert, F_CPU));
-        printf_P(PSTR("\tbus_slave %d us\n"), TCNT_TO_US(busslavet, F_CPU));
+        printf_P(PSTR("\tbus_request %d us\n"), TCNT_TO_US(busrequestt, F_CPU));
+        printf_P(PSTR("\tbus_release %d us\n"), TCNT_TO_US(busreleaset, F_CPU));
         printf_P(PSTR("\tmem_read %d us (1KB)\n"), TCNT_TO_US(memreadbare1kt, F_CPU));
         printf_P(PSTR("\tmem_read %d us (32 bytes)\n"), TCNT_TO_US(memreadbare32t, F_CPU));
         printf_P(PSTR("\tmem_read %d us (32 bytes, cross-page)\n"), TCNT_TO_US(memreadbare32ct, F_CPU));

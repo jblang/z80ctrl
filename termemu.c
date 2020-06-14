@@ -471,7 +471,7 @@ void term_putchar(uint8_t c)
     }
 
     if (GET_BUSACK)
-        bus_master();
+        bus_request();
 
     if (mode == TERM_NORMAL) {
         if (c == 21) {

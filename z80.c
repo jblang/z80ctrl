@@ -65,11 +65,11 @@ void z80_reset(uint32_t addr)
     if (addr > 0x0002) {
         mem_write(0x0000, reset_vect, 3);
     }
-    bus_slave();
+    bus_request();
     RESET_LO;
     clk_cycle(3);
     RESET_HI;
-    bus_master();
+    bus_release();
 #ifdef PAGE_BASE
     for (uint8_t i = 0; i < 4; i++)
         mem_page(i, (base_addr >> 14) + i);
@@ -84,7 +84,7 @@ void z80_reset(uint32_t addr)
  */
 void z80_run(void)
 {
-    bus_slave();
+    bus_release();
     clk_run();
     for(;;) {
         if (uart_peek(0) == halt_key && halt_key != 0)
@@ -96,7 +96,7 @@ void z80_run(void)
     }
     clk_stop();
     CLK_LO;
-    bus_master();
+    bus_request();
 }
 
 /**
@@ -206,7 +206,7 @@ void z80_debug(uint32_t cycles)
     static uint8_t brkonce = 0;
     config_timer(1, CLKDIV1);
     
-    bus_slave();
+    bus_release();
     while (GET_HALT && (cycles == 0 || c < cycles)) {
         if (uart_peek(0) == halt_key && halt_key != 0)
             break;
@@ -233,6 +233,6 @@ void z80_debug(uint32_t cycles)
         if(z80_tick())
             break;
     }
-    bus_master();
+    bus_request();
     config_timer(1, CLKOFF);
 }

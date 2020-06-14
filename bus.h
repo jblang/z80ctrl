@@ -201,8 +201,8 @@ void clk_cycle(uint8_t cycles);
 void clk_run(void);
 void clk_stop(void);
 
-uint8_t bus_master(void);
-void bus_slave(void);
+uint8_t bus_request(void);
+void bus_release(void);
 void bus_init(void);
 
 bus_stat bus_status(void);

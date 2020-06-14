@@ -400,10 +400,10 @@ void iorq_dispatch(uint8_t logged)
         CLK_TOGGLE;
 
     if (dma_function) {
-        if (bus_master())
+        if (bus_request())
             dma_function();
         dma_function = NULL;
-        bus_slave();
+        bus_release();
     }
 
     DATA_INPUT;

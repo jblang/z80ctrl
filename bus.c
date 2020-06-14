@@ -73,7 +73,7 @@ void clk_stop()
 /**
  *  Request control of the bus from the Z80
  */
-uint8_t bus_master(void)
+uint8_t bus_request(void)
 {
     uint8_t i = 255;
 
@@ -82,7 +82,7 @@ uint8_t bus_master(void)
     while (GET_BUSACK)  {
         CLK_TOGGLE;
         if (i-- == 0) {
-            printf_P(PSTR("bus master request timed out\n"));
+            printf_P(PSTR("bus request timed out\n"));
             BUSRQ_HI;
             return 0;
         }
@@ -103,7 +103,7 @@ uint8_t bus_master(void)
 /**
  *  Return control of the bus to the Z80
  */
-void bus_slave(void)
+void bus_release(void)
 {
     uint8_t i = 255;
 
@@ -121,7 +121,7 @@ void bus_slave(void)
     while (!GET_BUSACK)  {
         CLK_TOGGLE;
         if (i-- == 0) {
-            printf_P(PSTR("bus master release timed out\n"));
+            printf_P(PSTR("bus release timed out\n"));
             return;
         }
     }
@@ -215,7 +215,7 @@ void bus_init(void)
     BUSRQ_HI;
 
     // Start out in control of the bus
-    bus_master();
+    bus_request();
 }
 
 /**
