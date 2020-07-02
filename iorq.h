@@ -88,6 +88,4 @@ typedef enum {
 
 extern void (*dma_function)(void);
 
-bus_stat iorq_stat;
-
  #endif
