@@ -44,6 +44,12 @@ AVRCC?=avr-gcc
 OBJCOPY?=avr-objcopy
 AVRDUDE?=avrdude
 
+ifeq ($(OS),Windows_NT)
+CLEAN?=del
+else
+CLEAN?=rm -rf
+endif
+
 BIN=z80ctrl
 FF_OBJS=ff.o diskio.o mmc_avr_spi.o
 OBJS=	cli.o \
@@ -109,4 +115,4 @@ install: $(BIN).hex
 	$(AVRDUDE) -c $(PROGRAMMER) -p $(MCU) -P $(PORT) -b $(BAUD) -U flash:w:$<
 
 clean:
-	rm -f $(BIN).elf $(BIN).hex $(OBJS)
+	$(CLEAN) $(BIN).elf $(BIN).hex $(OBJS)
