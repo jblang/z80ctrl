@@ -119,7 +119,7 @@ void z80_debug(uint32_t cycles)
         last_wr = GET_WR;
         CLK_HI;
         CLK_LO;
-        if ((last_rd && !GET_RD) || (last_wr && !GET_WR)) {
+        if ((last_rd && !GET_RD) || (last_wr && !GET_WR)) { // falling edge
             bus_stat status = bus_status();
             if (!FLAG(status.xflags, HALT) && do_halt)
                 break;
@@ -159,7 +159,7 @@ void z80_debug(uint32_t cycles)
                             }
                             if (INRANGE(breaks, OPFETCH, status.addr) && cycles-- == 0) {
                                 printf_P(PSTR("opfetch break at %04x\n"), status.addr);
-                                ignore_m1 = MULTIBYTE(status.data)
+                                ignore_m1 = MULTIBYTE(status.data);
                                 break;
                             }
                             if (INRANGE(watches, OPFETCH, status.addr))
