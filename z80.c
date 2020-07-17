@@ -65,11 +65,10 @@ void z80_reset(uint32_t addr)
     if (addr > 0x0002) {
         mem_write(0x0000, reset_vect, 3);
     }
-    bus_request();
     RESET_LO;
     clk_cycle(3);
     RESET_HI;
-    bus_release();
+    bus_request();
 #ifdef PAGE_BASE
     for (uint8_t i = 0; i < 4; i++)
         mem_page(i, (base_addr >> 14) + i);
