@@ -167,7 +167,7 @@ uint8_t sio_status(uint8_t port)
 {
     UINT bw;
     FRESULT fr;
-    uint8_t status;
+    uint8_t status = 0;
     if (port > 1) {
         printf_P(PSTR("error: valid port numbers are 0-1\n"));
         return 0;
