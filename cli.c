@@ -406,6 +406,16 @@ void cli_dump(int argc, char *argv[])
 }
 
 /**
+ * Report the status of the TMS9918A
+ */
+#ifdef TMS_BASE
+void cli_tmsreg(int argc, char *argv[])
+{
+    tms_report();
+}
+#endif
+
+/**
  * Run the processor at full speed from an optional starting address
  */
 void cli_run(int argc, char *argv[])
@@ -1402,6 +1412,7 @@ const char cli_cmd_names[] PROGMEM =
     "s\0"
     "step\0"
 #ifdef TMS_BASE
+    "tmsreg\0"
     "tmsdump\0"
     "tmsfill\0"
     "tmslbin\0"
@@ -1481,6 +1492,7 @@ const char cli_cmd_help[] PROGMEM =
     "\0"                                            // s
     "step processor N cycles (alias s)\0"           // step
 #ifdef TMS_BASE
+    "report tms registers\0"                        // tmsreg
     "dump tms memory in hex and ascii\0"            // tmsdump
     "fill tms memory with byte\0"                   // tmsfill
     "load binary file to tms memory\0"              // tmslbin
@@ -1562,6 +1574,7 @@ void * const cli_cmd_functions[] PROGMEM = {
     &cli_step,      // s
     &cli_step,
 #ifdef TMS_BASE
+    &cli_tmsreg,    // tmsreg
     &cli_dump,      // tmsdump
     &cli_fill,      // tmsfill
     &cli_loadbin,   // tmslbin

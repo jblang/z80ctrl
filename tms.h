@@ -38,6 +38,7 @@
 #define TMS_BLANK 0x8000
 
 void tms_config();
+void tms_report();
 uint8_t tms_read(uint16_t addr, uint8_t *buf, uint16_t len);
 uint8_t _tms_write(uint16_t addr, const uint8_t *buf, uint16_t len, uint8_t pgmspace);
 #define tms_write(addr, buf, len) _tms_write((addr), (buf), (len), 0)

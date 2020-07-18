@@ -141,7 +141,7 @@ void tms_config()
     tms_writereg(TMS_CONTROL0, control_bits & 0xff);
     tms_writereg(TMS_CONTROL1, control_bits >> 8);
     tms_writereg(TMS_NAME_TABLE, name_table / 0x400);
-    if (control_bits & 2) {
+    if (control_bits & TMS_M3) {
         tms_writereg(TMS_COLOR_TABLE, color_table / 0x40 + 0x7f);
         tms_writereg(TMS_PATTERN_TABLE, pattern_table / 0x800 + 3);
     } else {
@@ -159,11 +159,11 @@ void tms_save_reg(uint8_t data)
         if (data & 0x80) {
             switch(data & 0x7) {
                 case TMS_CONTROL0:
-                    control_bits &= 0xff;
+                    control_bits &= 0xff00;
                     control_bits |= last_reg_write;
                     break;
                 case TMS_CONTROL1:
-                    control_bits &= 0xff00;
+                    control_bits &= 0xff;
                     control_bits |= (last_reg_write << 8);
                     break;
                 case TMS_NAME_TABLE:
@@ -189,6 +189,7 @@ void tms_save_reg(uint8_t data)
         reg_high_byte = 0;
     } else {
         reg_high_byte = 1;
+        last_reg_write = data;
     }
     if (control_bits & TMS_M3) {
         color_table &= 0x2000;
@@ -200,6 +201,31 @@ void tms_save_status(uint8_t data)
 {
     reg_high_byte = 0;
     last_status = data;
+}
+
+void tms_report()
+{
+    printf_P(PSTR("Control bits: %04x\n"), control_bits);
+    printf_P(PSTR("External video: %c\n"), control_bits & TMS_EXT_VIDEO ? 'Y' : 'N');
+    printf_P(PSTR("16K enabled: %c\n"), control_bits & TMS_16K ? 'Y' : 'N');
+    printf_P(PSTR("Display enabled: %c\n"), control_bits & TMS_DISPLAY_ENABLE ? 'Y' : 'N');
+    printf_P(PSTR("Interrupt enabled: %c\n"), control_bits & TMS_INT_ENABLE ? 'Y' : 'N');
+    printf_P(PSTR("Large sprites: %c\n"), control_bits & TMS_SPRITE_32X32 ? 'Y' : 'N');
+    printf_P(PSTR("Sprite magnification: %c\n"), control_bits & TMS_SPRITE_MAG ? 'Y' : 'N');
+    printf_P(PSTR("Video mode: "));
+    if (control_bits & TMS_M1)
+        printf_P(PSTR("Text\n"));
+    else if (control_bits & TMS_M2)
+        printf_P(PSTR("Multicolor\n"));
+    else if (control_bits & TMS_M3)
+        printf_P(PSTR("Graphics II\n"));
+    else
+        printf_P(PSTR("Graphics I\n"));
+    printf_P(PSTR("Name table: %04x\n"), name_table);
+    printf_P(PSTR("Color table: %04x\n"), color_table);
+    printf_P(PSTR("Pattern table: %04x\n"), pattern_table);
+    printf_P(PSTR("Sprite attribute table: %04x\n"), sprite_attribute_table);
+    printf_P(PSTR("Sprite pattern table: %04x\n"), sprite_pattern_table);
 }
 
 void tms_fill(uint16_t addr, uint8_t val, uint16_t len)
