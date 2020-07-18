@@ -86,13 +86,32 @@ void z80_run(void)
 {
     bus_release();
     clk_run();
-    for(;;) {
-        if (uart_peek(0) == halt_key && halt_key != 0)
-            break;
-        if (!GET_IORQ)
-            iorq_dispatch();
-        if (do_halt && !GET_HALT)
-            break;
+    if (halt_key && do_halt) {
+        for (;;) {
+            if (!GET_IORQ)
+                iorq_dispatch();
+            else if (uart_peek(0) == halt_key || !GET_HALT)
+                break;
+        }
+    } else if (halt_key) {
+        for (;;) {
+            if (!GET_IORQ)
+                iorq_dispatch();
+            else if (uart_peek(0) == halt_key)
+                break;
+        }
+    } else if (do_halt) {
+        for (;;) {
+            if (!GET_IORQ)
+                iorq_dispatch();
+            else if (!GET_HALT)
+                break;
+        }
+    } else {
+        for (;;) {
+            if (!GET_IORQ)
+                iorq_dispatch();
+        }
     }
     clk_stop();
     CLK_LO;
