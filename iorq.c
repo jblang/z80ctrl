@@ -87,14 +87,20 @@ const char device_name[] PROGMEM =
 
     "extern\0"
 
+#ifdef PAGE_BASE
     "wbwpage\0"
+#endif
 
 #ifdef TMS_BASE
     "tmsram\0"
     "tmsreg\0"
 #endif
 
-    "sn76489\0";
+#ifdef SN76489_PORT
+    "sn76489\0"
+#endif
+
+    "invalid\0";
 
 /**
  * Device descriptions shown during listing
@@ -127,14 +133,20 @@ const char device_description[] PROGMEM =
 
     "External device\0"
 
+#ifdef PAGE_BASE
     "512K ROM/RAM page\0"
+#endif
 
 #ifdef TMS_BASE
     "TMS9918A RAM\0"
     "TMS9918A register\0"
 #endif
 
-    "SN76489\0";
+#ifdef SN76489_PORT
+    "SN76489\0"
+#endif
+
+    "Invalid device\0";
 
 /**
  * Device read functions
@@ -167,10 +179,20 @@ void * const device_read[] PROGMEM = {
 
     NULL,               // EXT_UNKNOWN
 
+#ifdef PAGE_BASE
+    NULL,               // EXT_WBW_RAM
+#endif
+
 #ifdef TMS_BASE
     NULL,               // EXT_TMS_RAM
-    &tms_save_status    // EXT_TMS_REG
+    &tms_save_status,   // EXT_TMS_REG
 #endif
+
+#ifdef SN76489_PORT
+    NULL,               // EXT_SN76489
+#endif
+
+    NULL                // DEV_INVALID
 };
 
 /**
@@ -204,10 +226,20 @@ void * const device_write[] PROGMEM = {
 
     NULL,               // EXT_UNKNOWN
 
+#ifdef PAGE_BASE
+    NULL,               // EXT_WBW_RAM
+#endif
+
 #ifdef TMS_BASE
     NULL,               // EXT_TMS_RAM
-    &tms_save_reg       // EXT_TMS_REG
+    &tms_save_reg,      // EXT_TMS_REG
 #endif
+
+#ifdef SN76489_PORT
+    NULL,               // EXT_SN76489
+#endif
+
+    NULL                // DEV_INVALID
 };
 
 /**

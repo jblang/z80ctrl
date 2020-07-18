@@ -58,12 +58,18 @@ typedef enum {
 
     EXT_UNKNOWN,
 
+#ifdef PAGE_BASE
     EXT_WBW_RAM,
+#endif
 
+#ifdef TMS_BASE
     EXT_TMS_RAM,
     EXT_TMS_REG,
+#endif
 
+#ifdef SN76489_PORT
     EXT_SN76489,
+#endif 
 
     DEV_INVALID
 } device_type;
