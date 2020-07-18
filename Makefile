@@ -26,7 +26,7 @@ BOARD_REV?=3
 # IOX_BASE=0x00
 
 # Base port for MSX keyboard
-# MSX_KEY_BASE = 0xA9
+# MSX_KEY_BASE=0xA9
 
 # Current git hash
 GITVERSION:= $(shell git log -1 --pretty='%h')
@@ -37,7 +37,7 @@ F_CPU?=20000000L
 
 # Programmer options
 PROGRAMMER?=arduino
-PORT?=COM3
+PORT?=COM4
 BAUD?=115200
 
 AVRCC?=avr-gcc
@@ -45,7 +45,7 @@ OBJCOPY?=avr-objcopy
 AVRDUDE?=avrdude
 
 ifeq ($(OS),Windows_NT)
-CLEAN?=del
+CLEAN?=cmd ///c del
 else
 CLEAN?=rm -rf
 endif
