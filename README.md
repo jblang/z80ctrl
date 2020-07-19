@@ -5,7 +5,6 @@ z80ctrl is an AVR-based bootloader, debugger, and I/O device for a Z80 retrocomp
 - Plug-in module for [RC2014](https://rc2014.co.uk/) retrocomputer replaces the clock, serial, ROM, and CF boards
 - Runs CP/M software directly from FAT32-formatted SD Card
 - Boots unmodified disk images from the [AltairZ80](https://schorn.ch/altair.html) emulator
-- Provides Altair and RC2014-compatible serial port
 - Monitor with file management, memory inspector, and built-in Z80 disassembler
 - Single-step debugging, breakpoints, and watchpoints to trace Z80 bus activity in real-time
 - Expandable SPI bus allows bridging other SPI peripherals to the Z80
