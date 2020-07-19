@@ -1,3 +1,7 @@
+; BDOS stub for z80ctrl BDOS emulation
+; Assemble using sjasm
+; Rename bdos.out to bdos.bin and place in root directory of z80ctrl SD card
+
 ;*****************************************************************
 ;*****************************************************************
 ;**                                                             **
