@@ -424,20 +424,17 @@ uint8_t iorq_dispatch()
         }
     }
     uint8_t data = GET_DATA;
-
-    // Asserting busrq deasserts wait while pausing further Z80 exeuction
-    BUSRQ_LO;
-    while (!GET_IORQ)
-        CLK_TOGGLE;
-
     if (dma_function) {
         if (bus_request())
             dma_function();
         dma_function = NULL;
         bus_release();
+    } else {
+        BUSRQ_LO;
+        while (!GET_IORQ)
+            CLK_TOGGLE;
+        DATA_INPUT;
+        BUSRQ_HI;
     }
-
-    DATA_INPUT;
-    BUSRQ_HI;
     return data;
 }
