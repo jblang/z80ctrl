@@ -67,6 +67,7 @@ OBJS=	cli.o \
 	util.o \
 	xmodem.o \
 	bdosemu.o \
+	ffwrap.o \
 	$(FF_OBJS)
 
 ifdef BOARD_REV
@@ -100,7 +101,7 @@ ifdef MSX_KEY_BASE
 	FEATURE_DEFINES += -DMSX_KEY_BASE=$(MSX_KEY_BASE)
 	OBJS += msxkey.o
 endif
-CFLAGS=-std=c99 -Os $(FEATURE_DEFINES) -DF_CPU=$(F_CPU) -DGITVERSION="\"${GITVERSION}\"" -mmcu=$(MCU) -I.
+CFLAGS=-std=c99 -flto -Os $(FEATURE_DEFINES) -DF_CPU=$(F_CPU) -DGITVERSION="\"${GITVERSION}\"" -mmcu=$(MCU) -I.
 
 %.o: %.c
 	$(AVRCC) $(CFLAGS) $(LDFLAGS) -c -o $@ $<

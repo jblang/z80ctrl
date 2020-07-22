@@ -35,7 +35,7 @@
 #include <stdio.h>
 #include <avr/pgmspace.h>
 
-#include "util.h"
+#include "ffwrap.h"
 #include "bus.h"
 #include "diskemu.h"
 #include "ff.h"
@@ -108,9 +108,7 @@ void drive_unmount(uint8_t drv)
         return;
     }
     FRESULT fr;
-    if ((fr = f_close(&drives[drv].fp)) != FR_OK) {
-        printf_P(PSTR("error unmounting disk: %S\n"), strlookup(fr_text, fr));
-    }
+    file_close(&drives[drv].fp);
     drives[drv].status &= ~(1 << S_MOUNTED);
 }
 
@@ -128,15 +126,11 @@ void drive_mount(uint8_t drv, char *filename)
     FRESULT fr;
     if (drives[drv].status & (1 << S_MOUNTED))
         drive_unmount(drv);
-    if ((fr = f_open(&drives[drv].fp, filename, FA_READ | FA_WRITE | FA_OPEN_ALWAYS)) != FR_OK) {
-        printf_P(PSTR("error mounting disk: %S"), strlookup(fr_text, fr));
+    if ((fr = file_open(&drives[drv].fp, NULL, filename, FA_READ | FA_WRITE | FA_OPEN_ALWAYS)) != FR_OK)
         return;
-    }
     drives[drv].status |= 1 << S_MOUNTED;
-    if ((fr = f_read(&drives[drv].fp, buf, 3, &br)) != FR_OK) {
-        printf_P(PSTR("read error: %S\n"), strlookup(fr_text, fr));
+    if ((fr = file_read(&drives[drv].fp, buf, 3, &br)) != FR_OK)
         drives[drv].format = DISK_FORMAT_UNKNOWN;
-    }
     if (buf[0] == 0xE5 && buf[1] == 0xE5 && buf[2] == 0xE5) {
         // SIMH disks
         drives[drv].format = DISK_FORMAT_SIMH;
@@ -165,13 +159,8 @@ void write_sector(void)
     for (i = selected->byte; i < SECTORSIZE; i++)
         sectorbuf[i] = 0;
 
-    if ((fr = f_lseek(&selected->fp, OFFSET(selected->track, selected->sector))) != FR_OK) {
-        printf_P(PSTR("seek error: %S\n"), strlookup(fr_text, fr));
-    } else {
-        if ((fr = f_write(&selected->fp, sectorbuf, SECTORSIZE, &bw)) != FR_OK) {
-            printf_P(PSTR("write error: %S\n"), strlookup(fr_text, fr));
-        }
-    }
+    if ((fr = file_seek(&selected->fp, OFFSET(selected->track, selected->sector))) == FR_OK)
+        file_write(&selected->fp, sectorbuf, SECTORSIZE, &bw);
     selected->status &= ~(1 << S_WRITERDY);
     selected->byte = 0xff;
     dirtysector = 0;
@@ -331,13 +320,8 @@ uint8_t drive_read(void)
         selected->byte++;
         return sectorbuf[i];
     } else {
-        if ((fr = f_lseek(&selected->fp, OFFSET(selected->track, selected->sector))) != FR_OK) {
-            printf_P(PSTR("seek error: %S\n"), strlookup(fr_text, fr));
-        } else {
-            if ((fr = f_read(&selected->fp, sectorbuf, SECTORSIZE, &br)) != FR_OK) {
-                printf_P(PSTR("read error: %S\n"), strlookup(fr_text, fr));
-            }
-        }
+        if ((fr = file_seek(&selected->fp, OFFSET(selected->track, selected->sector))) == FR_OK)
+            file_read(&selected->fp, sectorbuf, SECTORSIZE, &br);
         selected->byte = 1;
         return sectorbuf[0];
     }
@@ -359,14 +343,10 @@ int drive_bootload()
         uint8_t track = 0;
         uint8_t sector = drives[0].bootstart;
         for (uint16_t addr = 0; addr < 0x5c00; addr += 0x80) {
-            if ((fr = f_lseek(&drives[0].fp, OFFSET(track, sector))) != FR_OK) {
-                printf_P(PSTR("seek error: %S\n"), strlookup(fr_text, fr));
+            if ((fr = file_seek(&drives[0].fp, OFFSET(track, sector))) != FR_OK)
                 return 0;
-            }
-            if ((fr = f_read(&drives[0].fp, buf, SECTORSIZE, &read)) != FR_OK) {
-                printf_P(PSTR("read error: %S\n"), strlookup(fr_text, fr));
+            if ((fr = file_read(&drives[0].fp, buf, SECTORSIZE, &read)) != FR_OK)
                 return 0;
-            }
             mem_write(addr, buf+3, 0x80);
             sector += 2;
             if (sector == NUMSECTORS)

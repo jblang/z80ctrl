@@ -2,7 +2,7 @@
  * Copyright 2018 J.B. Langston
  *
  * Permission is hereby granted, free of charge, to any person obtaining a 
- * copy of this software and associated documentation files (the "Software"), 
+ * copy of this software and associated documentation argvs (the "Software"), 
  * to deal in the Software without restriction, including without limitation 
  * the rights to use, copy, modify, merge, publish, distribute, sublicense, 
  * and/or sell copies of the Software, and to permit persons to whom the 
@@ -31,8 +31,6 @@
 #include <string.h>
 
 #include "util.h"
-#include "ff.h"
-#include "bus.h"
 
 /**
  * Look up a text string by index from a NULL-separated PROGMEM array
@@ -48,33 +46,6 @@ PGM_P strlookup(PGM_P str, uint32_t index)
 
     return p;
 }
-
-/**
- * FatFS wrapper to write a single byte to a file, used by stdio library
- */
-int fatfs_putchar(char c, FILE * stream)
-{
-    FIL *fil = stream->udata;
-    if (f_write(fil, &c, 1, NULL) != FR_OK)
-        return EOF;
-    else
-        return 0;
-}
-
-/**
- * FatFS wrapper to read a single byte from a file, used by stdio library
- */
-int fatfs_getchar(FILE * stream)
-{
-    FIL *fil = stream->udata;
-    char c;
-
-    if (f_read(fil, &c, 1, NULL) == FR_OK)
-        return c;
-    else
-        return EOF;
-}
-
 
 void config_timer(uint8_t timer, uint8_t prescaler)
 {
@@ -140,20 +111,6 @@ void set_tcnt(uint8_t timer, uint16_t value)
     SREG = sreg;
 }
 
-char *splitdir(char *path)
-{
-    char *fs = strrchr(path, '/');
-    char *bs = strrchr(path, '\\');
-    if  (fs > bs) {
-        *fs = '\0';
-        return fs + 1;
-    } else if (bs != NULL) {
-        *bs = '\0';
-        return bs + 1;
-    }
-    return NULL;
-}
-
 uint8_t clibuf[256];
 
 void save_cli(int argc, char *argv[])
@@ -168,4 +125,3 @@ void save_cli(int argc, char *argv[])
         next += strlen(argv[i]) + 1;
     }
 }
-

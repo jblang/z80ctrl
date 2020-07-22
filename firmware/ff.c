@@ -5039,7 +5039,7 @@ FRESULT f_copy (
     if (fr) return fr;
 
     /* Create destination file on the drive 0 */
-    fr = f_open(&fdst, dst, FA_WRITE | FA_CREATE_ALWAYS);
+    fr = f_open(&fdst, dst, FA_WRITE | FA_CREATE_NEW);
     if (fr) return fr;
 
     /* Copy source to destination */

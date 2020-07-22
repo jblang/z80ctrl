@@ -30,7 +30,7 @@
 #include "ff.h"
 #include "sioemu.h"
 #include "uart.h"
-#include "util.h"
+#include "ffwrap.h"
 
 /**
  * Physical to virtual UART mapping.
@@ -61,8 +61,7 @@ void sio_unattach(uint8_t port, uint8_t dir)
     }
     
     if (sio_mode[port] == SIO_FILE)
-        if ((fr = f_close(&sio_file[port])) != FR_OK)
-            printf_P(PSTR("error closing file: %S\n"), strlookup(fr_text, fr));
+        file_close(&sio_file[port]);
     sio_mode[port] = SIO_UNATTACHED;        
 }
 
@@ -89,11 +88,8 @@ void sio_attach(uint8_t port, uint8_t dir, uint8_t mode, char *filename)
     FRESULT fr;
     sio_mode[port] = mode;
     if (mode == SIO_FILE) {
-        if ((fr = f_open(&sio_file[port], filename, (dir == SIO_INPUT ? FA_READ : FA_WRITE) | FA_OPEN_ALWAYS)) != FR_OK) {
-            printf_P(PSTR("error attaching file: %S"), strlookup(fr_text, fr));
+        if ((fr = file_open(&sio_file[port], NULL, filename, (dir == SIO_INPUT ? FA_READ : FA_WRITE) | FA_OPEN_ALWAYS)) != FR_OK)
             sio_mode[port] = SIO_UNATTACHED;
-            return;
-        }
     }
 }
 
@@ -110,10 +106,8 @@ uint8_t sio_read(uint8_t port)
         return 0;
     }
     if (sio_readmode[port] == SIO_FILE) {
-        if ((fr = f_read(&sio_readfile[port], &data, 1, &br)) != FR_OK) {
-            printf_P(PSTR("read error: %S\n"), strlookup(fr_text, fr));
+        if ((fr = file_read(&sio_readfile[port], &data, 1, &br)) != FR_OK)
             return 0;
-        }
         if (br == 0)
             return SIO_EOF;
         return data;
@@ -143,10 +137,8 @@ void sio_write(uint8_t port, uint8_t data)
         return;
     }
     if (sio_writemode[port] == SIO_FILE) {
-        if ((fr = f_write(&sio_writefile[port], &data, 1, &bw)) != FR_OK) {
-            printf_P(PSTR("write error: %S\n"), strlookup(fr_text, fr));
+        if ((fr = file_write(&sio_writefile[port], &data, 1, &bw)) != FR_OK)
             return;
-        }
     } else if (sio_writemode[port] != SIO_UNATTACHED) {
         uart_putc(sio_writemode[port], data);
     }

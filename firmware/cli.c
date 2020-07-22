@@ -56,6 +56,7 @@
 #ifdef SST_FLASH
 #include "flash.h"
 #endif
+#include "ffwrap.h"
 
 /**
  * SD card filesystem
@@ -84,16 +85,10 @@ void cli_loadhex(int argc, char *argv[])
         result = load_ihex(stdin);
     } else {
         printf_P(PSTR("loading from %s\n"), argv[1]);
-        if ((fr = f_open(&fil, argv[1], FA_READ)) == FR_OK) {
-            fdev_setup_stream(&file, fatfs_putchar, fatfs_getchar, _FDEV_SETUP_RW);
-            fdev_set_udata(&file, &fil);
-            result = load_ihex(&file);
-            if ((fr = f_close(&fil)) != FR_OK)
-                printf_P(PSTR("error closing file: %S\n"), strlookup(fr_text, fr));
-        } else {
-            printf_P(PSTR("error opening file: %S\n"), strlookup(fr_text, fr));
+        if ((fr = file_open(&fil, &file, argv[1], FA_READ)) != FR_OK)
             return;
-        }        
+        result = load_ihex(&file);
+        file_close(&fil);
     }
     printf_P(PSTR("loaded %d bytes total from %04x-%04x"), result.total, result.min, result.max);
     if (result.errors > 0)
@@ -116,16 +111,11 @@ void cli_savehex(int argc, char *argv[])
     uint32_t start = strtoul(argv[1], NULL, 16) & 0xfffff;
     uint32_t end = strtoul(argv[2], NULL, 16) & 0xfffff;
     if (argc == 4) {
-        if ((fr = f_open(&fil, argv[3], FA_WRITE | FA_CREATE_ALWAYS)) == FR_OK) {
-            fdev_setup_stream(&file, fatfs_putchar, fatfs_getchar, _FDEV_SETUP_RW);
-            fdev_set_udata(&file, &fil);
-            if (save_ihex(start, end, &file) == EOF)
-                printf_P(PSTR("error writing file"));
-            if ((fr = f_close(&fil)) != FR_OK)
-                printf_P(PSTR("error closing file: %S\n"), strlookup(fr_text, fr));
-        } else {
-            printf_P(PSTR("error opening file: %S\n"), strlookup(fr_text, fr));
-        }        
+        if ((fr = file_open(&fil, &file, argv[3], FA_WRITE | FA_CREATE_ALWAYS)) != FR_OK)
+            return;
+        if (save_ihex(start, end, &file) == EOF)
+            printf_P(PSTR("error writing file"));
+        file_close(&fil);
     } else {
         if (save_ihex(start, end, stdout) == EOF)
             printf_P(PSTR("error writing file"));
@@ -145,23 +135,19 @@ uint32_t loadbin(char *filename, uint8_t dest, int32_t start, uint32_t offset, u
     uint16_t load = start;
     if (len == 0)
         len = 0x100000;
-    if ((fr = f_open(&fil, filename, FA_READ)) != FR_OK) {
-        printf_P(PSTR("error opening file: %S\n"), strlookup(fr_text, fr));
+    if ((fr = file_open(&fil, NULL, filename, FA_READ)) != FR_OK)
         return -1;
-    }
-    if ((fr = f_lseek(&fil, offset)) != FR_OK) {
-        printf_P(PSTR("seek error: %S\n"), strlookup(fr_text, fr));
-    } else {
+    if ((fr = file_seek(&fil, offset)) == FR_OK) {
         if (start < 0) {
             // if starting address is not specified, get it from
             // the first two bytes of file a la C64 PRG files
-            if (fr = f_read(&fil, &load, 2, &br)) {
-                printf_P(PSTR("read error: %S\n"), strlookup(fr_text, fr));
-                goto close;
+            if (fr = file_read(&fil, &load, 2, &br) != FR_OK) {
+                file_close(&fil);
+                return 0;
             }
             start = load;
         }
-        while ((fr = f_read(&fil, buf, sizeof buf, &br)) == FR_OK) {
+        while ((fr = file_read(&fil, buf, sizeof buf, &br)) == FR_OK) {
             if (br > len)
                 br = len;
             if (dest == MEM) {
@@ -182,12 +168,8 @@ uint32_t loadbin(char *filename, uint8_t dest, int32_t start, uint32_t offset, u
             start += br;
             len -= br;
         }
-        if (fr != FR_OK)
-            printf_P(PSTR("read error: %S\n"), strlookup(fr_text, fr));
     }
-close:
-    if ((fr = f_close(&fil)) != FR_OK)
-        printf_P(PSTR("error closing file: %S\n"), strlookup(fr_text, fr));
+    file_close(&fil);
     return load;
 }
 
@@ -255,21 +237,16 @@ void cli_savebin(int argc, char *argv[])
     }
     uint32_t start = strtoul(argv[1], NULL, 16) & 0xfffff;
     uint32_t end = strtoul(argv[2], NULL, 16) & 0xfffff;
-    if ((fr = f_open(&fil, argv[3], FA_WRITE | FA_CREATE_ALWAYS)) == FR_OK) {
+    if ((fr = file_open(&fil, NULL, argv[3], FA_WRITE | FA_CREATE_ALWAYS)) == FR_OK) {
         while (start <= end) {
             if (end - start + 1 < len)
                 len = end - start + 1;
             mem_read(start, buf, len);
-            if ((fr = f_write(&fil, buf, len, &bw)) != FR_OK) {
-                printf_P(PSTR("write error: %S\n"), strlookup(fr_text, fr));
+            if ((fr = file_write(&fil, buf, len, &bw)) != FR_OK)
                 break;
-            }
             start += len;
         }
-        if ((fr = f_close(&fil)) != FR_OK)
-            printf_P(PSTR("error closing file: %S\n"), strlookup(fr_text, fr));
-    } else {
-        printf_P(PSTR("error opening file: %S\n"), strlookup(fr_text, fr));
+        file_close(&fil);
     }        
 }
 
@@ -286,14 +263,10 @@ void cli_xmrx(int argc, char *argv[])
         printf_P(PSTR("usage: xmrx <file>\n"));
         return;
     }
-    char *filename =  argv[1];
-    if ((fr = f_open(&fil, filename, FA_WRITE | FA_CREATE_ALWAYS)) == FR_OK) {
+    if ((fr = file_open(&fil, NULL, argv[1], FA_WRITE | FA_CREATE_ALWAYS)) == FR_OK) {
         printf_P(PSTR("waiting for transfer to begin; press ^X twice to cancel\n"));
         xm_receive(&fil);
-        if ((fr = f_close(&fil)) != FR_OK)
-            printf_P(PSTR("error closing file: %S\n"), strlookup(fr_text, fr));
-    } else {
-        printf_P(PSTR("error opening file: %S\n"), strlookup(fr_text, fr));
+        file_close(&fil);
     }        
 }
 
@@ -310,16 +283,11 @@ void cli_xmtx(int argc, char *argv[])
         printf_P(PSTR("usage: %s <file>\n"), argv[0]);
         return;
     }
-    char *filename = argv[1];
-    if ((fr = f_open(&fil, filename, FA_READ)) != FR_OK) {
-        printf_P(PSTR("error opening file: %S\n"), strlookup(fr_text, fr));
-        return;
-    } else {
+    if ((fr = file_open(&fil, NULL, argv[1], FA_READ)) == FR_OK) {
         printf_P(PSTR("beginning transmission; press ^X twice to cancel\n"));
         xm_transmit(&fil);
+        file_close(&fil);
     }
-    if ((fr = f_close(&fil)) != FR_OK)
-        printf_P(PSTR("error closing file: %S\n"), strlookup(fr_text, fr));
 }
 
 /**
@@ -632,7 +600,7 @@ void cli_dir(int argc, char *argv[])
         glob = NULL;
     } else {
         dirname = argv[1];
-        glob = splitdir(dirname);
+        glob = file_splitpath(dirname);
     }
 
     if (glob == NULL) {
@@ -682,110 +650,39 @@ void cli_dir(int argc, char *argv[])
     f_closedir(&dir);
 }
 
-/** 
- * Erase a file on the SD Card
- */
-void cli_del(int argc, char *argv[])
-{
- 	FRESULT fr;
-    DIR dir;
-    FILINFO fno;
-
-    if (argc < 2) {
-        printf_P(PSTR("usage: %s <filename>...\n"), argv[0]);
-        return;
-    }
-
-    for (uint8_t i = 1; i < argc; i++) {
-        if (fr = f_findfirst(&dir, &fno, ".", argv[i]))
-            printf_P(PSTR("error deleting %s: %S\n"), argv[i], strlookup(fr_text, fr));
-        while (!fr && fno.fname[0] != 0) {
-            if (fr = f_unlink(fno.fname))
-                printf_P(PSTR("error deleting %s: %S\n"), fno.fname, strlookup(fr_text, fr));
-            if (fr = f_findnext(&dir, &fno))
-                printf_P(PSTR("error deleting %s: %S\n"), argv[i], strlookup(fr_text, fr));
-        }
-        if (fr = f_closedir(&dir))
-            printf_P(PSTR("error closing directory: %S\n"), strlookup(fr_text, fr));
-    }
-}
 
 void cli_copy(int argc, char *argv[])
 {
- 	FRESULT fr;
-    DIR dir;
-    FILINFO fno;
-    char dest[256];
-    FRESULT (*f_operation)(const TCHAR* path_old, const TCHAR* path_new) = NULL;
-
     if (argc < 3) {
         printf_P(PSTR("usage: %s <src>... <dest>\n"), argv[0]);
         return;
     }
-
-    if (!strcmp_P(argv[0], PSTR("copy")) || !strcmp_P(argv[0], PSTR("cp"))) {
-        f_operation = f_copy;
-    } else {
-        f_operation = f_rename;
-    }
-
-    if (fr = f_stat(argv[argc-1], &fno)) {
-        if (fr == FR_NO_FILE) {
-            if (fr = f_operation(argv[1], argv[2]))
-                    printf_P(PSTR("cannot %s '%s': %S\n"), argv[0], argv[1], strlookup(fr_text, fr));        
-        } else {
-            printf_P(PSTR("cannot stat '%s': %S\n"), argv[argc-1], strlookup(fr_text, fr));
-        }
-    } else if (fno.fattrib & AM_DIR) {
-        for (uint8_t i = 1; i < argc-1; i++) {
-            if (fr = f_findfirst(&dir, &fno, ".", argv[i]))
-                printf_P(PSTR("cannot find '%s': %S\n"), argv[0], argv[i], strlookup(fr_text, fr));
-            while (!fr && fno.fname[0] != 0) {
-                strcpy(dest, argv[argc-1]);
-                strcat_P(dest, PSTR("/"));
-                strcat(dest, fno.fname);
-                if (fr = f_operation(fno.fname, dest))
-                    printf_P(PSTR("cannot %s '%s': %S\n"), argv[0], fno.fname, strlookup(fr_text, fr));
-                if (fr = f_findnext(&dir, &fno))
-                    printf_P(PSTR("cannot %s '%s': %S\n"), argv[0], argv[i], strlookup(fr_text, fr));
-            }
-            if (fr = f_closedir(&dir))
-                printf_P(PSTR("cannot close directory: %S\n"), strlookup(fr_text, fr));
-        }
-    } else {
-        printf_P(PSTR("cannot %s '%s': '%s' already exists\n"), argv[0], argv[1], argv[argc-1]);
-    }
+    file_iterate(file_copy, argc-2, &argv[1], argv[argc-1]);
 }
 
-/**
- * Verify specified number of bytes from external memory against a buffer
- */
-int verify_mem(uint16_t start, uint16_t end, uint8_t *src, uint8_t log)
+void cli_ren(int argc, char *argv[])
 {
-    uint8_t buf[256];
-    int errors = 0;
-    uint16_t j = 0, buflen = 256;
-    uint32_t i = start;
-
-    while (i <= end) {
-        if (end - i + 1 < buflen)
-            buflen = end - i + 1;
-        mem_read(start, buf, buflen);
-        for (j = 0; j < buflen; i++, j++) {
-            if (buf[j] != src[i]) {
-                if (log)
-                    printf_P(PSTR("%04x: expected %02x but read %02x\n"), start+i, src[i], buf[j]);
-                errors++;
-            }
-        }
+    if (argc < 3) {
+        printf_P(PSTR("usage: %s <src>... <dest>\n"), argv[0]);
+        return;
     }
-    return errors;
+    file_iterate(file_rename, argc-2, &argv[1], argv[argc-1]);
+}
+
+void cli_del(int argc, char *argv[])
+{
+    if (argc < 2) {
+        printf_P(PSTR("usage: %s <file>...\n"), argv[0]);
+        return;
+    }
+    file_iterate(file_delete, argc-1, &argv[1], NULL);
 }
 
 /**
  * Fill memory with a specified byte for a specified range
  */
-void cli_fill(int argc, char*argv[]) {
+void cli_fill(int argc, char *argv[])
+{
     if (argc != 4) {
         printf_P(PSTR("usage: fill <start> <end> <value>\n"));
         return;
@@ -1189,6 +1086,7 @@ void cli_ascii(int argc, char *argv[])
 /**
  * Run a benchmark
  */
+#ifdef BENCHMARK
 void cli_bench(int argc, char *argv[])
 {
     uint32_t count = 1;
@@ -1296,6 +1194,7 @@ void cli_bench(int argc, char *argv[])
         uart_flush();
     }
 }
+#endif
 
 void cli_dispatch(char *buf);
 
@@ -1313,19 +1212,14 @@ void cli_exec(char *filename)
     FILE file;
     FRESULT fr;
     char buf[MAXBUF];
-    if ((fr = f_open(&fil, filename, FA_READ)) == FR_OK) {
-        fdev_setup_stream(&file, fatfs_putchar, fatfs_getchar, _FDEV_SETUP_RW);
-        fdev_set_udata(&file, &fil);
+    if (strcmp_P(filename, PSTR(AUTOEXEC)) == 0 && f_stat(filename, NULL) == FR_NO_FILE)
+        return;
+    if ((fr = file_open(&fil, &file, filename, FA_READ)) == FR_OK) {
         while (fgets(buf, sizeof buf - 1, &file) != NULL && strlen(buf) != 0) {
             printf_P(PSTR("%s>%s"), filename, buf);
             cli_dispatch(buf);
         }
-        if ((fr = f_close(&fil)) != FR_OK)
-            printf_P(PSTR("error closing file: %S\n"), strlookup(fr_text, fr));
-    } else {
-        // don't show a file not found error for autoexec.bat
-        if (fr != FR_NO_FILE || strcmp_P(filename, PSTR(AUTOEXEC)) != 0)
-            printf_P(PSTR("error opening file: %S\n"), strlookup(fr_text, fr));
+        file_close(&fil);
     }
 }
 
@@ -1354,7 +1248,9 @@ const char cli_cmd_names[] PROGMEM =
 #endif
     "baud\0"
     "bdosdbg\0"
+#ifdef BENCHMARK
     "bench\0"
+#endif
     "boot\0"
     "bus\0"
     "break\0"
@@ -1434,7 +1330,9 @@ const char cli_cmd_help[] PROGMEM =
 #endif
     "configure UART baud rate\0"                    // baud
     "\0"                                            // bdosdbg
+#ifdef BENCHMARK
     "\0"                                            // bench
+#endif
     "boot from specified disk image\0"              // boot
     "display low-level bus status\0"                // bus
     "set breakpoints\0"                             // break
@@ -1516,7 +1414,9 @@ void * const cli_cmd_functions[] PROGMEM = {
 #endif
     &cli_baud,
     &cli_bdosdbg,
+#ifdef BENCHMARK
     &cli_bench,
+#endif
     &cli_boot,
     &cli_bus,
     &cli_breakwatch,
@@ -1558,12 +1458,12 @@ void * const cli_cmd_functions[] PROGMEM = {
     &cli_mkdir,     // md
     &cli_mkdir,
     &cli_mount,
-    &cli_copy,       // move
-    &cli_copy,       // mv
+    &cli_ren,        // move
+    &cli_ren,        // mv
     &cli_out,
     &cli_poke,
     &cli_del,       // rd
-    &cli_copy,
+    &cli_ren,
     &cli_del,       // rm
     &cli_del,       // rmdir
     &cli_run,
