@@ -233,12 +233,18 @@ uint8_t operand(uint8_t op, int8_t offset, uint8_t (*input)(), char *output)
     if (paren)
         *output++ = '(';
 
-    if (op == BYTE || op == BYTEI || op == WORD || op == WORDI) {
+    if (op == BYTE || op == BYTEI) {
         // Retrieve and output immediate operand if specified
+        uint8_t imm = input();
+        if (imm >= 0xa0)
+            *output++ = '0';
+        output += sprintf_P(output, PSTR("%02xh"), imm);
+    } else if (op == WORD || op == WORDI) {
         uint16_t imm = input();
-        if (op == WORD || op == WORDI)
-            imm |= input() << 8;
-        output += sprintf_P(output, PSTR("0%04xh"), imm);
+        imm |= input() << 8;
+        if (imm >= 0xa000)
+            *output++ = '0';
+        output += sprintf_P(output, PSTR("%04xh"), imm);
     } else if (op == REL) {
         // Output relative jump in signed decimal
         int8_t imm = input();
