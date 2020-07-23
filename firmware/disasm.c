@@ -35,311 +35,414 @@
  * in http://www.z80.info/decoding.htm.
  */
 
-/**
- * disassemble a single instruction
+/* z80ctrl (https://github.com/jblang/z80ctrl)
+ * Copyright 2018 J.B. Langston
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a 
+ * copy of this software and associated documentation files (the "Software"), 
+ * to deal in the Software without restriction, including without limitation 
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense, 
+ * and/or sell copies of the Software, and to permit persons to whom the 
+ * Software is furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
+ * DEALINGS IN THE SOFTWARE.
  */
+
+#include <stdint.h>
+#include <stdio.h>
+#include <avr/pgmspace.h>
+
+/*
+ Tokens for each assembly mnemonic and operand are defined as follows:
+
+ - Tokens between 0 and 077 (octal) are one character literals
+ - Tokens between 0100 and 0177 are two character literals
+ - Tokens between 0200 and 0277 are three character literals
+ - Tokens between 0300 and 0367 are four character literals
+ - Tokens between 0370 and 0377 are special non-literal values
+
+ Thus the top 2 bits encode the literal's length and the bottom 6 bits
+ encode the index of the literal within its respective length class.
+
+ Literals are grouped by length so that all literals of the same length can
+ be packed into a single PROGMEM string and the position of a literal within
+ the string can be calculated by multiplying the index times the length.
+
+ If the literals weren't grouped by length, they would each have to be
+ stored in a separate PROGMEM string, which is verbose and ugly, and wastes
+ an extra byte per literal for the terminating null character.
+
+ The `literal` function is provided to copy the literal string associated 
+ with the specified token into a buffer.
+*/
+
+// constant starting values for different classes of tokens
+enum {LIT1 = 0, LIT2 = 0100, LIT3 = 0200, LIT4 = 0300, NONLIT = 0370};
+
+// 1-character literals
+enum {
+    // numbers
+    N0, N1, N2, N3, N4, N5, N6, N7,
+    // registers
+    B, C, D, E, H, L, A, I, R,
+    // condition codes
+    Z, P, M, 
+};
+
+const char lit1[] PROGMEM = 
+    "01234567"
+    "bcdehlair"
+    "zpm";
+
+// 2-character literals
+enum {
+    // instructions
+    CP = LIT2, DI, EI, EX, IM, IN, JP, JR, LD, OR, RL, RR, 
+    // registers
+    BC, DE, HL, NSHL, SP_, AF, IX, IY, IXI, IYI,
+    // condition codes
+    NZ, NC, PO, PE
+};
+
+const char lit2[] PROGMEM = 
+    "cp" "di" "ei" "ex" "im" "in" "jp" "jr" "ld" "or" "rl" "rr"
+    "bc" "de" "hl" "hl" "sp" "af" "ix" "iy" "ix" "iy"
+    "nz" "nc" "po" "pe";
+
+// 3-character literals
+enum {
+    // instructions
+    ADC_ = LIT3, ADD, AND, BIT, CCF, CPD, CPI, CPL, 
+    DAA, DEC, EXX, INC, IND, INI, LDD, LDI, 
+    NEG, NOP, OUT, POP, RES, RET, RLA, RLC,
+    RLD, RRA, RRC, RRD, RST, SBC, SCF, SET, 
+    SLA, SRA, SRL, SLL, SUB, XOR, 
+    // registers
+    IXH, IXL, IYH, IYL, AFP, CI,
+    // reset addresses
+    H00, H08, H10, H18, H20, H28, H30, H38,
+    // Interrupt modes
+    N01
+};
+
+const char lit3[] PROGMEM = 
+    "adc" "add" "and" "bit" "ccf" "cpd" "cpi" "cpl"
+    "daa" "dec" "exx" "inc" "ind" "ini" "ldd" "ldi"
+    "neg" "nop" "out" "pop" "res" "ret" "rla" "rlc"
+    "rld" "rra" "rrc" "rrd" "rst" "sbc" "scf" "set"
+    "sla" "sra" "srl" "sll" "sub" "xor"
+    "ixh" "ixl" "iyh" "iyl" "af'" "(c)"
+    "00h" "08h" "10h" "18h" "20h" "28h" "30h" "38h"
+    "0/1";
+
+// 4-character literals
+enum {
+    // instructions
+    CALL = LIT4, CPDR, CPIR, DJNZ, HALT_, INDR, INIR, LDDR, LDIR,
+    OTDR, OTIR, OUTD, OUTI, PUSH, RETI, RETN, RLCA, RRCA, NOP8,
+    // registers
+    BCI, DEI, HLI, SPI
+};
+
+const char lit4[] PROGMEM = 
+    "call" "cpdr" "cpir" "djnz" "halt" "indr" "inir" "lddr" "ldir"
+    "otdr" "otir" "outd" "outi" "push" "reti" "retn" "rlca" "rrca" "nop8"
+    "(bc)" "(de)" "(hl)" "(sp)";
+
+// nonliteral tokens
+enum {
+    _ = NONLIT, REL, BYTE, BYTEI, WORD, WORDI
+};
+
+/*
+ Lookup table for registers and opcodes.  Instructions that are highly 
+ regular such as `aluop reg` and `ld reg, reg` are handled specially
+ to reduce the size of the lookup tables.  Some columns in the lookup
+ table are regular and could be encoded more compactly if special cased
+ but doing so would add more bytes of code than it would save in the
+ lookup tables.
+*/
+
+// Misc ops from 0x00 to 0x3F
+const uint8_t x0ops[] PROGMEM = {
+    NOP, _, _,          LD, BC, WORD,       LD, BCI, A,         INC, BC, _,         INC, B, _,          DEC, B, _,          LD, B, BYTE,        RLCA, _, _,
+    EX, AF, AFP,        ADD, HL, BC,        LD, A, BCI,         DEC, BC, _,         INC, C, _,          DEC, C, _,          LD, C, BYTE,        RRCA, _, _,
+    DJNZ, REL, _,       LD, DE, WORD,       LD, DEI, A,         INC, DE, _,         INC, D, _,          DEC, D, _,          LD, D, BYTE,        RLA, _, _,
+    JR, REL, _,         ADD, HL, DE,        LD, A, DEI,         DEC, DE, _,         INC, E, _,          DEC, E, _,          LD, E, BYTE,        RRA, _, _,
+    JR, NZ, REL,        LD, HL, WORD,       LD, WORDI, HL,      INC, HL, _,         INC, H, _,          DEC, H, _,          LD, H, BYTE,        DAA, _, _,
+    JR, Z, REL,         ADD, HL, HL,        LD, HL, WORDI,      DEC, HL, _,         INC, L, _,          DEC, L, _,          LD, L, BYTE,        CPL, _, _,
+    JR, NC, REL,        LD, SP_, WORD,      LD, WORDI, A,       INC, SP_, _,        INC, HLI, _,        DEC, HLI, _,        LD, HLI, BYTE,      SCF, _, _,
+    JR, C, REL,         ADD, HL, SP_,       LD, A, WORDI,       DEC, SP_, _,        INC, A, _,          DEC, A, _,          LD, A, BYTE,        CCF, _, _
+
+};
+
+// Misc ops from 0xC0 to 0xFF
+const uint8_t x3ops[] PROGMEM = {
+    RET, NZ, _,         POP, BC, _,         JP, NZ, WORD,       JP, WORD, _,        CALL, NZ, WORD,     PUSH, BC, _,        ADD, A, BYTE,       RST, H00, _,
+    RET, Z, _,          RET, _, _,          JP, Z, WORD,        _, _, _,            CALL, Z, WORD,      CALL, WORD, _,      ADC_, A, BYTE,      RST, H08, _,
+    RET, NC, _,         POP, DE, _,         JP, NC, WORD,       OUT, BYTEI, A,      CALL, NC, WORD,     PUSH, DE, _,        SUB, BYTE, _,       RST, H10, _,
+    RET, C, _,          EXX, _, _,          JP, C, WORD,        IN, A, BYTEI,       CALL, C, WORD,      _, _, _,            SBC, A, BYTE,       RST, H18, _,
+    RET, PO, _,         POP, HL, _,         JP, PO, WORD,       EX, SPI, HL,        CALL, PO, WORD,     PUSH, HL, _,        AND, BYTE, _,       RST, H20, _,
+    RET, PE, _,         JP, HLI, _,         JP, PE, WORD,       EX, DE, NSHL,       CALL, PE, WORD,     _, _, _,            XOR, BYTE, _,       RST, H28, _,
+    RET, P, _,          POP, AF, _,         JP, P, WORD,        DI, _, _,           CALL, P, WORD,      PUSH, AF, _,        OR, BYTE, _,        RST, H30, _,
+    RET, M, _,          LD, SP_, HL,        JP, M, WORD,        EI, _, _,           CALL, M, WORD,      _, _, _,            CP, BYTE, _,        RST, H38, _
+};
+
+// Misc ED-prefixed ops from 0x40 to 0x7F
+const uint8_t edx1ops[] PROGMEM = {
+    IN, B, CI,          OUT, CI, B,         SBC, HL, BC,        LD, WORDI, BC,      NEG, _, _,          RETN, _, _,         IM, N0, _,         LD, I, A, 
+    IN, C, CI,          OUT, CI, C,         ADC_, HL, BC,       LD, BC, WORDI,      NEG, _, _,          RETI, _, _,         IM, N01, _,        LD, R, A,
+    IN, D, CI,          OUT, CI, D,         SBC, HL, DE,        LD, WORDI, DE,      NEG, _, _,          RETN, _, _,         IM, N1, _,         LD, A, I, 
+    IN, E, CI,          OUT, CI, E,         ADC_, HL, DE,       LD, DE, WORDI,      NEG, _, _,          RETN, _, _,         IM, N2, _,         LD, A, R, 
+    IN, H, CI,          OUT, CI, H,         SBC, HL, HL,        LD, WORDI, HL,      NEG, _, _,          RETN, _, _,         IM, N0, _,         RRD, _, _, 
+    IN, L, CI,          OUT, CI, L,         ADC_, HL, HL,       LD, HL, WORDI,      NEG, _, _,          RETN, _, _,         IM, N01, _,        RLD, _, _, 
+    IN, _, CI,          OUT, CI, 0,         SBC, HL, SP_,       LD, WORDI, SP_,     NEG, _, _,          RETN, _, _,         IM, N1, _,         NOP, _, _, 
+    IN, A, CI,          OUT, CI, A,         ADC_, HL, SP_,      LD, SP_, WORDI,     NEG, _, _,          RETN, _, _,         IM, N2, _,         NOP, _, _
+};
+
+// Registers
+const uint8_t reg[] PROGMEM = {B, C, D, E, H, L, HLI, A};
+
+// ALU operations
+const uint8_t aluops[] PROGMEM = {ADD, ADC_, SUB, SBC, AND, XOR, OR, CP};
+
+// Extended rotation operations
+const uint8_t rotops[] PROGMEM = {RLC, RRC, RL, RR, SLA, SRA, SLL, SRL};
+
+// Bit operations
+const uint8_t bitops[] PROGMEM = {_, BIT, RES, SET};
+
+// Block operations
+const uint8_t blockops[] PROGMEM = {
+    LDI, CPI, INI, OUTI, 
+    LDD, CPD, IND, OUTD, 
+    LDIR, CPIR, INIR, OTIR, 
+    LDDR, CPDR, INDR, OTDR, 
+};
+
+// Decode token and copy the corresponding characters into output buffer
+uint8_t literal(uint8_t token, char *output)
+{
+    if (token >= NONLIT)
+        return 0;
+    const char *literals[] = {lit1, lit2, lit3, lit4};
+    uint8_t len = token >> 6;
+    const char *input = literals[len] + (token & 077) * ++len;
+    uint8_t i = len;
+    while (i--)
+        *output++ = pgm_read_byte(input++);
+    return len;
+}
+
+// Output an operand in the correct format
+uint8_t operand(uint8_t op, int8_t offset, uint8_t (*input)(), char *output)
+{
+    char *start = output;
+
+    // Return if no operand
+    if (op == _) return 0;
+    
+    // Skip space
+    *output++ = ' ';
+
+    // Wrap indirect operands in parentheses
+    uint8_t paren = (op == WORDI || op == BYTEI || op == IXI || op == IYI);
+    if (paren)
+        *output++ = '(';
+
+    if (op == BYTE || op == BYTEI || op == WORD || op == WORDI) {
+        // Retrieve and output immediate operand if specified
+        uint16_t imm = input();
+        if (op == WORD || op == WORDI)
+            imm |= input() << 8;
+        output += sprintf_P(output, PSTR("0%04xh"), imm);
+    } else if (op == REL) {
+        // Output relative jump in signed decimal
+        int8_t imm = input();
+        output += sprintf_P(output, PSTR("%d"), imm);
+    } else if (op == IXI || op == IYI) {
+        // Indirect IX or IY with offset
+        output += literal(op, output);
+        if (offset >= 0) {
+            *output++ = '+';
+            output += sprintf_P(output, PSTR("%d"), offset);
+        }
+    } else {
+        // Literal
+        output += literal(op, output);
+    }
+
+    // Closing parentheses
+    if (paren)
+        *output++ = ')';
+
+    // Return length
+    return output - start;
+}
+
+// Substitute IX or IY for HL as appropriate
+const uint8_t regsub(uint8_t reg, uint8_t submode)
+{
+    if (submode == IX) {
+        if (reg == HL) 
+            reg = IX;
+        else if (reg == HLI) 
+            reg = IXI;
+        else if (reg == H) 
+            reg = IXH;
+        else if (reg == L) 
+            reg = IXL;
+    } else if (submode == IY) {
+        if (reg == HL) 
+            reg = IY;
+        else if (reg == HLI) 
+            reg = IYI;
+        else if (reg == H) 
+            reg = IYH;
+        else if (reg == L) 
+            reg = IYL;
+    }
+    return reg;
+}
+
+#define LOOKUP(table, index) pgm_read_byte(&table[index])
+
+// Disassemble an instruction
 uint8_t disasm(uint8_t (*input)(), char *output)
 {
-    enum {B, C, D, E, H, L, HLI, A, IXH, IXL, IYH, IYL};
-    enum {BC, DE, HL, _SP, AF, IX, IY};
-
+    // Consume any number of 0xDD and 0xFD prefix bytes and set 
+    // IX/IY substituion mode according to last byte encountered
     uint8_t opcode = 0;
-    uint8_t prefix = 0;
-    uint8_t displ = 0;
-    uint16_t operand = 0;
-    uint8_t im = HL;
-
-    // Consume any number of 0xDD and 0xFD prefix bytes
-    // and set index mode according to last one encountered.
+    uint8_t submode = HL;
     for (;;) {
-            opcode = input();
-            if (opcode == 0xDD)
-                im = IX;
-            else if (opcode == 0xFD)
-                im = IY;
-            else
-                break;
-    }
-
-    if (opcode == 0xED) {
-            prefix = 0xED;
-            im = HL;            // Index mode for 0xED prefix is always hl
-            opcode = input();
-    } if (opcode == 0xCB) {
-        prefix = 0xCB;
-        if (im != HL)
-                displ = input();
         opcode = input();
-    } 
-
-    // bit slice the opcode: xxyyyzzz / xxppqzzz
-    uint8_t x = (opcode & 0300) >> 6;       // x = opcode[7:6]
-    uint8_t y = (opcode & 0070) >> 3;       // y = opcode[5:3]
-    uint8_t z = (opcode & 0007);            // z = opcode[2:0]
-    uint8_t p = (opcode & 0060) >> 4;       // p = opcode[5:4]
-    uint8_t q = (opcode & 0010) >> 3;       // q = opcode[3]
-    uint8_t zy = ((z & 3) << 2) | (y & 3);  // zy = {opcode[1:0], opcode[4:3]}
-
-    // choose registers based on index mode and y/z/p opcode fields
-    const char *registers[] = {"b", "c", "d", "e", "h", "l", "(hl)", "a", "ixh", "ixl", "iyh", "iyl"};
-
-    const char *register_pairs[] = {"bc", "de", "hl", "sp", "af", "ix", "iy"};
-
-    const char *rp, *hli, *ry, *ryi, *rz, *rzi;
-    rp = register_pairs[p == HL ? im : p];
-    ry = registers[y];
-    rz = registers[z];
-    if (im == IX) {
-        hli = register_pairs[IX];
-        ryi = registers[y == H ? IXH : y == L ? IXL : y];
-        rzi = registers[z == H ? IXH : z == L ? IXL : z];
-    } else if (im == IY) {
-        hli = register_pairs[IY];
-        ryi = registers[y == H ? IYH : y == L ? IYL : y];
-        rzi = registers[z == H ? IYH : z == L ? IYL : z];
-    } else {
-        hli = register_pairs[HL];
-        ryi = ry;
-        rzi = rz;
+        if (opcode == 0xDD)
+            submode = IX;
+        else if (opcode == 0xFD)
+            submode = IY;
+        else
+            break;
     }
 
-    const char *conditions[] = {"nz", "z", "nc", "c", "po", "pe", "p", "m"};
-    const char *alu_ops[] = {"add a,", "adc a,", "sub ", "sbc a,", "and ", "xor ", "or ", "cp "};
+    // Handle 0xED/0xCB prefix
+    uint8_t prefix = 0;
+    int8_t offset = -1;
+    if (opcode == 0xED) {
+        prefix = 0xED;
+        submode = HL;            // Address register for 0xED prefix is always HL
+        opcode = input();
+    } else if (opcode == 0xCB) {
+        prefix = 0xCB;
+        // 0xDDCB and 0xFDCB instructions have a displacement byte before the opcode
+        if (submode != HL)
+            offset = input();
+        opcode = input();
+    }
 
-    // Big ugly nested if tree to decode opcode
+    // Slice the opcode into xxyyyzzz (see http://www.z80.info/decoding.htm)
+    uint8_t x = opcode >> 6;                // x = opcode[7:6]
+    uint8_t y = (opcode >> 3) & 7;          // y = opcode[5:3]
+    uint8_t z = opcode & 7;                 // z = opcode[2:0]
+    uint8_t rz = LOOKUP(reg, z);
+
+    // Initialize instruction and operands to blank
+    uint8_t instr = _;
+    uint8_t op1 = _;
+    uint8_t op2 = _;
+
+    // Decode opcode into instruction and operand tokens
     if (prefix == 0xCB) {
+        // CB-prefixed opcodes
         if (x == 0) {
-            // Roll/shift register or memory location
-            const char *rot_ops[] = {"rlc", "rrc", "rl", "rr", "sla", "sra", "sll", "srl"};
-            if (im == HL) {
-                sprintf_P(output, PSTR("%s %s"), rot_ops[y], rz);
-            } else {
-                sprintf_P(output, PSTR("%s (%s+%02xh)"), rot_ops[y], hli, displ);
-            }
+            // Rotate/shift ops
+            instr = LOOKUP(rotops, y);
+            op1 = rz;
         } else {
-            // Bit operations (test reset, set)
-            const char *bit_ops[] = {"bit", "res", "set"};
-            if (im == HL) {
-                sprintf_P(output, PSTR("%s %x,%s"), bit_ops[x-1], y, rz);
-            } else {
-                sprintf_P(output, PSTR("%s %x,(%s+%02xh)"), bit_ops[x-1], y, hli, displ);
-            }
+            // Bit ops
+            instr = LOOKUP(bitops, x);
+            op1 = y;
+            op2 = rz;
         }
     } else if (prefix == 0xED) {
+        // ED-prefixed opcodes
         if (x == 1) {
-            if (z == 0) {
-                // Input from port
-                sprintf_P(output, (y == 6) ? PSTR("in (c)") : PSTR("in %s,(c)"), ry);
-            } else if (z == 1) {
-                // Output to port
-                sprintf_P(output, (y == 6) ? PSTR("out (c)") : PSTR("out (c),%s"), ry);
-            } else if (z == 2) {
-                // 16-bit add/subtract with carry
-                sprintf_P(output, (q == 0) ? PSTR("sbc hl,%s") : PSTR("adc hl,%s"), rp);
-            } else if (z == 3) {
-                // Retrieve/store register pair from/to immediate address
-                operand = input() | (input() << 8);
-                if (q == 0) {
-                    sprintf_P(output, PSTR("ld (%04xh),%s"), operand, rp);
-                } else {
-                    sprintf_P(output, PSTR("ld %s,(%04xh)"), rp, operand);
-                }
-            } else if (z == 4) {
-                // Negate accumulator
-                strcpy_P(output, PSTR("neg"));
-            } else if (z == 5) {
-                // Return from interrupt
-                strcpy_P(output, (y == 1) ? PSTR("reti") : PSTR("retn"));
-            } else if (z == 6) {
-                // Set interrupt mode
-                const char *int_modes[] = {"0", "0", "1", "2"};
-                sprintf_P(output, PSTR("im %s"), int_modes[y&0x3]);
-            } else if (z == 7) {
-                // Assorted ops
-                const char *misc_ops[] = {
-                    "ld i,a", "ld r,a", "ld a,i", "ld a,r", "rrd", "rld", "nop", "nop"
-                };
-                strcpy(output, misc_ops[y]);
-            }
+            // misc instructions
+            uint8_t opindex = (opcode - 0x40) * 3;
+            instr = LOOKUP(edx1ops, opindex);
+            op1 = LOOKUP(edx1ops, opindex + 1);
+            op2 = LOOKUP(edx1ops, opindex + 2);
         } else if (x == 2 && z <= 3 && y >= 4) {
             // block operations
-            const char *block_ops[] = {
-                "ldi", "ldd", "ldir", "lddr", 
-                "cpi", "cpd", "cpir", "cpdr", 
-                "ini", "ind", "inir", "indr", 
-                "outi", "outd", "otir", "otdr"
-            };
-            strcpy(output, block_ops[zy]);
+            instr = LOOKUP(blockops, z + (y - 4) * 4);
         } else {
-            strcpy_P(output, PSTR("?"));
+            // Undocumented 8 T-state nop
+            instr = NOP8;
         }
     } else {
         // un-prefixed opcodes
         if (x == 0) {
-            if (z == 0) {
-                // Relative jumps and assorted ops
-                if (y == 0) {
-                    strcpy_P(output, PSTR("nop"));
-                } else if (y == 1) {
-                    strcpy_P(output, PSTR("ex af,af'"));
-                } else {
-                    operand = input();
-                    if (y == 2) {
-                        sprintf_P(output, PSTR("djnz %d"), (int8_t)operand);
-                    } else if (y == 3) {
-                        sprintf_P(output, PSTR("jr %d"), (int8_t)operand);
-                    } else {
-                        sprintf_P(output, PSTR("jr %s,%d"), conditions[y-4], (int8_t)operand);
-                    }
-                }
-            } else if (z == 1) {
-                // 16-bit load immediate/add
-                if (q == 0) {
-                    operand = input() | (input() << 8);
-                    sprintf_P(output, PSTR("ld %s,%04xh"), rp, operand);
-                } else {
-                    sprintf_P(output, PSTR("add %s,%s"), hli, rp);
-                }
-            } else if (z == 2) {
-                // Indirect loading
-                if (y < 4) {
-                    const char *ld_ops[] = {"ld (bc),a", "ld a,(bc)", "ld (de),a", "ld a,(de)"};
-                    strcpy(output, ld_ops[y]);
-                } else {
-                    operand = input() | (input() << 8);
-                    if (p == 3) {
-                        hli = "a";
-                    }
-                    if (q == 0) {
-                        sprintf_P(output, PSTR("ld (0%04xh),%s"), operand, hli); 
-                    } else {
-                        sprintf_P(output, PSTR("ld %s,(0%04xh)"), hli, operand);
-                    }
-                }
-            } else if (z == 3) {
-                // 16-bit increment or decrement
-                sprintf_P(output, (q == 0) ? PSTR("inc %s") : PSTR("dec %s"), rp);
-            } else if (z == 4) {
-                // 8-bit increment
-                if (y == HLI && im != HL) {
-                    displ = input();
-                    sprintf_P(output, PSTR("inc (%s+%02xh)"), hli, displ);
-                } else {
-                    sprintf_P(output, PSTR("inc %s"), ry);
-                }
-            } else if (z == 5) {
-                // 8-bit decrement
-                if (y == HLI && im != HL) {
-                    displ = input();
-                    sprintf_P(output, PSTR("dec (%s+%02xh)"), hli, displ);
-                } else {
-                    sprintf_P(output, PSTR("dec %s"), ry);
-                }
-            } else if (z == 6) {
-                // 8-bit load immediate
-                if (y == HLI && im != HL) {
-                    displ = input();
-                    operand = input();
-                    sprintf_P(output, PSTR("ld (%s+%02xh),%02xh"), hli, displ, operand);
-                } else {
-                    operand = input();
-                    sprintf_P(output, PSTR("ld %s,%02xh"), ry, operand);
-                }
-            } else if (z == 7) {
-                // Assorted operations on accumulator/flags
-                const char *af_ops[] = {"rlca", "rrca", "rla", "rra", "daa", "cpl", "scf", "ccf"};
-                strcpy(output, af_ops[y]);
-            }
+            // misc instructions
+            uint8_t opindex = opcode * 3;
+            instr = LOOKUP(x0ops, opindex);
+            op1 = LOOKUP(x0ops, opindex + 1);
+            op2 = LOOKUP(x0ops, opindex + 2);
         } else if (x == 1) {
-            if (z == HLI && y == HLI) {
-                // Exception: halt replaces ld (hl),(hl)
-                strcpy_P(output, PSTR("halt"));
-            } else if ((y == HLI || z == HLI) && im != HL) {
-                // 8-bit loading
-                displ = input();
-                if (y == HLI) {
-                    sprintf_P(output, PSTR("ld (%s+%02xh),%s"), hli, displ, rz);
-                } else {
-                    sprintf_P(output, PSTR("ld %s,(%s+%02xh)"), ry, hli, displ);
-                }
+            // ld reg, reg instructions
+            if (opcode == 0x76) {
+                instr = HALT_;
             } else {
-                sprintf_P(output, PSTR("ld %s,%s"), ry, rz);
+                instr = LD;
+                op1 = LOOKUP(reg, y);
+                op2 = rz;
             }
         } else if (x == 2) {
-            // ALU operation on accumulator and register/memory location
-            if (z == 6 && im != HL) {
-                displ = input();
-                sprintf_P(output, PSTR("%s(%s+%02xh)"), alu_ops[y], hli, displ);
-            } else {
-                sprintf_P(output, PSTR("%s%s"), alu_ops[y], rz);
-            }
+            // alu reg instructions
+            instr = LOOKUP(aluops, y);
+            if (y <= 3 && y != 2)
+                op1 = A;
+            op2 = rz;
         } else if (x == 3) {
-            if (z == 0) {
-                // Conditional return
-                sprintf_P(output, PSTR("ret %s"), conditions[y]);
-            } else if (z == 1) {
-                // pop & various ops
-                if (q == 0) {
-                    sprintf_P(output, PSTR("pop %s"), p < _SP ? rp : register_pairs[AF]);
-                } else if (p == 0) {
-                    strcpy_P(output, PSTR("ret"));
-                } else if (p == 1) {
-                    strcpy_P(output, PSTR("exx"));
-                } else if (p == 2) {
-                    sprintf_P(output, PSTR("jp (%s)"), hli);
-                } else if (p == 3) {
-                    sprintf_P(output, PSTR("ld sp,%s"), hli);
-                }
-            } else if (z == 2) {
-                // Conditional jump
-                operand = input() | (input() << 8);
-                sprintf_P(output, PSTR("jp %s,%04xh"), conditions[y], operand);
-            } else if (z == 3) {
-                // Assorted operations
-                if (y == 0) {
-                    operand = input() | (input() << 8);                                    
-                    sprintf_P(output, PSTR("jp %04xh"), operand);
-                } else if (y == 1) {
-                    strcpy_P(output, PSTR("?")); // CB prefix
-                } else if (y == 2) {
-                    operand = input();
-                    sprintf_P(output, PSTR("out (%02xh),a"), operand);
-                } else if (y == 3) {
-                    operand = input();
-                    sprintf_P(output, PSTR("in a,(%02xh)"), operand);
-                } else if (y == 4) {
-                    sprintf_P(output, PSTR("ex (sp),%s"), hli);
-                } else if (y == 5) {
-                    strcpy_P(output, PSTR("ex de,hl"));
-                } else if (y == 6) {
-                    strcpy_P(output, PSTR("di"));
-                } else if (y == 7) {
-                    strcpy_P(output, PSTR("ei"));
-                }
-            } else if (z == 4) {
-                // Conditional call
-                operand = input() | (input() << 8);
-                sprintf_P(output, PSTR("call %s,%04xh"), conditions[y], operand);
-            } else if (z == 5) {
-                // push & various ops
-                if (q == 0)
-                    sprintf_P(output, PSTR("push %s"), p < _SP ? rp : register_pairs[AF]);
-                else if (p == 0) {
-                    operand = input() | (input() << 8);
-                    sprintf_P(output, PSTR("call %04xh"), operand);
-                } 
-            } else if (z == 6) {
-                // ALU operation on accumulator and immediate operand
-                operand = input();
-                sprintf_P(output, PSTR("%s%02xh"), alu_ops[y], operand);
-            } else if (z == 7) {
-                // Restart
-                sprintf_P(output, PSTR("rst %02xh"), y*8);
-            }
+            // misc instructions
+            uint8_t opindex = (opcode - 0xC0) * 3;
+            instr = LOOKUP(x3ops, opindex);
+            op1 = LOOKUP(x3ops, opindex + 1);
+            op2 = LOOKUP(x3ops, opindex + 2);
         }
     }
 
-    //printf_P(PSTR("%s %02X %03o %04X\t"), register_pairs[im], prefix, opcode, operand);
+    // Handle IX/IY register substitution
+    if (prefix == 0 && submode != HL && instr != JP && (op1 == HLI || op2 == HLI))
+        offset = input();
+    if (op2 != HLI)
+        op1 = regsub(op1, submode);
+    if (op1 != IXI && op1 != IYI)
+        op2 = regsub(op2, submode);
+
+    // Handle undocumented load + bit/rotate instructions
+    if (prefix == 0xCB && submode != HL && x != 1 && z != 6) {
+        output += literal(LD, output);
+        *output++ = ' ';
+        output += literal(rz, output);
+        *output++ = ',';
+        *output++ = ' ';
+    }
+
+    // Output instruction mnemonic
+    output += literal(instr, output);
+    output += operand(op1, offset, input, output);
+    if (op1 != _ && op2 != _)
+        *output++ = ',';
+    output += operand(op2, offset, input, output);
+    *output = '\0';
 }
 
 static uint8_t disasm_index = 0;   /**< index of next byte within 256 byte buffer */
