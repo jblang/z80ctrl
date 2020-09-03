@@ -1257,18 +1257,6 @@ Connection ~ 9800 3100
 Connection ~ 9800 2800
 Connection ~ 8100 2800
 Connection ~ 8100 3100
-Wire Bus Line
-	5250 3500 5250 5050
-Wire Bus Line
-	6750 5050 6750 6550
-Wire Bus Line
-	3400 5050 3400 6350
-Wire Bus Line
-	4950 5850 4950 6850
-Wire Bus Line
-	5050 3700 5050 5050
-Wire Bus Line
-	5150 2000 5150 6850
 $Comp
 L power:PWR_FLAG #FLG0103
 U 1 1 5F5F3FE0
@@ -1283,4 +1271,56 @@ $EndComp
 Connection ~ 7950 5100
 Wire Wire Line
 	7950 5100 9850 5100
+Wire Wire Line
+	2250 1500 2500 1500
+Wire Wire Line
+	2250 1600 2500 1600
+Wire Wire Line
+	2250 1400 2500 1400
+Wire Wire Line
+	2250 1700 2500 1700
+Text Label 2500 1700 2    50   ~ 0
+~INT
+Text Label 2500 1400 2    50   ~ 0
+~NMI
+Text Label 2500 1500 2    50   ~ 0
+~WAIT
+Text Label 2500 1600 2    50   ~ 0
+~BUSRQ
+$Comp
+L Device:R_Network04 RN1
+U 1 1 5F602531
+P 2050 1500
+F 0 "RN1" V 2375 1500 50  0000 C CNN
+F 1 "10K" V 2284 1500 50  0000 C CNN
+F 2 "Resistor_THT:R_Array_SIP5" V 2325 1500 50  0001 C CNN
+F 3 "http://www.vishay.com/docs/31509/csc.pdf" H 2050 1500 50  0001 C CNN
+	1    2050 1500
+	0    -1   -1   0   
+$EndComp
+$Comp
+L power:VCC #PWR0117
+U 1 1 5F6920EC
+P 1750 1700
+F 0 "#PWR0117" H 1750 1550 50  0001 C CNN
+F 1 "VCC" H 1767 1873 50  0000 C CNN
+F 2 "" H 1750 1700 50  0001 C CNN
+F 3 "" H 1750 1700 50  0001 C CNN
+	1    1750 1700
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	1750 1700 1850 1700
+Wire Bus Line
+	5250 3500 5250 5050
+Wire Bus Line
+	6750 5050 6750 6550
+Wire Bus Line
+	3400 5050 3400 6350
+Wire Bus Line
+	4950 5850 4950 6850
+Wire Bus Line
+	5050 3700 5050 5050
+Wire Bus Line
+	5150 2000 5150 6850
 $EndSCHEMATC

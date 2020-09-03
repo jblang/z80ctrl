@@ -1257,6 +1257,60 @@ Connection ~ 9800 3100
 Connection ~ 9800 2800
 Connection ~ 8100 2800
 Connection ~ 8100 3100
+$Comp
+L power:PWR_FLAG #FLG0103
+U 1 1 5F5F3FE0
+P 7950 5100
+F 0 "#FLG0103" H 7950 5175 50  0001 C CNN
+F 1 "PWR_FLAG" H 7950 5273 50  0000 C CNN
+F 2 "" H 7950 5100 50  0001 C CNN
+F 3 "~" H 7950 5100 50  0001 C CNN
+	1    7950 5100
+	-1   0    0    1   
+$EndComp
+Connection ~ 7950 5100
+Wire Wire Line
+	7950 5100 9850 5100
+Wire Wire Line
+	7600 3700 7850 3700
+Wire Wire Line
+	7600 3800 7850 3800
+Wire Wire Line
+	7600 3600 7850 3600
+Wire Wire Line
+	7600 3900 7850 3900
+Text Label 7850 3900 2    50   ~ 0
+~INT
+Text Label 7850 3600 2    50   ~ 0
+~NMI
+Text Label 7850 3700 2    50   ~ 0
+~WAIT
+Text Label 7850 3800 2    50   ~ 0
+~BUSRQ
+$Comp
+L Device:R_Network04 RN?
+U 1 1 5F602531
+P 7400 3700
+F 0 "RN?" V 7725 3700 50  0000 C CNN
+F 1 "R_Network04" V 7634 3700 50  0000 C CNN
+F 2 "Resistor_THT:R_Array_SIP5" V 7675 3700 50  0001 C CNN
+F 3 "http://www.vishay.com/docs/31509/csc.pdf" H 7400 3700 50  0001 C CNN
+	1    7400 3700
+	0    -1   -1   0   
+$EndComp
+$Comp
+L power:VCC #PWR?
+U 1 1 5F6920EC
+P 7100 3900
+F 0 "#PWR?" H 7100 3750 50  0001 C CNN
+F 1 "VCC" H 7117 4073 50  0000 C CNN
+F 2 "" H 7100 3900 50  0001 C CNN
+F 3 "" H 7100 3900 50  0001 C CNN
+	1    7100 3900
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	7100 3900 7200 3900
 Wire Bus Line
 	5250 3500 5250 5050
 Wire Bus Line
@@ -1269,18 +1323,4 @@ Wire Bus Line
 	5050 3700 5050 5050
 Wire Bus Line
 	5150 2000 5150 6850
-$Comp
-L power:PWR_FLAG #FLG?
-U 1 1 5F5F3FE0
-P 7950 5100
-F 0 "#FLG?" H 7950 5175 50  0001 C CNN
-F 1 "PWR_FLAG" H 7950 5273 50  0000 C CNN
-F 2 "" H 7950 5100 50  0001 C CNN
-F 3 "~" H 7950 5100 50  0001 C CNN
-	1    7950 5100
-	-1   0    0    1   
-$EndComp
-Connection ~ 7950 5100
-Wire Wire Line
-	7950 5100 9850 5100
 $EndSCHEMATC
