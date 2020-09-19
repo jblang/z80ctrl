@@ -71,8 +71,7 @@ void z80_reset(uint32_t addr)
     RESET_HI;
     bus_request();
 #ifdef PAGE_BASE
-    for (uint8_t i = 0; i < 4; i++)
-        mem_page(i, (base_addr >> 14) + i);
+    mem_page_addr(0);
 #endif
 #ifdef TMS_BASE
     tms_config();

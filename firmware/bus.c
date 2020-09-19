@@ -264,41 +264,49 @@ uint8_t io_in(uint8_t addr)
     return value;
 }
 
-#ifdef PAGE_BASE
-#define PAGE_ENABLE (PAGE_BASE + 4)
-
+#ifdef WBW_BASE
+#define WBW_ENABLE (WBW_BASE + 4)
 uint8_t mem_pages[] = {0, 0, 0, 0};
-
-
-/**
- * Set the specified memory bank to the specified page
- */
-void mem_page(uint8_t bank, uint8_t page)
-{
-    bank &= 3;
-    page &= 0x3f;
-    uint8_t mreq = GET_MREQ;
-    uint8_t rd = GET_RD;
-    uint8_t dataddr = DATA_DDR;
-    io_out(PAGE_ENABLE, 1);
-    io_out(PAGE_BASE + bank, page);
-    if (!mreq)
-        MREQ_LO;
-    if (!rd)
-        RD_LO;
-    DATA_DDR = dataddr;
-    mem_pages[bank] = page;
-}
 
 /**
  * Bank in the page at the specified address
  */
 void mem_page_addr(uint32_t addr)
 {
+    uint8_t mreq = GET_MREQ;
+    uint8_t rd = GET_RD;
+    uint8_t dataddr = DATA_DDR;
+    io_out(WBW_ENABLE, 1);
     addr += base_addr;
-    uint8_t page = (addr >> 14) & 0x3f;
-    uint8_t bank = page & 3;
-    mem_page(bank, page);
+    uint8_t page = (addr >> 14) & 0x3c;
+    for (uint8_t i = 0; i < 4; i++) {
+        io_out(WBW_BASE + i, page + i);
+        mem_pages[i] = page + i;
+    }
+    if (!mreq)
+        MREQ_LO;
+    if (!rd)
+        RD_LO;
+    DATA_DDR = dataddr;
+}
+#endif
+
+#ifdef PAGE_BASE
+uint8_t mem_pages = 0;
+void mem_page_addr(uint32_t addr)
+{
+    uint8_t mreq = GET_MREQ;
+    uint8_t rd = GET_RD;
+    uint8_t dataddr = DATA_DDR;
+    addr += base_addr;
+    mem_pages = (addr >> 15) & 0x0e;
+    mem_pages |= (mem_pages + 1) << 4;
+    io_out(PAGE_BASE, mem_pages);
+    if (!mreq)
+        MREQ_LO;
+    if (!rd)
+        RD_LO;
+    DATA_DDR = dataddr;
 }
 #endif
 
