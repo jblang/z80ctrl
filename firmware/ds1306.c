@@ -21,12 +21,12 @@
  */
 
 /**
- * @file rtc.c DS1306+ RTC functions
+ * @file ds1306.c DS1306+ RTC functions
  */
 
 #include <time.h>
 
-#include "rtc.h"
+#include "ds1306.h"
 #include "spi.h"
 
 void rtc_begin()
@@ -43,7 +43,7 @@ void rtc_end()
     SPI_FAST;
 }
 
-void rtc_read(uint8_t start, uint8_t end, uint8_t values[])
+void rtc_read_burst(uint8_t start, uint8_t end, uint8_t values[])
 {
     rtc_begin();
     spi_exchange(start);
@@ -52,7 +52,7 @@ void rtc_read(uint8_t start, uint8_t end, uint8_t values[])
     rtc_end();
 }
 
-void rtc_write(uint8_t start, uint8_t end, uint8_t values[])
+void rtc_write_burst(uint8_t start, uint8_t end, uint8_t values[])
 {
     rtc_begin();
     spi_exchange(start | RTC_WRITE);
@@ -61,16 +61,16 @@ void rtc_write(uint8_t start, uint8_t end, uint8_t values[])
     rtc_end();
 }
 
-uint8_t rtc_read1(uint8_t reg)
+uint8_t rtc_read(uint8_t reg)
 {
     uint8_t value;
-    rtc_read(reg, reg, &value);
+    rtc_read_burst(reg, reg, &value);
     return value;
 }
 
-void rtc_write1(uint8_t reg, uint8_t value)
+void rtc_write(uint8_t reg, uint8_t value)
 {
-    rtc_write(reg, reg, &value);
+    rtc_write_burst(reg, reg, &value);
 }
 
 #define frombcd(value) (((value) >> 4) * 10 + ((value) & 0xF))
@@ -79,7 +79,7 @@ void rtc_get_date(struct tm *date)
 {
     uint8_t data[7];
 
-    rtc_read(RTC_SEC, RTC_YEAR, data);
+    rtc_read_burst(RTC_SEC, RTC_YEAR, data);
     date->tm_year = frombcd(data[RTC_YEAR]);
     date->tm_mon = frombcd(data[RTC_MONTH]);
     date->tm_mday = frombcd(data[RTC_DAY]);
@@ -110,5 +110,5 @@ void rtc_set_date(struct tm *date)
     data[RTC_HOUR] = tobcd(date->tm_hour);
     data[RTC_MIN] = tobcd(date->tm_min);
     data[RTC_SEC] = tobcd(date->tm_sec);
-    rtc_write(RTC_SEC, RTC_YEAR, data);
+    rtc_write_burst(RTC_SEC, RTC_YEAR, data);
 }

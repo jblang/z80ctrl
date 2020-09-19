@@ -130,8 +130,8 @@ uint8_t iox_getreg()
 void iox_writeval(uint8_t data)
 {
     if (iox_dev == IOX_RTC) {
-#ifdef DS1306_RTC
-        rtc_write1(iox_reg, data);
+#ifdef USE_RTC
+        rtc_write(iox_reg, data);
 #endif
     } else if (iox_dev >= IOX_GPIO_MIN && iox_dev <= IOX_GPIO_MAX) {
         iox_write(iox_dev, iox_reg, data);
@@ -141,8 +141,8 @@ void iox_writeval(uint8_t data)
 uint8_t iox_readval()
 {
     if (iox_dev == IOX_RTC) {
-#ifdef DS1306_RTC
-        return rtc_read1(iox_reg);
+#ifdef USE_RTC
+        return rtc_read(iox_reg);
 #endif
     } else if (iox_dev >= IOX_GPIO_MIN && iox_dev <= IOX_GPIO_MAX) {
         return iox_read(iox_dev, iox_reg);

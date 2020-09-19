@@ -47,7 +47,7 @@
 #include "uart.h"
 #include "xmodem.h"
 #include "filedma.h"
-#ifdef DS1306_RTC
+#ifdef USE_RTC
 #include "rtc.h"
 #endif
 #ifdef TMS_BASE
@@ -895,7 +895,7 @@ void cli_unmount(int argc, char *argv[])
 /**
  * Display or set the date on the RTC
  */
-#ifdef DS1306_RTC
+#ifdef USE_RTC
 void cli_date(int argc, char *argv[])
 {
     struct tm date;
@@ -1261,7 +1261,7 @@ const char cli_cmd_names[] PROGMEM =
     "cls\0"
     "copy\0"
     "cp\0"
-#ifdef DS1306_RTC
+#ifdef USE_RTC
     "date\0"
 #endif
     "debug\0"
@@ -1343,7 +1343,7 @@ const char cli_cmd_help[] PROGMEM =
     "clear screen\0"                                // cls
     "copy a file (alias cp)\0"                      // copy
     "\0"                                            // cp
-#ifdef DS1306_RTC
+#ifdef USE_RTC
     "display or set the date on the rtc\0"          // date
 #endif
     "debug code at address (alias c)\0"             // debug
@@ -1427,7 +1427,7 @@ void * const cli_cmd_functions[] PROGMEM = {
     &cli_cls,
     &cli_copy,       // copy
     &cli_copy,       // cp
-#ifdef DS1306_RTC
+#ifdef USE_RTC
     &cli_date,
 #endif
     &cli_debug,

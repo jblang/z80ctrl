@@ -33,6 +33,7 @@
 // SPI pins
 #define SPI_DDR DDRB
 #define SPI_PORT PORTB
+#define SPI_PIN PINB
 
 #define SCK 7
 #define MISO 6
@@ -56,6 +57,18 @@
 
 #define SPI_PHASE0 SPCR &= ~(1 << CPHA)
 #define SPI_PHASE1 SPCR |= (1 << CPHA)
+
+#define SPI_ENABLE SPCR |= (1 << SPE)
+#define SPI_DISABLE SPCR &= ~(1 << SPE)
+
+#define MISO_INPUT SPI_DDR &= ~(1 << MISO)
+#define MISO_OUTPUT SPI_DDR |= (1 << MISO)
+#define MISO_LO SPI_PORT &= ~(1 << MISO)
+#define MISO_HI SPI_PORT |= (1 << MISO)
+#define GET_MISO (SPI_PIN & (1 << MISO))
+
+#define SCK_LO SPI_PORT &= ~(1 << SCK)
+#define SCK_HI SPI_PORT |= (1 << SCK)
 
 void spi_init();
 uint8_t spi_exchange(uint8_t val);

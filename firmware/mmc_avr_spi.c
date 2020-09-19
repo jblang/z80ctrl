@@ -19,7 +19,7 @@
 #include "spi.h"
 #include "iox.h"
 #include <time.h>
-#ifdef DS1306_RTC
+#ifdef USE_RTC
 #include "rtc.h"
 #endif
 
@@ -99,7 +99,7 @@ void start_timer(void)
 
 DWORD get_fattime (void)
 {
-#ifdef DS1306_RTC
+#ifdef USE_RTC
 	/* Pack date and time into a DWORD variable */
 	struct tm date;
     rtc_get_date(&date);

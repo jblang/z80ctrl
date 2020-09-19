@@ -13,8 +13,11 @@ BOARD_REV?=3
 # Uncomment to enable support for SST39F0x0 flash chips on RomWBW boards
 # SST_FLASH=1
 
-# Uncomment to enable DS1306 RTC support
+# Uncomment to enable DS1306 RTC support (used on IOX board)
 # DS1306_RTC=1
+
+# Uncomment to enable DS1302 RTC support (used on CPU/RAM/RTC board)
+# DS1302_RTC=1
 
 # Base address TMS9918A chip; comment out to disable support
 # TMS_BASE=0xBE
@@ -88,8 +91,12 @@ ifdef PAGE_BASE
 	FEATURE_DEFINES += -DPAGE_BASE=$(PAGE_BASE)
 endif
 ifdef DS1306_RTC
-	FEATURE_DEFINES += -DDS1306_RTC
-	OBJS += rtc.o
+	FEATURE_DEFINES += -DDS1306_RTC -DUSE_RTC
+	OBJS += ds1306.o
+endif
+ifdef DS1302_RTC
+	FEATURE_DEFINES += -DDS1302_RTC -DUSE_RTC
+	OBJS += ds1302.o
 endif
 ifdef IOX_BASE
 	FEATURE_DEFINES += -DIOX_BASE=$(IOX_BASE)
