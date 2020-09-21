@@ -168,7 +168,6 @@ void bus_log(bus_stat status)
         !FLAG(status.flags, IORQ) ? "iorq " : "    ",
         !FLAG(status.flags, RD) ? "rd  " :
         !FLAG(status.flags, WR) ? "wr  " :
-        !FLAG(status.xflags, RFSH) ? "rfsh" : "    ",
         !FLAG(status.xflags, M1) ? "m1" : "  ",
         !FLAG(status.flags, BUSRQ) ? "busrq" : "     ",
         !FLAG(status.flags, BUSACK) ? "busack" : "      ",
@@ -187,32 +186,24 @@ void bus_init(void)
     // Initialize I/O expander
     iox_init();
 
-    // Configure bus signal direction
-    RESET_INPUT;
-    RESET_PULLUP;
+    // Configure outputs
     BUSRQ_OUTPUT;
     CLK_OUTPUT;
+#if (BOARD_REV == 5)
+    MWAIT_OUTPUT;
+#endif
 
-    IORQ_INPUT;
-    BUSACK_INPUT;
-    M1_INPUT;
-    RFSH_INPUT;
-    HALT_INPUT;
-
-    // Pullup on halt so it can be used with a switch
+    // Configure default levels
     HALT_PULLUP;
-
-    // Set defaults for output bus signals
+    BUSRQ_HI;
+    RESET_HI;
     INT_HI;
     NMI_HI;
-    BUSRQ_HI;
 
     // Reset the processor
     RESET_LO;
     clk_cycle(3);
     RESET_HI;
-    BUSRQ_LO;
-    BUSRQ_HI;
 
     // Start out in control of the bus
     bus_request();
