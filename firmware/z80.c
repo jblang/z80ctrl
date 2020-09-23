@@ -66,9 +66,9 @@ void z80_reset(uint32_t addr)
         mem_write(0x0000, reset_vect, 3);
     }
     bus_release();
-    RESET_LO;
+    RESET_OUTPUT;
     clk_cycle(3);
-    RESET_HI;
+    RESET_INPUT;
     bus_request();
 #ifdef PAGE_BASE
     mem_page_addr(0);
@@ -87,28 +87,28 @@ void z80_run(void)
     clk_run();
     if (halt_key && do_halt) {
         for (;;) {
-            if (!GET_IORQ)
+            if (!GET_WAIT)
                 iorq_dispatch();
             else if (uart_peek(0) == halt_key || !GET_HALT)
                 break;
         }
     } else if (halt_key) {
         for (;;) {
-            if (!GET_IORQ)
+            if (!GET_WAIT)
                 iorq_dispatch();
             else if (uart_peek(0) == halt_key)
                 break;
         }
     } else if (do_halt) {
         for (;;) {
-            if (!GET_IORQ)
+            if (!GET_WAIT)
                 iorq_dispatch();
             else if (!GET_HALT)
                 break;
         }
     } else {
         for (;;) {
-            if (!GET_IORQ)
+            if (!GET_WAIT)
                 iorq_dispatch();
         }
     }
@@ -139,11 +139,11 @@ void z80_debug(uint32_t cycles)
         CLK_LO;
         if ((last_rd && !GET_RD) || (last_wr && !GET_WR)) { // falling edge
             bus_stat status = bus_status();
-            if (!FLAG(status.xflags, HALT) && do_halt)
+            if (!HALT_STATUS && do_halt)
                 break;
-            if (!FLAG(status.flags, IORQ)) {
+            if (!IORQ_STATUS) {
                 status.data = iorq_dispatch();
-                if (!FLAG(status.flags, RD)) {
+                if (!RD_STATUS) {
                     if (INRANGE(watches, IORD, status.addr & 0xff)) {
                         bus_log(status);
                         uart_flush();
@@ -163,12 +163,12 @@ void z80_debug(uint32_t cycles)
                     }
                 }
             } else { // MREQ
-                if (!FLAG(status.flags, RD)) {
+                if (!RD_STATUS) {
                     if (INRANGE(watches, MEMRD, status.addr)) {
                         bus_log(status);
                         uart_flush();
                     }
-                    if (!FLAG(status.xflags, M1)) {
+                    if (!M1_STATUS) {
                         if (!ignore_m1) {
                             if (INRANGE(watches, OPFETCH, status.addr)) {
                                 bus_request();

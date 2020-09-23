@@ -133,8 +133,8 @@ void bus_release(void)
 bus_stat bus_status(void)
 {
     bus_stat status;
-    uint16_t iox = iox_read16(0, GPIOA0);
-    status.flags = (PINB & BMASK) | (PIND & DMASK);
+    uint16_t iox = iox0_read16(ADDRHI_GPIO);
+    status.flags = (PINB & CTRLB_MASK) | (PIND & CTRLD_MASK);
     status.xflags = iox >> 8;
     status.data = DATA_PIN;
     status.addr = ADDRLO_PIN | ((iox & 0xFF) << 8);
@@ -147,7 +147,7 @@ bus_stat bus_status(void)
 bus_stat bus_status_fast(void)
 {
     bus_stat status;
-    status.flags = (PINB & BMASK) | (PIND & DMASK);
+    status.flags = (PINB & CTRLB_MASK) | (PIND & CTRLD_MASK);
     status.xflags = 0xFF;
     status.data = GET_DATA;
     status.addr = GET_ADDRLO;
@@ -164,18 +164,19 @@ void bus_log(bus_stat status)
         status.addr,
         status.data,
         0x20 <= status.data && status.data <= 0x7e ? status.data : ' ',
-        !FLAG(status.flags, MREQ) ? "mreq" :
-        !FLAG(status.flags, IORQ) ? "iorq " : "    ",
-        !FLAG(status.flags, RD) ? "rd  " :
-        !FLAG(status.flags, WR) ? "wr  " :
-        !FLAG(status.xflags, M1) ? "m1" : "  ",
-        !FLAG(status.flags, BUSRQ) ? "busrq" : "     ",
-        !FLAG(status.flags, BUSACK) ? "busack" : "      ",
-        (!FLAG(status.flags, IORQ) && FLAG(status.flags, BUSRQ)) ? "wait" : "    ",
-        !FLAG(status.xflags, HALT) ? "halt" : "    ", 
-        !FLAG(status.xflags, INTERRUPT) ? "int" : "   ",
-        !FLAG(status.xflags, NMI) ? "nmi" : "   ",
-        !FLAG(status.xflags, RESET) ? "reset" : "     ");
+        !MREQ_STATUS ? "mreq" :
+        !IORQ_STATUS ? "iorq " : "    ",
+        !RD_STATUS ? "rd  " :
+        !WR_STATUS ? "wr  " :
+        !RFSH_STATUS ? "rfsh" : "    ",
+        !M1_STATUS ? "m1" : "  ",
+        !BUSRQ_STATUS ? "busrq" : "     ",
+        !BUSACK_STATUS ? "busack" : "      ",
+        !WAIT_STATUS ? "wait" : "    ",
+        !HALT_STATUS ? "halt" : "    ", 
+        !INT_STATUS ? "int" : "   ",
+        !NMI_STATUS ? "nmi" : "   ",
+        !RESET_STATUS ? "reset" : "     ");
 }
 
 /**
@@ -186,24 +187,17 @@ void bus_init(void)
     // Initialize I/O expander
     iox_init();
 
-    // Configure outputs
-    BUSRQ_OUTPUT;
-    CLK_OUTPUT;
-#if (BOARD_REV == 5)
-    MWAIT_OUTPUT;
-#endif
-
-    // Configure default levels
-    HALT_PULLUP;
-    BUSRQ_HI;
-    RESET_HI;
-    INT_HI;
-    NMI_HI;
+    // Initialize control signals
+    CTRLB_OUTPUT_INIT;
+    CTRLD_OUTPUT_INIT;
+    CTRLX_OUTPUT_INIT;
+    CTRLX_PULLUP_INIT;
 
     // Reset the processor
-    RESET_LO;
+    BUSRQ_HI;
+    RESET_OUTPUT;
     clk_cycle(3);
-    RESET_HI;
+    RESET_INPUT;
 
     // Start out in control of the bus
     bus_request();

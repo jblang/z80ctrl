@@ -14,21 +14,22 @@
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <time.h>
 #include "diskio.h"
 #include "mmc_avr.h"
 #include "spi.h"
-#include "iox.h"
-#include <time.h>
 #ifdef USE_RTC
 #include "rtc.h"
 #endif
 
-#define SD_IODIR IODIRB0    // Direction register handling SD CD/EN lines
-#define SD_GPPU GPPUB0      // Pullup register handling SD CD/EN lines
-#define SD_GPIO GPIOB0      // GPIO register handling SD CD/EN lines
-#define SD_IOXADDR 0        // IO expander address handling SD CD/EN lines
-#define SD_EN 0             // SD power enable pin on IO expnader
-#define SD_CD 6             // SD chip detect pin on IO expander
+#if (BOARD_REV == 3 || BOARD_REV == 4)
+#include "iox.h"
+#define SD_IODIR IODIRB     // Direction register handling SD CD/EN lines
+#define SD_GPPU GPPUB       // Pullup register handling SD CD/EN lines
+#define SD_GPIO GPIOB       // GPIO register handling SD CD/EN lines
+#define SDEN (1 << 0)       // SD power enable pin on IO expnader
+#define SDCD (1 << 6)       // SD chip detect pin on IO expander
+#endif
 
 /* Peripheral controls (Platform dependent) */
 #define CS_LOW()		SD_SEL		/* Set MMC_CS = low */
@@ -122,13 +123,17 @@ DWORD get_fattime (void)
 static
 void init_cden()
 {
+#if (BOARD_REV == 3 || BOARD_REV == 4)
     iox_init();
     // Enable pull up on card detect line
-    iox_write(SD_IOXADDR, SD_GPPU, iox_read(SD_IOXADDR, SD_GPPU) | (1 << SD_CD));
+    iox0_set(SD_GPPU, SDCD);
 
     // Set SD enable high and make it an output
-    iox_write(SD_IOXADDR, SD_GPIO, iox_read(SD_IOXADDR, SD_GPIO) | (1 << SD_EN));
-    iox_write(SD_IOXADDR, SD_IODIR, iox_read(SD_IOXADDR, SD_IODIR) & ~(1 << SD_EN));
+    iox0_set(SD_GPIO, SDEN);
+    iox0_clear(SD_IODIR, SDEN);
+#else
+    spi_init();
+#endif
 }
 
 /*-----------------------------------------------------------------------*/
@@ -140,16 +145,20 @@ void init_cden()
 static
 void power_on (void)
 {
+#if (BOARD_REV == 3 || BOARD_REV == 4)
     // Set SDEN low to turn off voltage regulator
-    iox_write(SD_IOXADDR, SD_GPIO, iox_read(SD_IOXADDR, SD_GPIO) | (1 << SD_EN));
+    iox0_set(SD_GPIO, SDEN);
+#endif
 }
 
 
 static
 void power_off (void)
 {
+#if (BOARD_REV == 3 || BOARD_REV == 4)
     // Set SDEN high to turn on voltage regulator
-    iox_write(SD_IOXADDR, SD_GPIO, iox_read(SD_IOXADDR, SD_GPIO) & ~(1 << SD_EN));
+    iox0_clear(SD_GPIO, SDEN);
+#endif
 }
 
 

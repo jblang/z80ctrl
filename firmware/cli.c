@@ -1635,7 +1635,6 @@ int main(void)
         printf_P(PSTR("error mounting drive: %S\n"), strlookup(fr_text, fr));
 
     bus_init();
-    iox_extcs_init(1);
     iorq_init();
  #ifdef TMS_BASE
     tms_init(TMS_TEXT);

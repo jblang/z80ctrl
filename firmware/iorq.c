@@ -431,7 +431,7 @@ uint8_t iorq_dispatch()
         bus_release();
     } else {
         BUSRQ_LO;
-        while (!GET_IORQ)
+        while (GET_BUSACK)
             CLK_TOGGLE;
         DATA_INPUT;
         BUSRQ_HI;

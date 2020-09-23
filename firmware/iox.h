@@ -30,68 +30,44 @@
 #include <stdint.h>
 
 // Register addresses in bank 0
-#define IODIRA0 0x00
-#define IODIRB0 0x01
-#define IPOLA0 0x02
-#define IPOLB0 0x03
-#define GPINTENA0 0x04
-#define GPINTENB0 0x05
-#define DEFVALA0 0x06
-#define DEFVALB0 0x07
-#define INTCONA0 0x08
-#define INTCONB0 0x09
-#define IOCON0 0x0A
-#define GPPUA0 0x0C
-#define GPPUB0 0x0D
-#define INTFA0 0x0E
-#define INTFB0 0x0F
-#define INTCAPA0 0x10
-#define INTCAPB0 0x11
-#define GPIOA0 0x12
-#define GPIOB0 0x13
-#define OLATA0 0x14
-#define OLATB0 0x15
-
-// Register addresses in bank 1
-#define IODIRA1 0x00
-#define IPOLA1 0x01
-#define GPINTENA1 0x02
-#define DEFVALA1 0x03
-#define INTCONA1 0x04
-#define IOCON1 0x05
-#define GPPUA1 0x06
-#define INTFA1 0x07
-#define INTCAPA1 0x08
-#define GPIOA1 0x09
-#define OLATA1 0x0A
-#define IODIRB1 0x10
-#define IPOLB1 0x11
-#define GPINTENB1 0x12
-#define DEFVALB1 0x13
-#define INTCONB1 0x14
-#define GPPUB1 0x16
-#define INTFB1 0x17
-#define INTCAPB1 0x18
-#define GPIOB1 0x19
-#define OLATB1 0x1A
+enum {
+    IODIRA = 0x00,
+    IODIRB = 0x01,
+    IPOLA = 0x02,
+    IPOLB = 0x03,
+    GPINTENA = 0x04,
+    GPINTENB = 0x05,
+    DEFVALA = 0x06,
+    DEFVALB = 0x07,
+    INTCONA = 0x08,
+    INTCONB = 0x09,
+    IOCON = 0x0a,
+    IOCONB = 0x0b,
+    GPPUA = 0x0c,
+    GPPUB = 0x0d,
+    INTFA = 0x0e,
+    INTFB = 0x0f,
+    INTCAPA = 0x10,
+    INTCAPB = 0x11,
+    GPIOA = 0x12,
+    GPIOB = 0x13,
+    OLATA = 0x14,
+    OLATB = 0x15
+};
 
 // Bits in IOCON register
-#define INTCC 0
-#define INTPOL 1
-#define ODR 2
-#define HAEN 3
-#define DISSLW 4
-#define SEQOP 5
-#define MIRROR 6
-#define BANK 7
-
-#define SPI_ADDR 0x40
-#define WRITE 0
-#define READ 1
+enum {
+    INTCC = (1 << 0),
+    INTPOL = (1 << 1),
+    ODR = (1 << 2),
+    HAEN = (1 << 3),
+    DISSLW = (1 << 4),
+    SEQOP = (1 << 5),
+    MIRROR = (1 << 6),
+    BANK = (1 << 7)
+};
 
 void iox_init(void);
-void iox_begin(uint8_t mode, uint8_t addr);
-void iox_end(void);
 uint8_t iox_read(uint8_t chipaddr, uint8_t regaddr);
 uint16_t iox_read16(uint8_t chipaddr, uint8_t regaddr);
 void iox_write(uint8_t chipaddr, uint8_t regaddr, uint8_t data);
@@ -99,6 +75,12 @@ void iox_write(uint8_t chipaddr, uint8_t regaddr, uint8_t data);
 void iox_extcs_init(uint8_t addr);
 void iox_extcs_lo(uint8_t c);
 void iox_extcs_hi(uint8_t c);
+
+uint8_t iox0_read(uint8_t reg);
+uint16_t iox0_read16(uint8_t reg);
+void iox0_write(uint8_t reg, uint8_t data);
+void iox0_set(uint8_t reg, uint8_t mask);
+void iox0_clear(uint8_t reg, uint8_t mask);
 
 void iox_setdev(uint8_t dev);
 uint8_t iox_getdev();

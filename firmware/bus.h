@@ -39,23 +39,25 @@
 #define ADDRLO_PIN PINA
 
 #if (BOARD_REV == 3 || BOARD_REV == 4)
-#define ADDRHI_IODIR IODIRA0
-#define ADDRHI_GPPU GPPUA0
-#define ADDRHI_GPIO GPIOA0
+#define ADDRHI_IODIR IODIRA
+#define ADDRHI_GPPU GPPUA
+#define ADDRHI_GPIO GPIOA
 #elif (BOARD_REV == 5)
-#define ADDRHI_IODIR IODIRB0
-#define ADDRHI_GPPU GPPUB0
-#define ADDRHI_GPIO GPIOB0
+#define ADDRHI_IODIR IODIRB
+#define ADDRHI_GPPU GPPUB
+#define ADDRHI_GPIO GPIOB
+#else
+#error "Unsupported board revision. Set BOARD_REV in your Makefile to match your board revision."
 #endif
 
-#define ADDR_INPUT (ADDRLO_DDR = 0x00, iox_write(0, ADDRHI_IODIR, 0xFF))
-#define ADDR_OUTPUT (ADDRLO_DDR = 0xFF, iox_write(0, ADDRHI_IODIR, 0x00))
+#define ADDR_INPUT (ADDRLO_DDR = 0x00, iox0_write(ADDRHI_IODIR, 0xFF))
+#define ADDR_OUTPUT (ADDRLO_DDR = 0xFF, iox0_write(ADDRHI_IODIR, 0x00))
 
 #define GET_ADDRLO ADDRLO_PIN
 #define SET_ADDRLO(addr) ADDRLO_PORT = (addr)
 
-#define GET_ADDRHI iox_read(0, ADDRHI_GPIO)
-#define SET_ADDRHI(addr) iox_write(0, ADDRHI_GPIO, (addr))
+#define GET_ADDRHI iox0_read(ADDRHI_GPIO)
+#define SET_ADDRHI(addr) iox0_write(ADDRHI_GPIO, (addr))
 
 #define GET_ADDR (GET_ADDRLO | (GET_ADDRHI << 8))
 #define SET_ADDR(addr) (SET_ADDRLO((addr) & 0xFF), SET_ADDRHI((addr) >> 8))
@@ -77,140 +79,167 @@
  * PORTB flags
  */
 
-#define BMASK 0x0F
-#define BUSRQ 0
+#define BUSRQ (1 << 0)
 
-#define BUSRQ_OUTPUT DDRB |= (1 << BUSRQ)
-#define GET_BUSRQ (PINB & (1 << BUSRQ))
-#define BUSRQ_HI PORTB |= (1 << BUSRQ)
-#define BUSRQ_LO PORTB &= ~(1 << BUSRQ)
+#define GET_BUSRQ (PINB & BUSRQ)
+#define BUSRQ_STATUS (status.flags & BUSRQ)
+#define BUSRQ_HI PORTB |= BUSRQ
+#define BUSRQ_LO PORTB &= ~BUSRQ
+
+#define CTRLB_MASK 0x0F
+#define CTRLB_OUTPUT_INIT DDRB |= BUSRQ
 
 #if (BOARD_REV == 3 || BOARD_REV == 4)
-#define IORQ 1
-#define MREQ 2
+#define IORQ (1 << 1)
+#define MREQ (1 << 2)
 
-#define MREQ_INPUT DDRB &= ~(1 << MREQ)
-#define GET_MREQ (PINB & (1 << MREQ))
-#define MREQ_OUTPUT DDRB |= (1 << MREQ)
-#define MREQ_HI PORTB |= (1 << MREQ)
-#define MREQ_LO PORTB &= ~(1 << MREQ)
+#define MREQ_INPUT DDRB &= ~MREQ
+#define GET_MREQ (PINB & MREQ)
+#define MREQ_STATUS (status.flags & MREQ)
+#define MREQ_OUTPUT DDRB |= MREQ
+#define MREQ_HI PORTB |= MREQ
+#define MREQ_LO PORTB &= ~MREQ
 
-#define IORQ_INPUT DDRB &= ~(1 << IORQ)
-#define GET_IORQ (PINB & (1 << IORQ))
-#define IORQ_OUTPUT DDRB |= (1 << IORQ)
-#define IORQ_HI PORTB |= (1 << IORQ)
-#define IORQ_LO PORTB &= ~(1 << IORQ)
+#define IORQ_INPUT DDRB &= ~IORQ
+#define GET_IORQ (PINB & IORQ)
+#define IORQ_STATUS (status.flags & IORQ)
+#define IORQ_OUTPUT DDRB |= IORQ
+#define IORQ_HI PORTB |= IORQ
+#define IORQ_LO PORTB &= ~IORQ
+
+#define GET_WAIT (GET_IORQ || !GET_BUSRQ)
+#define WAIT_STATUS (IORQ_STATUS || !BUSRQ_STATUS)
+
+#define GET_IOXINT 0
+#define IOXINT_STATUS 0
 #elif (BOARD_REV == 5)
-#define WAIT 1
-#define IOXINT 2
+#define WAIT (1 << 1)
+#define IOXINT (1 << 2)
 
-#define WAIT_INPUT DDRB &= ~(1 << WAIT)
-#define GET_WAIT (PINB & (1 << WAIT))
+#define GET_WAIT (PINB & WAIT)
+#define WAIT_STATUS (status.flags & WAIT)
 
-#define IOXINT_INPUT DDRB &= ~(1 << IOXINT)
-#define GET_IOXINT (PINB & (1 << IOXINT))
+#define GET_IOXINT (PINB & IOXINT)
+#define IOXINT_STATUS (status.flags & IOXINT)
 #endif
+
 
 /**
  * PORTD Flags
  */
 
-#define DMASK 0xF0
-#define RD 4
-#define WR 5
-#define CLK 6
-#define BUSACK 7
+#define RD (1 << 4)
+#define WR (1 << 5)
+#define CLK (1 << 6)
+#define BUSACK (1 << 7)
 
-#define RD_INPUT DDRD &= ~(1 << RD)
-#define RD_OUTPUT DDRD |= (1 << RD)
-#define GET_RD (PIND & (1 << RD))
-#define RD_HI PORTD |= (1 << RD)
-#define RD_LO PORTD &= ~(1 << RD)
+#define RD_INPUT DDRD &= ~RD
+#define RD_OUTPUT DDRD |= RD
+#define GET_RD (PIND & RD)
+#define RD_STATUS (status.flags & RD)
+#define RD_HI PORTD |= RD
+#define RD_LO PORTD &= ~RD
 
-#define WR_INPUT DDRD &= ~(1 << WR)
-#define WR_OUTPUT DDRD |= (1 << WR)
-#define GET_WR (PIND & (1 << WR))
-#define WR_HI PORTD |= (1 << WR)
-#define WR_LO PORTD &= ~(1 << WR)
+#define WR_INPUT DDRD &= ~WR
+#define WR_OUTPUT DDRD |= WR
+#define GET_WR (PIND & WR)
+#define WR_STATUS (status.flags & WR)
+#define WR_HI PORTD |= WR
+#define WR_LO PORTD &= ~WR
 
-#define CLK_OUTPUT DDRD |= (1 << CLK)
-#define GET_CLK (PIND & (1 << CLK))
-#define CLK_HI PORTD |= (1 << CLK)
-#define CLK_LO PORTD &= ~(1 << CLK)
-#define CLK_TOGGLE PIND |= (1 << CLK)
+#define GET_CLK (PIND & CLK)
+#define CLK_STATUS (status.flags & CLK)
+#define CLK_HI PORTD |= CLK
+#define CLK_LO PORTD &= ~CLK
+#define CLK_TOGGLE PIND |= CLK
 
-#define BUSACK_INPUT DDRD &= ~(1 << BUSACK)
-#define GET_BUSACK (PIND & (1 << BUSACK))
+#define GET_BUSACK (PIND & BUSACK)
+#define BUSACK_STATUS (status.flags & BUSACK)
+
+#define CTRLD_MASK 0xF0
+#define CTRLD_OUTPUT_INIT DDRD |= CLK
 
 /**
- * IOX GPIOB flags
+ * IOX flags
  */
 
-
 #if (BOARD_REV == 3 || BOARD_REV == 4)
-#define CTRLX_IODIR IODIRB0
-#define CTRLX_GPPU GPPUB0
-#define CTRLX_GPIO GPIOB0
-#define RFSH 1
-#define RESET 2
-#define INTERRUPT 3
-#define M1 4
-#define HALT 5
-#define NMI 7
+#define CTRLX_IODIR IODIRB
+#define CTRLX_GPPU GPPUB
+#define CTRLX_GPIO GPIOB
+#define RFSH (1 << 1)
+#define RESET (1 << 2)
+#define INTERRUPT (1 << 3)
+#define M1 (1 << 4)
+#define HALT (1 << 5)
+#define NMI (1 << 7)
 
-#define RFSH_INPUT iox_write(0, CTRLX_IODIR, iox_read(0, CTRLX_IODIR) | (1 << RFSH))
-#define GET_RFSH (iox_read(0, CTRLX_GPIO) & (1 << RFSH))
+#define CTRLX_OUTPUT_INIT // No-op
+
+#define GET_RFSH (iox0_read(CTRLX_GPIO) & RFSH)
+#define RFSH_STATUS (status.xflags & RFSH)
 
 #elif (BOARD_REV == 5)
-#define CTRLX_IODIR IODIRA0
-#define CTRLX_GPPU GPPUA0
-#define CTRLX_GPIO GPIOA0
-#define M1 0
-#define RESET 1
-#define INTERRUPT 2
-#define IORQ 3
-#define NMI 4
-#define HALT 5
-#define MREQ 6
-#define MWAIT 7
+#define CTRLX_IODIR IODIRA
+#define CTRLX_GPPU GPPUA
+#define CTRLX_GPIO GPIOA
+#define M1 (1 << 0)
+#define RESET (1 << 1)
+#define INTERRUPT (1 << 2)
+#define IORQ (1 << 3)
+#define NMI (1 << 4)
+#define HALT (1 << 5)
+#define MREQ (1 << 6)
+#define MWAIT (1 << 7)
 
-#define MWAIT_OUTPUT iox_write(0, CTRLX_IODIR, iox_read(0, CTRLX_IODIR) & ~(1 << MWAIT))
-#define GET_MWAIT (iox_read(0, CTRLX_GPIO) & (1 << MWAIT))
-#define MWAIT_LO iox_write(0, CTRLX_GPIO, iox_read(0, CTRLX_GPIO) & ~(1 << MWAIT))
-#define MWAIT_HI iox_write(0, CTRLX_GPIO, iox_read(0, CTRLX_GPIO) | (1 << MWAIT))
+#define CTRLX_OUTPUT_INIT iox0_clear(CTRLX_IODIR, MWAIT)
 
-#define MREQ_INPUT iox_write(0, CTRLX_IODIR, iox_read(0, CTRLX_IODIR) | (1 << MREQ))
-#define GET_MREQ (iox_read(0, CTRLX_GPIO) & (1 << MREQ))
-#define MREQ_OUTPUT iox_write(0, CTRLX_IODIR, iox_read(0, CTRLX_IODIR) & ~(1 << MREQ))
-#define MREQ_LO iox_write(0, CTRLX_GPIO, iox_read(0, CTRLX_GPIO) & ~(1 << MREQ))
-#define MREQ_HI iox_write(0, CTRLX_GPIO, iox_read(0, CTRLX_GPIO) | (1 << MREQ))
+#define GET_MWAIT (iox0_read(CTRLX_GPIO) & MWAIT)
+#define MWAIT_STATUS (status.xflags & MWAIT)
+#define MWAIT_LO iox0_clear(CTRLX_GPIO, MWAIT)
+#define MWAIT_HI iox0_set(CTRLX_GPIO, MWAIT)
 
-#define IORQ_INPUT iox_write(0, CTRLX_IODIR, iox_read(0, CTRLX_IODIR) | (1 << IORQ))
-#define GET_IORQ (iox_read(0, CTRLX_GPIO) & (1 << IORQ))
-#define IORQ_OUTPUT iox_write(0, CTRLX_IODIR, iox_read(0, CTRLX_IODIR) & ~(1 << IORQ))
-#define IORQ_LO iox_write(0, CTRLX_GPIO, iox_read(0, CTRLX_GPIO) & ~(1 << IORQ))
-#define IORQ_HI iox_write(0, CTRLX_GPIO, iox_read(0, CTRLX_GPIO) | (1 << IORQ))
+#define MREQ_INPUT iox0_set(CTRLX_IODIR, MREQ)
+#define GET_MREQ (iox0_read(CTRLX_GPIO) & MREQ)
+#define MREQ_STATUS (status.xflags & MREQ)
+#define MREQ_OUTPUT iox0_clear(CTRLX_IODIR, MREQ)
+#define MREQ_LO iox0_clear(CTRLX_GPIO, MREQ)
+#define MREQ_HI iox0_set(CTRLX_GPIO, MREQ)
+
+#define IORQ_INPUT iox0_set(CTRLX_IODIR, IORQ)
+#define GET_IORQ (iox0_read(CTRLX_GPIO) & IORQ)
+#define IORQ_STATUS (status.xflags & IORQ)
+#define IORQ_OUTPUT iox0_clear(CTRLX_IODIR, IORQ)
+#define IORQ_LO iox0_clear(CTRLX_GPIO, IORQ)
+#define IORQ_HI iox0_set(CTRLX_GPIO, IORQ)
+
+#define GET_RFSH (GET_MREQ || !(GET_RD && GET_WR))
+#define RFSH_STATUS (MREQ_STATUS || !(RD_STATUS && WR_STATUS))
 #endif
 
-#define M1_INPUT iox_write(0, CTRLX_IODIR, iox_read(0, CTRLX_IODIR) | (1 << M1))
-#define GET_M1 (iox_read(0, CTRLX_GPIO) & (1 << M1))
+#define GET_M1 (iox0_read(CTRLX_GPIO) & M1)
+#define M1_STATUS (status.xflags & M1)
 
-#define HALT_INPUT iox_write(0, CTRLX_IODIR, iox_read(0, CTRLX_IODIR) | (1 << HALT))
-#define HALT_PULLUP iox_write(0, CTRLX_GPPU, iox_read(0, CTRLX_GPPU) | (1 << HALT))
-#define GET_HALT (iox_read(0, CTRLX_GPIO) & (1 << HALT))
+#define GET_HALT (iox0_read(CTRLX_GPIO) & HALT)
+#define HALT_STATUS (status.xflags & HALT)
 
 // RESET, INT, and NMI behave like an open drain. It is only an output when it is low.
-#define GET_RESET (iox_read(0, CTRLX_GPIO) & (1 << RESET))
-#define RESET_LO (iox_write(0, CTRLX_GPIO, iox_read(0, CTRLX_GPIO) & ~(1 << RESET)), iox_write(0, CTRLX_IODIR, iox_read(0, CTRLX_IODIR) & ~(1 << RESET)))
-#define RESET_HI (iox_write(0, CTRLX_IODIR, iox_read(0, CTRLX_IODIR) | (1 << RESET)), iox_write(0, CTRLX_GPPU, iox_read(0, CTRLX_GPPU) | (1 << RESET)))
+#define GET_RESET (iox0_read(CTRLX_GPIO) & RESET)
+#define RESET_STATUS (status.xflags & RESET)
+#define RESET_OUTPUT iox0_clear(CTRLX_IODIR, RESET)
+#define RESET_INPUT iox0_set(CTRLX_IODIR, RESET)
 
-#define GET_INT (iox_read(0, CTRLX_GPIO) & (1 << INTERRUPT))
-#define INT_LO (iox_write(0, CTRLX_GPIO, iox_read(0, CTRLX_GPIO) & ~(1 << INTERRUPT)), iox_write(0, CTRLX_IODIR, iox_read(0, CTRLX_IODIR) & ~(1 << INTERRUPT)))
-#define INT_HI (iox_write(0, CTRLX_IODIR, iox_read(0, CTRLX_IODIR) | (1 << INTERRUPT)), iox_write(0, CTRLX_GPPU, iox_read(0, CTRLX_GPPU) | (1 << INTERRUPT)))
+#define GET_INT (iox0_read(CTRLX_GPIO) & INTERRUPT)
+#define INT_STATUS (status.xflags & INTERRUPT)
+#define INT_OUTPUT iox0_clear(CTRLX_IODIR, INTERRUPT)
+#define INT_INPUT iox0_set(CTRLX_IODIR, INTERRUPT)
 
-#define GET_NMI (iox_read(0, CTRLX_GPIO) & (1 << NMI))
-#define NMI_LO (iox_write(0, CTRLX_GPIO, iox_read(0, CTRLX_GPIO) & ~(1 << NMI)), iox_write(0, CTRLX_IODIR, iox_read(0, CTRLX_IODIR) & ~(1 << NMI)))
-#define NMI_HI (iox_write(0, CTRLX_IODIR, iox_read(0, CTRLX_IODIR) | (1 << NMI)), iox_write(0, CTRLX_GPPU, iox_read(0, CTRLX_GPPU) | (1 << NMI)))
+#define GET_NMI (iox0_read(CTRLX_GPIO) & NMI)
+#define NMI_STATUS (status.xflags & NMI)
+#define NMI_OUTPUT iox0_clear(CTRLX_IODIR, NMI)
+#define NMI_INPUT iox0_set(CTRLX_IODIR, NMI)
+
+#define CTRLX_PULLUP_INIT iox0_set(CTRLX_GPPU, (HALT | RESET | INTERRUPT | NMI))
 
 /**
  * Complete bus status all in one place
@@ -221,8 +250,6 @@ typedef struct {
         uint16_t addr;
         uint8_t data;
 } bus_stat;
-
-#define FLAG(b, f) ((b) & (1<<f))
 
 extern uint8_t clkdiv;
 extern uint32_t base_addr;
