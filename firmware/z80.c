@@ -62,15 +62,15 @@ void z80_reset(uint32_t addr)
     sn76489_mute();
     uint8_t reset_vect[] = { 0xC3, (addr & 0xFF), ((addr >> 8) & 0xFF) };
     if (addr > 0x0002) {
-        mem_write(0x0000, reset_vect, 3);
+        mem_write_banked(0x0000, reset_vect, 3);
     }
     bus_release();
     RESET_OUTPUT;
     clk_cycle(3);
     RESET_INPUT;
     bus_request();
-#ifdef PAGE_BASE
-    mem_page_addr(0);
+#if defined(BANK_PORT) || defined(BANK_BASE)
+    mem_bank_addr(base_addr);
 #endif
 #ifdef TMS_BASE
     tms_config();

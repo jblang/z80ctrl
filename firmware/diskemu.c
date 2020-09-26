@@ -339,7 +339,7 @@ int drive_bootload()
     if (drives[0].status & (1 << S_MOUNTED)) {
         // SIMH BIOS expects the bootloader to be there even though we don't use it
         if (drives[0].format == DISK_FORMAT_SIMH)
-            mem_write_P(0xff00, simhboot_bin, simhboot_bin_len);
+            mem_write_banked_P(0xff00, simhboot_bin, simhboot_bin_len);
         uint8_t track = 0;
         uint8_t sector = drives[0].bootstart;
         for (uint16_t addr = 0; addr < 0x5c00; addr += 0x80) {
@@ -347,7 +347,7 @@ int drive_bootload()
                 return 0;
             if ((fr = file_read(&drives[0].fp, buf, SECTORSIZE, &read)) != FR_OK)
                 return 0;
-            mem_write(addr, buf+3, 0x80);
+            mem_write_banked(addr, buf+3, 0x80);
             sector += 2;
             if (sector == NUMSECTORS)
                 sector = 1;

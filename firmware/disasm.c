@@ -459,7 +459,7 @@ void disasm_mem(uint32_t start, uint32_t end)
 
     while (start <= disasm_addr && disasm_addr <= end) {
         instr_length = 0;
-        printf_P(PSTR("%05lx "), disasm_addr + base_addr);
+        printf_P(PSTR("%05lx "), disasm_addr);
         disasm(disasm_next_byte, mnemonic);
         for (i = 0; i < instr_length; i++) {
             printf_P(PSTR("%02x "), instr_bytes[i]);

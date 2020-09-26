@@ -87,8 +87,8 @@ const char device_name[] PROGMEM =
 
     "extern\0"
 
-#ifdef PAGE_BASE
-    "wbwpage\0"
+#ifdef BANK_BASE
+    "wbwbank\0"
 #endif
 
 #ifdef TMS_BASE
@@ -133,8 +133,8 @@ const char device_description[] PROGMEM =
 
     "External device\0"
 
-#ifdef PAGE_BASE
-    "512K ROM/RAM page\0"
+#ifdef BANK_BASE
+    "512K ROM/RAM bank\0"
 #endif
 
 #ifdef TMS_BASE
@@ -179,7 +179,7 @@ void * const device_read[] PROGMEM = {
 
     NULL,               // EXT_UNKNOWN
 
-#ifdef PAGE_BASE
+#ifdef BANK_BASE
     NULL,               // EXT_WBW_RAM
 #endif
 
@@ -226,7 +226,7 @@ void * const device_write[] PROGMEM = {
 
     NULL,               // EXT_UNKNOWN
 
-#ifdef PAGE_BASE
+#ifdef BANK_BASE
     NULL,               // EXT_WBW_RAM
 #endif
 

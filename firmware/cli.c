@@ -150,8 +150,8 @@ uint32_t loadbin(char *filename, uint8_t dest, int32_t start, uint32_t offset, u
         while ((fr = file_read(&fil, buf, sizeof buf, &br)) == FR_OK) {
             if (br > len)
                 br = len;
-            if (dest == MEM) {
-                mem_write(start, buf, br);
+            if (dest == MEM && br > 0) {
+                mem_write_banked(start, buf, br);
             }
 #ifdef SST_FLASH
             else if (dest == FLASH) {
@@ -241,7 +241,7 @@ void cli_savebin(int argc, char *argv[])
         while (start <= end) {
             if (end - start + 1 < len)
                 len = end - start + 1;
-            mem_read(start, buf, len);
+            mem_read_banked(start, buf, len);
             if ((fr = file_write(&fil, buf, len, &bw)) != FR_OK)
                 break;
             start += len;
@@ -354,7 +354,7 @@ void cli_dump(int argc, char *argv[])
             tms_read(i, buf, buflen);
         else
 #endif
-            mem_read(i, buf, buflen);
+            mem_read_banked(i, buf, buflen);
         for (uint8_t j = 0; j < buflen; j++) {
             printf_P(PSTR("%02X "), buf[j]);
             if (j % 4 == 3 && screenwidth > 41)
@@ -710,7 +710,7 @@ void cli_fill(int argc, char *argv[])
                 tms_write(start, buf, 256);
             else
 #endif
-                mem_write(start, buf, 256);
+                mem_write_banked(start, buf, 256);
             start += 256;
         } else {
 #ifdef TMS_BASE
@@ -718,7 +718,7 @@ void cli_fill(int argc, char *argv[])
                 tms_write(start, buf, end - start + 1);
             else
 #endif
-                mem_write(start, buf, end - start + 1);
+                mem_write_banked(start, buf, end - start + 1);
             break;
         }
     }
@@ -736,14 +736,14 @@ void cli_poke(int argc, char *argv[])
     if (argc >= 3) {
         for (uint8_t i = 2; i < argc; i++) {
             value = strtoul(argv[i], NULL, 16) & 0xff;
-            mem_write(addr++, &value, 1);
+            mem_write_banked(addr++, &value, 1);
         }
         return;
     }
     printf_P(PSTR("enter valid hex to replace; blank to leave unchanged; 'x' to exit.\n"));
     for (;;) {
         char buf[16];
-        mem_read(addr, &value, 1);
+        mem_read_banked(addr, &value, 1);
         printf_P(PSTR("%05lX=%02X : "), addr + base_addr, value);
         if (fgets(buf, sizeof buf - 1, stdin) == NULL) {
             break;
@@ -756,7 +756,7 @@ void cli_poke(int argc, char *argv[])
             } else if (end == buf) {
                 break;
             } else {
-                mem_write(addr, &value, 1);
+                mem_write_banked(addr, &value, 1);
                 addr++;
             }
         }
@@ -825,7 +825,7 @@ void cli_ioxwrite(int argc, char *argv[])
     iox_write(addr, reg, value);
 }
 
-#ifdef PAGE_BASE
+#if defined(BANK_PORT) || defined(BANK_BASE)
 
 /**
  * Set the base address in memory
@@ -1138,19 +1138,19 @@ void cli_bench(int argc, char *argv[])
         uint8_t buf[1024];
 
         TCNT1 = 0;
-        mem_read(0, buf, 1024);
+        mem_read_banked(0, buf, 1024);
         uint16_t memreadbare1kt = TCNT1;
 
         TCNT1 = 0;
-        mem_read(0, buf, 32);
+        mem_read_banked(0, buf, 32);
         uint16_t memreadbare32t = TCNT1;
 
         TCNT1 = 0;
-        mem_read(0xf0, buf, 32);
+        mem_read_banked(0xf0, buf, 32);
         uint16_t memreadbare32ct = TCNT1;
 
         TCNT1 = 0;
-        mem_read(0, buf, 256);
+        mem_read_banked(0, buf, 256);
         uint16_t memreadt = TCNT1;
 
         FIL fp;
@@ -1183,10 +1183,10 @@ void cli_bench(int argc, char *argv[])
         printf_P(PSTR("\tbus_status_fast %d us\n"), TCNT_TO_US(busfastt, F_CPU));
         printf_P(PSTR("\tbus_request %d us\n"), TCNT_TO_US(busrequestt, F_CPU));
         printf_P(PSTR("\tbus_release %d us\n"), TCNT_TO_US(busreleaset, F_CPU));
-        printf_P(PSTR("\tmem_read %d us (1KB)\n"), TCNT_TO_US(memreadbare1kt, F_CPU));
-        printf_P(PSTR("\tmem_read %d us (32 bytes)\n"), TCNT_TO_US(memreadbare32t, F_CPU));
-        printf_P(PSTR("\tmem_read %d us (32 bytes, cross-page)\n"), TCNT_TO_US(memreadbare32ct, F_CPU));
-        printf_P(PSTR("\tmem_read %d us\n"), TCNT_TO_US(memreadt, F_CPU));
+        printf_P(PSTR("\tmem_read_banked %d us (1KB)\n"), TCNT_TO_US(memreadbare1kt, F_CPU));
+        printf_P(PSTR("\tmem_read_banked %d us (32 bytes)\n"), TCNT_TO_US(memreadbare32t, F_CPU));
+        printf_P(PSTR("\tmem_read_banked %d us (32 bytes, cross-page)\n"), TCNT_TO_US(memreadbare32ct, F_CPU));
+        printf_P(PSTR("\tmem_read_banked %d us\n"), TCNT_TO_US(memreadt, F_CPU));
         printf_P(PSTR("\tf_open %d us\n"), TCNT_TO_US(fopent, F_CPU));
         printf_P(PSTR("\tf_read %d us\n"), TCNT_TO_US(freadt, F_CPU));
         printf_P(PSTR("\tf_lseek %d us\n"), TCNT_TO_US(fseekt, F_CPU));
@@ -1249,7 +1249,7 @@ const char cli_cmd_names[] PROGMEM =
     "ascii\0"
     "assign\0"
     "attach\0"
-#ifdef PAGE_BASE
+#if defined(BANK_PORT) || defined(BANK_BASE)
     "base\0"
 #endif
     "baud\0"
@@ -1331,7 +1331,7 @@ const char cli_cmd_help[] PROGMEM =
     "\0"                                            // ascii
     "assign a device to a port\0"                   // assign
     "attach virtual uart\0"                         // attach
-#ifdef PAGE_BASE
+#if defined(BANK_PORT) || defined(BANK_BASE)
     "set the base memory address\0"                 // base
 #endif
     "configure UART baud rate\0"                    // baud
@@ -1415,7 +1415,7 @@ void * const cli_cmd_functions[] PROGMEM = {
     &cli_ascii,
     &cli_assign,
     &cli_attach,
-#ifdef PAGE_BASE
+#if defined(BANK_PORT) || defined(BANK_BASE)
     &cli_base,
 #endif
     &cli_baud,

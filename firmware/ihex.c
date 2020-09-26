@@ -173,7 +173,7 @@ ihex_res load_ihex(FILE *file)
         line++;
         record = ihex_to_bin(ihex, bin);
         if (record.rc == IHEX_OK && record.type == IHEX_DATA && record.count > 0) {
-            mem_write(record.addr, bin, record.count);
+            mem_write_banked(record.addr, bin, record.count);
             result.total += record.count;
             if (record.addr < result.min)
                 result.min = record.addr;
@@ -238,7 +238,7 @@ int save_ihex(uint32_t start, uint16_t end, FILE *file)
             count = BYTESPERLINE;
         else
             count = end - start + 1;
-        mem_read(start, bin, count);
+        mem_read_banked(start, bin, count);
         bin_to_ihex(bin, ihex, start, count);
         if (fprintf_P(file, PSTR("%s\n"), ihex) == EOF)
             return EOF;

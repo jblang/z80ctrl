@@ -269,18 +269,28 @@ void bus_log(bus_stat status);
 uint8_t io_out(uint8_t addr, uint8_t value);
 uint8_t io_in(uint8_t addr);
 
-#ifdef PAGE_BASE
-void mem_page(uint8_t bank, uint8_t page);
-void mem_page_addr(uint32_t addr);
+#if defined(BANK_PORT) || defined(BANK_BASE)
+void mem_bank(uint8_t bank, uint8_t page);
+void mem_bank_addr(uint32_t addr);
 #else
-#define mem_page(bank, page)
-#define mem_page_addr(addr)
+#define mem_bank(bank, page)
+#define mem_bank_addr(addr)
 #endif
 
-uint8_t mem_read(uint32_t addr, void * buf, uint16_t len);
-uint8_t _mem_write(uint32_t addr, const void *buf, uint16_t len, uint8_t pgmspace);
-#define mem_write(addr, buf, len) _mem_write((addr), (buf), (len), 0);
-#define mem_write_P(addr, buf, len) _mem_write((addr), (buf), (len), 1);
+typedef void (*pagefunc_t)(uint8_t, uint8_t, void*);
+void mem_read_page(uint8_t start, uint8_t end, void *buf);
+void mem_write_page(uint8_t start, uint8_t end, void *buf);
+void mem_write_page_P(uint8_t start, uint8_t end, void *buf);
+void mem_iterate(uint16_t start, uint16_t end, pagefunc_t dopage, void *buf);
+void mem_iterate_banked(uint32_t start, uint32_t end, pagefunc_t dopage, void *buf);
+
+#define mem_read(addr, buf, len) mem_iterate((addr), ((addr) + ((len) - 1)), mem_read_page, (buf));
+#define mem_write(addr, buf, len) mem_iterate((addr), ((addr) + ((len) - 1)), mem_write_page, (buf));
+#define mem_write_P(addr, buf, len) mem_iterate((addr), ((addr) + ((len) - 1)), mem_write_page_P, (void *)(buf));
+
+#define mem_read_banked(addr, buf, len) mem_iterate_banked((addr), ((addr) + ((len) - 1)), mem_read_page, (buf));
+#define mem_write_banked(addr, buf, len) mem_iterate_banked((addr), ((addr) + ((len) - 1)), mem_write_page, (buf));
+#define mem_write_banked_P(addr, buf, len) mem_iterate_banked((addr), ((addr) + ((len) - 1)), mem_write_page_P, (void *)(buf));
 
 void sn76489_mute(void);
 

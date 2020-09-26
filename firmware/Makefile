@@ -7,8 +7,11 @@
 # Hardware revision (Important: must be set to correct value)
 BOARD_REV?=3
 
-# Base address for RomWBW-style paging; comment out to disable support
-# PAGE_BASE=0x78
+# Bank address for z80ctrl-style banked RAM; comment out to disable support
+# BANK_PORT=0xD0
+
+# Base address for RomWBW-style banked RAM; comment out to disable support
+# BANK_BASE=0x78
 
 # Uncomment to enable support for SST39F0x0 flash chips on RomWBW boards
 # SST_FLASH=1
@@ -87,8 +90,11 @@ endif
 ifdef SN76489_PORT
  	FEATURE_DEFINES += -DSN76489_PORT=$(SN76489_PORT)
 endif
-ifdef PAGE_BASE
-	FEATURE_DEFINES += -DPAGE_BASE=$(PAGE_BASE)
+ifdef BANK_BASE
+	FEATURE_DEFINES += -DBANK_BASE=$(BANK_BASE)
+endif
+ifdef BANK_PORT
+	FEATURE_DEFINES += -DBANK_PORT=$(BANK_PORT)
 endif
 ifdef DS1306_RTC
 	FEATURE_DEFINES += -DDS1306_RTC -DUSE_RTC

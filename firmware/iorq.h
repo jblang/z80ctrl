@@ -58,7 +58,7 @@ typedef enum {
 
     EXT_UNKNOWN,
 
-#ifdef PAGE_BASE
+#ifdef BANK_BASE
     EXT_WBW_RAM,
 #endif
 
