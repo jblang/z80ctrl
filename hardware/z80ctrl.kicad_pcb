@@ -1569,7 +1569,7 @@
     (fp_text reference J5 (at -2.3114 -0.02032 90) (layer F.SilkS)
       (effects (font (size 1 1) (thickness 0.15)))
     )
-    (fp_text value SERIAL (at 1.40462 15.36954) (layer F.SilkS)
+    (fp_text value "S1 S2" (at 1.40462 15.36954) (layer F.SilkS)
       (effects (font (size 1 1) (thickness 0.15)))
     )
     (fp_line (start 4.675 -1.27) (end 6.58 -1.27) (layer F.Fab) (width 0.1))
