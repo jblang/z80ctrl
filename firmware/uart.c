@@ -31,9 +31,9 @@
 #include <avr/interrupt.h>
 
 #include "uart.h"
-#ifdef TMS_BASE
-#include "tms.h"
-#endif
+
+uint8_t watch_flag;
+uint8_t watch_key;
 
 #define	UART_BUFF  64
 #define LINE_BUFF  80
@@ -165,6 +165,8 @@ void uart_rx_vect(uint8_t uart)
 
 	d = *UDR[uart];
 	n = RxFifo[uart].ct;
+    if (watch_key && d == watch_key)
+        watch_flag = 1;
 	if (n < sizeof RxFifo[uart].buff) {
 		RxFifo[uart].ct = ++n;
 		i = RxFifo[uart].wi;

@@ -29,6 +29,9 @@
 
 #define UBRR115200 10
 
+extern uint8_t watch_flag;
+extern uint8_t watch_key;
+
 void uart_init(uint8_t uart, uint16_t ubrr);     /* Perform UART startup initialization. */
 uint16_t uart_testrx(uint8_t uart);		/* Check number of bytes in UART Rx FIFO */
 uint16_t uart_testtx(uint8_t uart);		/* Check number of bytes in UART Rx FIFO */

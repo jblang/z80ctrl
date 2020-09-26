@@ -1011,14 +1011,20 @@ void cli_baud(int argc, char *argv[]) {
  */
 void cli_halt(int argc, char *argv[]) {
     if (argc == 2) {
-        if (strcmp_P(argv[1], PSTR("on")) == 0)
-            do_halt = 1;
-        else if (strcmp_P(argv[1], PSTR("off")) == 0)
-            do_halt = 0;
+        if (strcmp_P(argv[1], PSTR("on")) == 0 || strcmp_P(argv[1], PSTR("both")) == 0)
+            halt_mask = RESET | HALT;
+        else if (strcmp_P(argv[1], PSTR("off")) == 0 || strcmp_P(argv[1], PSTR("reset")) == 0)
+            halt_mask = RESET;
+        else if (strcmp_P(argv[1], PSTR("halt")) == 0)
+            halt_mask = HALT;
+        else if (strcmp_P(argv[1], PSTR("none")) == 0)
+            halt_mask = 0;
     }
-    if (do_halt)
-        printf("halt is enabled\n");
-    else
+    if (halt_mask & RESET)
+        printf("halt on reset signal is enabled\n");
+    if (halt_mask & HALT)
+        printf("halt on halt signal is enabled\n");
+    if (halt_mask == 0)
         printf("halt is disabled\n");
 }
 
@@ -1028,22 +1034,22 @@ void cli_halt(int argc, char *argv[]) {
 void cli_haltkey(int argc, char *argv[]) {
     if (argc == 2) {
         if (strcmp_P(argv[1], PSTR("off")) == 0)
-            halt_key = 0;
+            watch_key = 0;
         else if (argv[1][0] == '^' && argv[1][1] <= '_' && argv[1][1] >= '@')
-            halt_key = argv[1][1] - 64;
+            watch_key = argv[1][1] - 64;
         else if (argv[1][0] == '^' && argv[1][1] <= 'z' && argv[1][1] >= 'a')
-            halt_key = argv[1][1] - 96;
+            watch_key = argv[1][1] - 96;
         else
-            halt_key = strtoul(argv[1], NULL, 16) & 0xff;
+            watch_key = strtoul(argv[1], NULL, 16) & 0xff;
     }
-    if (halt_key == 0)
+    if (watch_key == 0)
         printf_P(PSTR("halt key is disabled\n"));
     else {
-        printf_P(PSTR("halt key is %02x "), halt_key);
-        if (halt_key <= 74)
-            printf_P(PSTR("(^%c)\n"), halt_key + 64);
-        else if (halt_key >= 33 && halt_key <= 126)
-            printf_P(PSTR("(%c)\n"), halt_key);
+        printf_P(PSTR("halt key is %02x "), watch_key);
+        if (watch_key <= 74)
+            printf_P(PSTR("(^%c)\n"), watch_key + 64);
+        else if (watch_key >= 33 && watch_key <= 126)
+            printf_P(PSTR("(%c)\n"), watch_key);
         else
             printf_P(PSTR("\n"));
     }

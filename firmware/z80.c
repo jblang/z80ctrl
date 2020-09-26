@@ -52,8 +52,7 @@ range watches[] = {{0xffff, 0}, {0xffff, 0}, {0xffff, 0}, {0xffff, 0}, {0xffff, 
 /**
  * Whether to stop when the halt signal occurs
  */
-uint8_t do_halt = 1;
-uint8_t halt_key = 0;
+uint8_t halt_mask = RESET | HALT;
 
 /**
  * Reset the Z80 to a specified address
@@ -83,30 +82,45 @@ void z80_reset(uint32_t addr)
  */
 void z80_run(void)
 {
+    watch_flag = 0;
     bus_release();
     clk_run();
-    if (halt_key && do_halt) {
+#if (BOARD_REV == 5)
+    iox0_write(INTCONA, 0xff);
+    iox0_write(DEFVALA, 0xff);
+    iox0_write(GPINTENA, halt_mask);
+    iox0_read(CTRLX_GPIO);  // clear interrupt conditions
+    if (watch_key || halt_mask) {
+        // check halt conditions every iteration (fast)
         for (;;) {
             if (!GET_WAIT)
                 iorq_dispatch();
-            else if (uart_peek(0) == halt_key || !GET_HALT)
+            else if (watch_flag || !GET_IOXINT)
                 break;
         }
-    } else if (halt_key) {
+    }
+#elif (BOARD_REV == 3 || BOARD_REV == 4)
+    if (watch_key && !halt_mask) {
+        // check only halt key every iteration (fast)
         for (;;) {
             if (!GET_WAIT)
                 iorq_dispatch();
-            else if (uart_peek(0) == halt_key)
+            else if (watch_flag)
                 break;
         }
-    } else if (do_halt) {
+    } else if (halt_mask) {
+        // check io extender for halt signals every iteration (slow)
         for (;;) {
             if (!GET_WAIT)
                 iorq_dispatch();
-            else if (!GET_HALT)
+            bus_stat status = bus_status();
+            if (watch_flag || (status.xflags & halt_mask) != halt_mask)
                 break;
         }
-    } else {
+    }
+#endif
+    else {
+        // no halt checks (fastest)
         for (;;) {
             if (!GET_WAIT)
                 iorq_dispatch();
@@ -114,8 +128,11 @@ void z80_run(void)
     }
     clk_stop();
     CLK_LO;
+    while (!GET_RESET)
+        ;
     bus_request();
 }
+
 
 #define MULTIBYTE(op) ((op) == 0xCB || (op) == 0xDD || (op) == 0xED || (op) == 0xFD);
 
@@ -127,6 +144,7 @@ void z80_debug(uint32_t cycles)
     uint8_t last_rd;
     uint8_t last_wr;
     static uint8_t ignore_m1;
+    watch_flag = 0;
 
     if (cycles > 0)
         cycles--;   // 0 based counter makes comparison cheaper
@@ -139,7 +157,7 @@ void z80_debug(uint32_t cycles)
         CLK_LO;
         if ((last_rd && !GET_RD) || (last_wr && !GET_WR)) { // falling edge
             bus_stat status = bus_status();
-            if (!HALT_STATUS && do_halt)
+            if (watch_flag || (status.xflags & halt_mask) != halt_mask)
                 break;
             if (!IORQ_STATUS) {
                 status.data = iorq_dispatch();
@@ -202,5 +220,7 @@ void z80_debug(uint32_t cycles)
             }
         }
     }
+    while (!GET_RESET)
+        ;
     bus_request();
 }
