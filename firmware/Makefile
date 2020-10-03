@@ -5,10 +5,10 @@
 #
 
 # Hardware revision (Important: must be set to correct value)
-BOARD_REV?=3
+BOARD_REV?=5
 
 # Bank address for z80ctrl-style banked RAM; comment out to disable support
-# BANK_PORT=0xD0
+# BANK_PORT=0x78
 
 # Base address for RomWBW-style banked RAM; comment out to disable support
 # BANK_BASE=0x78
