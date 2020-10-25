@@ -26,11 +26,6 @@
 #include <stdint.h>
 #include "bus.h"
 
-#ifndef IORQ_OUTPUT
-#error "TMS9918 support requires board revision 3 or higher"
-#endif
-
-
 #define TMS_TILE 0xc000
 #define TMS_BITMAP 0xc002
 #define TMS_MULTICOLOR 0xc800
