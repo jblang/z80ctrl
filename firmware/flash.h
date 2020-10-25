@@ -30,10 +30,6 @@
 #include <stdint.h>
 #include "bus.h"
 
-#ifndef IORQ_OUTPUT
-#error "Flash support requires board revision 3 or higher"
-#endif
-
 uint8_t flash_erase(uint32_t addr);
 uint8_t flash_write(uint32_t addr, uint8_t *buf, uint32_t len);
 
