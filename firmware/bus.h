@@ -93,19 +93,19 @@
 #define IORQ (1 << 1)
 #define MREQ (1 << 2)
 
-#define MREQ_INPUT DDRB &= ~MREQ
 #define GET_MREQ (PINB & MREQ)
 #define MREQ_STATUS (status.flags & MREQ)
-#define MREQ_OUTPUT DDRB |= MREQ
 #define MREQ_HI PORTB |= MREQ
 #define MREQ_LO PORTB &= ~MREQ
 
-#define IORQ_INPUT DDRB &= ~IORQ
 #define GET_IORQ (PINB & IORQ)
 #define IORQ_STATUS (status.flags & IORQ)
-#define IORQ_OUTPUT DDRB |= IORQ
 #define IORQ_HI PORTB |= IORQ
 #define IORQ_LO PORTB &= ~IORQ
+
+#define IOMR_HI PORTB |= (IORQ | MREQ)
+#define IOMR_OUTPUT DDRB |= (IORQ | MREQ)
+#define IOMR_INPUT DDRB &= ~(IORQ | MREQ)
 
 #define GET_WAIT (GET_IORQ || !GET_BUSRQ)
 #define WAIT_STATUS (IORQ_STATUS || !BUSRQ_STATUS)
@@ -133,19 +133,19 @@
 #define CLK (1 << 6)
 #define BUSACK (1 << 7)
 
-#define RD_INPUT DDRD &= ~RD
-#define RD_OUTPUT DDRD |= RD
 #define GET_RD (PIND & RD)
 #define RD_STATUS (status.flags & RD)
 #define RD_HI PORTD |= RD
 #define RD_LO PORTD &= ~RD
 
-#define WR_INPUT DDRD &= ~WR
-#define WR_OUTPUT DDRD |= WR
 #define GET_WR (PIND & WR)
 #define WR_STATUS (status.flags & WR)
 #define WR_HI PORTD |= WR
 #define WR_LO PORTD &= ~WR
+
+#define RDWR_INPUT DDRD &= ~(RD | WR)
+#define RDWR_OUTPUT DDRD |= (RD | WR)
+#define RDWR_HI PORTD |= (RD | WR)
 
 #define GET_CLK (PIND & CLK)
 #define CLK_STATUS (status.flags & CLK)
@@ -199,19 +199,19 @@
 #define MWAIT_LO iox0_clear(CTRLX_GPIO, MWAIT)
 #define MWAIT_HI iox0_set(CTRLX_GPIO, MWAIT)
 
-#define MREQ_INPUT iox0_set(CTRLX_IODIR, MREQ)
 #define GET_MREQ (iox0_read(CTRLX_GPIO) & MREQ)
 #define MREQ_STATUS (status.xflags & MREQ)
-#define MREQ_OUTPUT iox0_clear(CTRLX_IODIR, MREQ)
 #define MREQ_LO iox0_clear(CTRLX_GPIO, MREQ)
 #define MREQ_HI iox0_set(CTRLX_GPIO, MREQ)
 
-#define IORQ_INPUT iox0_set(CTRLX_IODIR, IORQ)
 #define GET_IORQ (iox0_read(CTRLX_GPIO) & IORQ)
 #define IORQ_STATUS (status.xflags & IORQ)
-#define IORQ_OUTPUT iox0_clear(CTRLX_IODIR, IORQ)
 #define IORQ_LO iox0_clear(CTRLX_GPIO, IORQ)
 #define IORQ_HI iox0_set(CTRLX_GPIO, IORQ)
+
+#define IOMR_INPUT iox0_set(CTRLX_IODIR, IORQ | MREQ)
+#define IOMR_OUTPUT iox0_clear(CTRLX_IODIR, IORQ | MREQ)
+#define IOMR_HI iox0_set(CTRLX_GPIO, IORQ | MREQ)
 
 #define GET_RFSH (GET_MREQ || !(GET_RD && GET_WR))
 #define RFSH_STATUS (MREQ_STATUS || !(RD_STATUS && WR_STATUS))

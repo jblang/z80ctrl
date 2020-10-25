@@ -88,14 +88,10 @@ uint8_t bus_request(void)
             return 0;
         }
     }
-    MREQ_HI;
-    IORQ_HI;
-    RD_HI;
-    WR_HI;
-    MREQ_OUTPUT;
-    IORQ_OUTPUT;
-    RD_OUTPUT;
-    WR_OUTPUT;
+    IOMR_HI;
+    RDWR_HI;
+    IOMR_OUTPUT;
+    RDWR_OUTPUT;
     ADDR_OUTPUT;
     DATA_INPUT;
     return 1;
@@ -108,10 +104,8 @@ void bus_release(void)
 {
     uint8_t i = 255;
 
-    MREQ_INPUT;
-    IORQ_INPUT;
-    RD_INPUT;
-    WR_INPUT;
+    IOMR_INPUT;
+    RDWR_INPUT;
     ADDR_INPUT;
     DATA_INPUT;
     SET_DATA(0); // Disable pullups on data and address lines
