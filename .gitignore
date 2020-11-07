@@ -1,3 +1,10 @@
+# project files
+*.X
+.vscode
+
+# archives
+*.zip
+
 # Compiler output
 *.o
 *.su
@@ -8,11 +15,14 @@
 # Assembler output
 *.lst
 *.out
+*.err
 
 # For PCBs designed using KiCad: http://www.kicad-pcb.org/
 # Format documentation: http://kicad-pcb.org/help/file-formats/
 
 # Temporary files
+fp-info-cache
+*.sch-bak
 *.000
 *.bak
 *.bck
