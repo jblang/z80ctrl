@@ -137,6 +137,9 @@ void tms_config()
     sprite_attribute_table &= 0x3f80;
     sprite_pattern_table &= 0x3800;
 
+    // Disable interrupts to prevent crash if last program had enabled them
+    control_bits &= ~TMS_INT_ENABLE;
+
     // Write registers for current configuration
     tms_writereg(TMS_CONTROL0, control_bits & 0xff);
     tms_writereg(TMS_CONTROL1, control_bits >> 8);
