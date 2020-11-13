@@ -85,7 +85,7 @@ void z80_run(void)
     watch_flag = 0;
     bus_release();
     clk_run();
-#if (BOARD_REV == 5)
+#if (BOARD_REV == 5 || BOARD_REV == 6)
     iox0_write(INTCONA, 0xff);
     iox0_write(DEFVALA, 0xff);
     iox0_write(GPINTENA, halt_mask);

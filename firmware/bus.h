@@ -42,7 +42,7 @@
 #define ADDRHI_IODIR IODIRA
 #define ADDRHI_GPPU GPPUA
 #define ADDRHI_GPIO GPIOA
-#elif (BOARD_REV == 5)
+#elif (BOARD_REV == 5 || BOARD_REV == 6)
 #define ADDRHI_IODIR IODIRB
 #define ADDRHI_GPPU GPPUB
 #define ADDRHI_GPIO GPIOB
@@ -112,7 +112,7 @@
 
 #define GET_IOXINT 0
 #define IOXINT_STATUS 0
-#elif (BOARD_REV == 5)
+#elif (BOARD_REV == 5 || BOARD_REV == 6)
 #define WAIT (1 << 1)
 #define IOXINT (1 << 2)
 
@@ -179,7 +179,7 @@
 #define GET_RFSH (iox0_read(CTRLX_GPIO) & RFSH)
 #define RFSH_STATUS (status.xflags & RFSH)
 
-#elif (BOARD_REV == 5)
+#elif (BOARD_REV == 5 || BOARD_REV == 6)
 #define CTRLX_IODIR IODIRA
 #define CTRLX_GPPU GPPUA
 #define CTRLX_GPIO GPIOA

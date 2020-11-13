@@ -5,7 +5,7 @@
 #
 
 # Hardware revision (Important: must be set to correct value)
-BOARD_REV?=5
+# BOARD_REV?=6
 
 # Bank address for z80ctrl-style banked RAM; comment out to disable support
 # BANK_PORT=0x78
