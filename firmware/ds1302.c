@@ -137,7 +137,7 @@ void rtc_get_date(struct tm *date)
         date->tm_hour = frombcd(data[2]);
     }
     date->tm_min = frombcd(data[1]);
-    date->tm_sec = frombcd(data[0]);
+    date->tm_sec = frombcd(data[0] & 0x7f);
 }
 
 #define tobcd(value) (((value / 10) << 4) | (value % 10))
