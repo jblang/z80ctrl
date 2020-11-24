@@ -39,6 +39,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <util/delay.h>
+#include <util/crc16.h>
 
 #define SOH 0x01
 #define STX 0x02
@@ -70,26 +71,18 @@ void outbyte(char c) {
     uart_putc(0, c); 
 }
 
-unsigned short crc16_ccitt(const void *buf, int len)
+uint16_t crc16(const uint8_t *buf, int len)
 {
-    unsigned short crc = 0;
-    while (len--) {
-        int i;
-        crc ^= *(char *)buf++ << 8;
-        for (i = 0; i < 8; ++i) {
-            if (crc & 0x8000)
-                crc = (crc << 1) ^ 0x1021;
-            else
-                crc = crc << 1;
-        }
-    }
+    uint16_t crc = 0;
+    while (len--)
+        crc = _crc_xmodem_update(crc, *buf++);
     return crc;
 }
 
 static int check(int crc, const unsigned char *buf, int sz)
 {
     if (crc) {
-        unsigned short crc = crc16_ccitt(buf, sz);
+        unsigned short crc = crc16(buf, sz);
         unsigned short tcrc = (buf[sz] << 8) + buf[sz + 1];
         if (crc == tcrc)
             return 1;
@@ -256,7 +249,7 @@ int xm_transmit(FIL *file)
                 if (c < bufsz)
                     xbuff[3 + c] = CTRLZ;
                 if (crc) {
-                    unsigned short ccrc = crc16_ccitt(&xbuff[3], bufsz);
+                    unsigned short ccrc = crc16(&xbuff[3], bufsz);
                     xbuff[bufsz + 3] = (ccrc >> 8) & 0xFF;
                     xbuff[bufsz + 4] = ccrc & 0xFF;
                 } else {
