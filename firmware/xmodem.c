@@ -29,7 +29,7 @@
    and input/output functions inbyte() and outbyte().
 
    the prototypes of the input/output functions are:
-     int inbyte(unsigned short timeout); // msec timeout
+     int inbyte(uint16_t timeout); // msec timeout
      void outbyte(int c);
 
  */
@@ -37,6 +37,7 @@
 #include "ff.h"
 #include "uart.h"
 #include <stdio.h>
+#include <stdint.h>
 #include <string.h>
 #include <util/delay.h>
 #include <util/crc16.h>
@@ -53,9 +54,9 @@
 #define MAXRETRANS 25
 #define TRANSMIT_XMODEM_1K
 
-int inbyte(unsigned short timeout) // msec timeout
+int inbyte(uint16_t timeout) // msec timeout
 {
-    unsigned short c;
+    uint16_t c;
     while (uart_testrx(0) == 0) {
         _delay_ms(1);
         if (timeout) {
@@ -79,16 +80,16 @@ uint16_t crc16(const uint8_t *buf, int len)
     return crc;
 }
 
-static int check(int crc, const unsigned char *buf, int sz)
+static int check(int crc, const uint8_t *buf, int sz)
 {
     if (crc) {
-        unsigned short crc = crc16(buf, sz);
-        unsigned short tcrc = (buf[sz] << 8) + buf[sz + 1];
+        uint16_t crc = crc16(buf, sz);
+        uint16_t tcrc = (buf[sz] << 8) + buf[sz + 1];
         if (crc == tcrc)
             return 1;
     } else {
         int i;
-        unsigned char cks = 0;
+        uint8_t cks = 0;
         for (i = 0; i < sz; ++i) {
             cks += buf[i];
         }
@@ -107,12 +108,12 @@ static void flushinput(void)
 
 int xm_receive(FIL *file)
 {
-    unsigned char
+    uint8_t
         xbuff[1030]; /* 1024 for XModem 1k + 3 head chars + 2 crc + nul */
-    unsigned char *p;
+    uint8_t *p;
     int bufsz, crc = 0;
-    unsigned char trychar = 'C';
-    unsigned char packetno = 1;
+    uint8_t trychar = 'C';
+    uint8_t packetno = 1;
     int i, c, len = 0;
     int retry, retrans = MAXRETRANS;
 
@@ -166,8 +167,8 @@ int xm_receive(FIL *file)
             *p++ = c;
         }
 
-        if (xbuff[1] == (unsigned char)(~xbuff[2]) &&
-            (xbuff[1] == packetno || xbuff[1] == (unsigned char)packetno - 1) &&
+        if (xbuff[1] == (uint8_t)(~xbuff[2]) &&
+            (xbuff[1] == packetno || xbuff[1] == (uint8_t)packetno - 1) &&
             check(crc, &xbuff[3], bufsz)) {
             if (xbuff[1] == packetno) {
                 UINT bw;
@@ -195,10 +196,10 @@ int xm_receive(FIL *file)
 
 int xm_transmit(FIL *file)
 {
-    unsigned char
+    uint8_t
         xbuff[1030]; /* 1024 for XModem 1k + 3 head chars + 2 crc + nul */
     int bufsz, crc = -1;
-    unsigned char packetno = 1;
+    uint8_t packetno = 1;
     int i, c, len = 0;
     int retry;
 
@@ -249,11 +250,11 @@ int xm_transmit(FIL *file)
                 if (c < bufsz)
                     xbuff[3 + c] = CTRLZ;
                 if (crc) {
-                    unsigned short ccrc = crc16(&xbuff[3], bufsz);
+                    uint16_t ccrc = crc16(&xbuff[3], bufsz);
                     xbuff[bufsz + 3] = (ccrc >> 8) & 0xFF;
                     xbuff[bufsz + 4] = ccrc & 0xFF;
                 } else {
-                    unsigned char ccks = 0;
+                    uint8_t ccks = 0;
                     for (i = 3; i < bufsz + 3; ++i) {
                         ccks += xbuff[i];
                     }
