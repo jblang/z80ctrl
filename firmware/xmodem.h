@@ -25,7 +25,7 @@
 
 #include "ff.h"
 
-int xm_receive(FIL *file);
+int xm_receive(int argc, char *argv[]);
 int xm_transmit(FIL *file);
 
 #endif

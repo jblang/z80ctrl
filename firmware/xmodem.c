@@ -1,6 +1,9 @@
 /*
  * Copyright 2001-2010 Georges Menie (www.menie.org)
  * All rights reserved.
+ * 
+ * YMODEM support added by J.B. Langston
+ * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
  *
@@ -25,13 +28,41 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* this code needs standard functions memcpy() and memset()
-   and input/output functions inbyte() and outbyte().
+/*
+Reference: http://pauillac.inria.fr/~doligez/zmodem/ymodem.txt
 
-   the prototypes of the input/output functions are:
-     int inbyte(uint16_t timeout); // msec timeout
-     void outbyte(int c);
+           Figure 4.  YMODEM Batch Transmission Session (2 files)
 
+           SENDER                                  RECEIVER
+                                                   "sb foo.c baz.c<CR>"
+           "sending in batch mode etc."
+                                                   C (command:rb)
+           SOH 00 FF foo.c NUL[123] CRC CRC
+                                                   ACK
+                                                   C
+           SOH 01 FE Data[128] CRC CRC
+                                                   ACK
+           SOH 02 FC Data[128] CRC CRC
+                                                   ACK
+           SOH 03 FB Data[100] CPMEOF[28] CRC CRC
+                                                   ACK
+           EOT
+                                                   NAK
+           EOT
+                                                   ACK
+                                                   C
+           SOH 00 FF baz.c NUL[123] CRC CRC
+                                                   ACK
+                                                   C
+           SOH 01 FB Data[100] CPMEOF[28] CRC CRC
+                                                   ACK
+           EOT
+                                                   NAK
+           EOT
+                                                   ACK
+                                                   C
+           SOH 00 FF NUL[128] CRC CRC
+                                                   ACK
  */
 
 #include "ff.h"
@@ -39,8 +70,10 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdlib.h>
 #include <util/delay.h>
 #include <util/crc16.h>
+#include <avr/pgmspace.h>
 
 #define SOH 0x01
 #define STX 0x02
@@ -50,7 +83,6 @@
 #define CAN 0x18
 #define CTRLZ 0x1A
 
-#define DLY_1S 1000
 #define MAXRETRANS 25
 #define TRANSMIT_XMODEM_1K
 
@@ -102,14 +134,21 @@ static int check(int crc, const uint8_t *buf, int sz)
 
 static void flushinput(void)
 {
-    while (inbyte(((DLY_1S)*3) >> 1) >= 0)
+    while (inbyte(1000) >= 0)
         ;
 }
 
-int xm_receive(FIL *file)
+static void cancel(void)
 {
-    uint8_t
-        xbuff[1030]; /* 1024 for XModem 1k + 3 head chars + 2 crc + nul */
+        flushinput();
+        outbyte(CAN);
+        outbyte(CAN);
+        outbyte(CAN);
+}
+
+int xm_receive(int argc, char *argv[])
+{
+    uint8_t xbuff[1030]; /* 1024 for XModem 1k + 3 head chars + 2 crc + nul */
     uint8_t *p;
     int bufsz, crc = 0;
     uint8_t trychar = 'C';
@@ -117,11 +156,22 @@ int xm_receive(FIL *file)
     int i, c, len = 0;
     int retry, retrans = MAXRETRANS;
 
+    FIL fil;
+    FRESULT fr;
+    UINT bw;
+    int curfile = 0;
+    char filename[255] = "NONAME";
+    int size = 0;
+    uint32_t mtime = 0;
+    uint8_t ymodem = 0;
+
     for (;;) {
         for (retry = 0; retry < 16; ++retry) {
-            if (trychar)
+            if (trychar) {
+                flushinput();
                 outbyte(trychar);
-            if ((c = inbyte((DLY_1S) << 1)) >= 0) {
+            }
+            if ((c = inbyte(10000)) >= 0) {
                 switch (c) {
                     case SOH:
                         bufsz = 128;
@@ -130,11 +180,38 @@ int xm_receive(FIL *file)
                         bufsz = 1024;
                         goto start_recv;
                     case EOT:
-                        flushinput();
-                        outbyte(ACK);
-                        return len; /* normal end */
+                        // done with current file
+                        if (f_error(&fil) == FR_OK) {
+                            // ymodem size was specified, remove extra bytes
+                            if (size > 0) {
+                                f_lseek(&fil, size);
+                                f_truncate(&fil);
+                            }
+                            f_close(&fil);
+                        }
+                        if (ymodem == 0) {
+                            // xmodem EOT; ack and return
+                            flushinput();
+                            outbyte(ACK);
+                            return len;
+                        } else if (ymodem == 1) {
+                            // ymodem first EOT; nak and prepare to ack second EOT
+                            outbyte(NAK);
+                            ymodem = 2;
+                            retry = 0;
+                            continue;
+                        } else if (ymodem == 2) {
+                            // ymodem second EOT; ack and wait for next file
+                            outbyte(ACK);
+                            trychar = 'C';
+                            ymodem = 0;
+                            packetno = 1;
+                            retry = 0;
+                            continue;
+                        }
+                        break;
                     case CAN:
-                        if ((c = inbyte(DLY_1S)) == CAN) {
+                        if ((c = inbyte(1000)) == CAN) {
                             flushinput();
                             outbyte(ACK);
                             return -1; /* canceled by remote */
@@ -149,10 +226,7 @@ int xm_receive(FIL *file)
             trychar = NAK;
             continue;
         }
-        flushinput();
-        outbyte(CAN);
-        outbyte(CAN);
-        outbyte(CAN);
+        cancel();
         return -2; /* sync error */
 
     start_recv:
@@ -162,7 +236,7 @@ int xm_receive(FIL *file)
         p = xbuff;
         *p++ = c;
         for (i = 0; i < (bufsz + (crc ? 1 : 0) + 3); ++i) {
-            if ((c = inbyte(DLY_1S)) < 0)
+            if ((c = inbyte(1000)) < 0)
                 goto reject;
             *p++ = c;
         }
@@ -170,20 +244,51 @@ int xm_receive(FIL *file)
         if (xbuff[1] == (uint8_t)(~xbuff[2]) &&
             (xbuff[1] == packetno || xbuff[1] == (uint8_t)packetno - 1) &&
             check(crc, &xbuff[3], bufsz)) {
+            if (xbuff[1] == 0) {
+                // ymodem metadata packet
+                if (xbuff[3] == 0) {
+                    // empty filename; ymodem session complete
+                    flushinput();
+                    outbyte(ACK);
+                    return len;
+                }
+                // SOH 00 FF filename NUL size space mtime NUL[...] CRC CRC
+                strncpy(filename, &xbuff[3], sizeof(filename));
+                i = strlen(filename) + 4;
+                i = sscanf_P(&xbuff[i], PSTR("%d %o"), &size, &mtime);
+                if (i == 0)
+                    size = 0;
+                if (i < 2)
+                    mtime = 0;
+                // get ready for data packet
+                outbyte(ACK);
+                trychar = 'C';
+                ymodem = 1;
+                continue;
+            }
             if (xbuff[1] == packetno) {
-                UINT bw;
-                if (f_write(file, &xbuff[3], bufsz, &bw) != FR_OK)
+                if (packetno == 1) {
+                    // first data packet; open new file
+                    if (curfile < argc)     // override filename if given locally
+                        strncpy(filename, argv[curfile], 255);
+                    curfile++;
+                    if (f_open(&fil, filename, FA_WRITE | FA_CREATE_ALWAYS) != FR_OK) {
+                        cancel();
+                        return -4;
+                    }
+                }
+                if (f_write(&fil, &xbuff[3], bufsz, &bw) != FR_OK) {
+                    cancel();
                     return -4;
+                }
                 len += bw;
                 ++packetno;
                 retrans = MAXRETRANS + 1;
             }
             if (--retrans <= 0) {
                 flushinput();
-                outbyte(CAN);
-                outbyte(CAN);
-                outbyte(CAN);
-                return -3; /* too many retry error */
+                cancel();
+                return -3; // too many retry error
             }
             outbyte(ACK);
             continue;
@@ -205,7 +310,7 @@ int xm_transmit(FIL *file)
 
     for (;;) {
         for (retry = 0; retry < 16; ++retry) {
-            if ((c = inbyte((DLY_1S) << 1)) >= 0) {
+            if ((c = inbyte(10000)) >= 0) {
                 switch (c) {
                     case 'C':
                         crc = 1;
@@ -214,7 +319,7 @@ int xm_transmit(FIL *file)
                         crc = 0;
                         goto start_trans;
                     case CAN:
-                        if ((c = inbyte(DLY_1S)) == CAN) {
+                        if ((c = inbyte(1000)) == CAN) {
                             outbyte(ACK);
                             flushinput();
                             return -1; /* canceled by remote */
@@ -264,14 +369,14 @@ int xm_transmit(FIL *file)
                     for (i = 0; i < bufsz + 4 + (crc ? 1 : 0); ++i) {
                         outbyte(xbuff[i]);
                     }
-                    if ((c = inbyte(DLY_1S)) >= 0) {
+                    if ((c = inbyte(1000)) >= 0) {
                         switch (c) {
                             case ACK:
                                 ++packetno;
                                 len += bufsz;
                                 goto start_trans;
                             case CAN:
-                                if ((c = inbyte(DLY_1S)) == CAN) {
+                                if ((c = inbyte(1000)) == CAN) {
                                     outbyte(ACK);
                                     flushinput();
                                     return -1; /* canceled by remote */
@@ -291,7 +396,7 @@ int xm_transmit(FIL *file)
             } else {
                 for (retry = 0; retry < 10; ++retry) {
                     outbyte(EOT);
-                    if ((c = inbyte((DLY_1S) << 1)) == ACK)
+                    if ((c = inbyte((1000) << 1)) == ACK)
                         break;
                 }
                 flushinput();

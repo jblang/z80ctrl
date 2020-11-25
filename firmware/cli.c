@@ -256,18 +256,7 @@ void cli_savebin(int argc, char *argv[])
 void cli_xmrx(int argc, char *argv[])
 {
     FRESULT fr;
-    FILE file;
-    FIL fil;
-    UINT bw;
-    if (argc < 2) {
-        printf_P(PSTR("usage: xmrx <file>\n"));
-        return;
-    }
-    if ((fr = file_open(&fil, NULL, argv[1], FA_WRITE | FA_CREATE_ALWAYS)) == FR_OK) {
-        printf_P(PSTR("waiting for transfer to begin; press ^X twice to cancel\n"));
-        xm_receive(&fil);
-        file_close(&fil);
-    }        
+    xm_receive(argc - 1, &argv[1]);
 }
 
 /**
