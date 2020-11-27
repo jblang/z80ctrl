@@ -165,12 +165,11 @@ int xm_receive(int argc, char *argv[])
     uint32_t mtime = 0;
     uint8_t ymodem = 0;
 
+    flushinput();
     for (;;) {
         for (retry = 0; retry < 16; ++retry) {
-            if (trychar) {
-                flushinput();
+            if (trychar)
                 outbyte(trychar);
-            }
             if ((c = inbyte(10000)) >= 0) {
                 switch (c) {
                     case SOH:
@@ -218,6 +217,7 @@ int xm_receive(int argc, char *argv[])
                         }
                         break;
                     default:
+                        flushinput();
                         break;
                 }
             }
