@@ -43,18 +43,14 @@ F_CPU?=20000000L
 
 # Programmer options
 PROGRAMMER?=arduino
-PORT?=COM4
+PORT?=COM3
 BAUD?=115200
 
 AVRCC?=avr-gcc
 OBJCOPY?=avr-objcopy
 AVRDUDE?=avrdude
 
-ifeq ($(OS),Windows_NT)
-CLEAN?=cmd ///c del
-else
 CLEAN?=rm -rf
-endif
 
 BIN=z80ctrl
 FF_OBJS=ff.o diskio.o mmc_avr_spi.o
