@@ -725,7 +725,8 @@ void cli_poke(int argc, char *argv[])
     if (argc >= 3) {
         for (uint8_t i = 2; i < argc; i++) {
             value = strtoul(argv[i], NULL, 16) & 0xff;
-            mem_write_banked(addr++, &value, 1);
+            mem_write_banked(addr, &value, 1);
+            addr++;
         }
         return;
     }
