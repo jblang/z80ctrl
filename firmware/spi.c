@@ -32,6 +32,9 @@ void spi_init(void)
 {
     SPI_DDR |= (1 << MOSI) | (1 << SCK) | CSADDRMASK;
     SPI_DDR &= ~(1 << MISO);
+#ifdef MISO_INPUT_PULLUP
+    MISO_HI;
+#endif
     SPSR = (1 << SPI2X);
     SPCR = (1 << SPE) | (1 << MSTR);
     SPI_FAST;

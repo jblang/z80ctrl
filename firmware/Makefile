@@ -1,4 +1,4 @@
-# All build variables can be set on command line. Build with a 
+# All build variables can be set on command line. Build with a
 # command of this form:
 #
 #    TMS_BASE=0xBE SN76489_PORT=0xFF BOARD_REV=4 MSX_KEY_BASE=0xA9 PORT=/dev/tty.usbserial-00000000 make install
@@ -33,6 +33,9 @@
 
 # Base port for MSX keyboard
 # MSX_KEY_BASE=0xA9
+
+# SD Card Adapter - Set set 1 for the AdaFruit adapter, leave commented out for the Polulu adapter.
+# SD_CARD_ADAFRUIT = 1
 
 # Current git hash
 GITVERSION:= $(shell git log -1 --pretty='%h')
@@ -110,9 +113,12 @@ ifdef MSX_KEY_BASE
 	FEATURE_DEFINES += -DMSX_KEY_BASE=$(MSX_KEY_BASE)
 	OBJS += msxkey.o
 endif
+ifdef SD_CARD_ADAFRUIT
+	FEATURE_DEFINES += -DMISO_INPUT_PULLUP
+endif
 CFLAGS=-std=c99 -flto -Os $(FEATURE_DEFINES) -DF_CPU=$(F_CPU) -DGITVERSION="\"${GITVERSION}\"" -mmcu=$(MCU) -I.
 
-%.o: %.c
+%.o: %.c %.h
 	$(AVRCC) $(CFLAGS) $(LDFLAGS) -c -o $@ $<
 
 $(BIN).hex: $(BIN).elf

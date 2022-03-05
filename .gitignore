@@ -45,3 +45,6 @@ _autosave-*
 # Exported BOM files
 *.xml
 *.csv
+
+# MacOS Artifacts
+.DS_Store
