@@ -116,9 +116,11 @@ endif
 ifdef SD_CARD_ADAFRUIT
 	FEATURE_DEFINES += -DMISO_INPUT_PULLUP
 endif
+
 CFLAGS=-std=c99 -flto -Os $(FEATURE_DEFINES) -DF_CPU=$(F_CPU) -DGITVERSION="\"${GITVERSION}\"" -mmcu=$(MCU) -I.
 
-%.o: %.c %.h
+
+%.o: %.c
 	$(AVRCC) $(CFLAGS) $(LDFLAGS) -c -o $@ $<
 
 $(BIN).hex: $(BIN).elf
