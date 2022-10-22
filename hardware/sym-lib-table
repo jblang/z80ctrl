@@ -1,3 +1,0 @@
-(sym_lib_table
-  (lib (name z80ctrl)(type Legacy)(uri ${KIPRJMOD}/z80ctrl.lib)(options "")(descr ""))
-)

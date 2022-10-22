@@ -1,4 +1,0 @@
-(sym_lib_table
-  (lib (name z80ctrl-iox)(type Legacy)(uri ${KIPRJMOD}/z80ctrl-iox.lib)(options "")(descr ""))
-  (lib (name SamacSys_Parts)(type Legacy)(uri C:/Users/jblang/Electronics/kicad-library/SamacSys_Parts.lib)(options "")(descr ""))
-)
