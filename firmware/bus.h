@@ -167,6 +167,10 @@
 #define CTRLX_IODIR IODIRB
 #define CTRLX_GPPU GPPUB
 #define CTRLX_GPIO GPIOB
+#define CTRLX_INTCON INTCONB
+#define CTRLX_DEFVAL DEFVALB
+#define CTRLX_GPINTEN GPINTENB
+#define CTRLX_INTCAP INTCAPB
 #define RFSH (1 << 1)
 #define RESET (1 << 2)
 #define INTERRUPT (1 << 3)
@@ -183,6 +187,10 @@
 #define CTRLX_IODIR IODIRA
 #define CTRLX_GPPU GPPUA
 #define CTRLX_GPIO GPIOA
+#define CTRLX_INTCON INTCONA
+#define CTRLX_DEFVAL DEFVALA
+#define CTRLX_GPINTEN GPINTENA
+#define CTRLX_INTCAP INTCAPA
 #define M1 (1 << 0)
 #define RESET (1 << 1)
 #define INTERRUPT (1 << 2)
@@ -259,7 +267,7 @@ void clk_run(void);
 void clk_stop(void);
 
 uint8_t bus_request(void);
-void bus_release(void);
+uint8_t bus_release(void);
 void bus_init(void);
 
 bus_stat bus_status(void);

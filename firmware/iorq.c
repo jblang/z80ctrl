@@ -427,6 +427,8 @@ uint8_t iorq_dispatch()
     if (dma_function) {
         if (bus_request())
             dma_function();
+        else
+            printf_P(PSTR("bus request timed out"));
         dma_function = NULL;
         bus_release();
     } else {

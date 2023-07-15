@@ -68,7 +68,8 @@ void z80_reset(uint32_t addr)
     RESET_OUTPUT;
     clk_cycle(3);
     RESET_INPUT;
-    bus_request();
+    if (!bus_request())
+        printf_P(PSTR("bus request timed out"));
 #if defined(BANK_PORT) || defined(BANK_BASE)
     mem_bank_addr(base_addr);
 #endif
@@ -82,55 +83,41 @@ void z80_reset(uint32_t addr)
  */
 void z80_run(void)
 {
+    // configure IO extender to interrupt on halt condition
+    iox0_write(CTRLX_INTCON, 0xff);
+    iox0_write(CTRLX_DEFVAL, 0xff);
+    iox0_write(CTRLX_GPINTEN, halt_mask);
+    iox0_read(CTRLX_INTCAP);  // clear interrupts
     watch_flag = 0;
     bus_release();
     clk_run();
+    for (;;) {
+        if (!GET_WAIT) 
+            iorq_dispatch();
+        if (watch_flag) {
+            printf_P(PSTR("breaking due to halt key\n"));
+            break;
+        }
+        if (!halt_mask) // halt checking disabled
+            continue;
 #if (BOARD_REV == 5 || BOARD_REV == 6)
-    iox0_write(INTCONA, 0xff);
-    iox0_write(DEFVALA, 0xff);
-    iox0_write(GPINTENA, halt_mask);
-    iox0_read(CTRLX_GPIO);  // clear interrupt conditions
-    if (watch_key || halt_mask) {
-        // check halt conditions every iteration (fast)
-        for (;;) {
-            if (!GET_WAIT)
-                iorq_dispatch();
-            else if (watch_flag || !GET_IOXINT)
-                break;
-        }
-    }
-#elif (BOARD_REV == 3 || BOARD_REV == 4)
-    if (watch_key && !halt_mask) {
-        // check only halt key every iteration (fast)
-        for (;;) {
-            if (!GET_WAIT)
-                iorq_dispatch();
-            else if (watch_flag)
-                break;
-        }
-    } else if (halt_mask) {
-        // check io extender for halt signals every iteration (slow)
-        for (;;) {
-            if (!GET_WAIT)
-                iorq_dispatch();
-            bus_stat status = bus_status();
-            if (watch_flag || (status.xflags & halt_mask) != halt_mask)
-                break;
-        }
-    }
+        // skip slow status check if no interrupt from IO extender
+        if (GET_IOXINT)
+            continue;
 #endif
-    else {
-        // no halt checks (fastest)
-        for (;;) {
-            if (!GET_WAIT)
-                iorq_dispatch();
+        uint8_t xflags = iox0_read(CTRLX_INTCAP);
+        if ((xflags & halt_mask) != halt_mask) {
+            printf_P(
+                PSTR("breaking due to %S signal\n"), 
+                !(xflags & halt_mask & RESET) ? PSTR("reset") : PSTR("halt")
+            );
+            break;
         }
     }
     clk_stop();
     CLK_LO;
-    while (!GET_RESET)
+    while (!bus_request())
         ;
-    bus_request();
 }
 
 
@@ -189,8 +176,11 @@ void z80_debug(uint32_t cycles)
                     if (!M1_STATUS) {
                         if (!ignore_m1) {
                             if (INRANGE(watches, OPFETCH, status.addr)) {
-                                bus_request();
-                                disasm_mem(status.addr, status.addr);
+                                if (bus_request()) {
+                                    disasm_mem(status.addr, status.addr);
+                                } else {
+                                    printf_P(PSTR("bus request timed out"));
+                                }
                                 uart_flush();
                             }
                             if (INRANGE(breaks, OPFETCH, status.addr) && cycles-- == 0) {
@@ -220,7 +210,6 @@ void z80_debug(uint32_t cycles)
             }
         }
     }
-    while (!GET_RESET)
+    while (!bus_request())
         ;
-    bus_request();
 }

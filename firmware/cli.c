@@ -1010,12 +1010,8 @@ void cli_halt(int argc, char *argv[]) {
         else if (strcmp_P(argv[1], PSTR("none")) == 0)
             halt_mask = 0;
     }
-    if (halt_mask & RESET)
-        printf("halt on reset signal is enabled\n");
-    if (halt_mask & HALT)
-        printf("halt on halt signal is enabled\n");
-    if (halt_mask == 0)
-        printf("halt is disabled\n");
+    printf_P(PSTR("halt on reset signal is %S\n"), halt_mask & RESET ? PSTR("enabled") : PSTR("disabled"));
+    printf_P(PSTR("halt on halt signal is %S\n"), halt_mask & HALT ? PSTR("enabled") : PSTR("disabled"));
 }
 
 /**

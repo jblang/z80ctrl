@@ -83,7 +83,6 @@ uint8_t bus_request(void)
     while (GET_BUSACK)  {
         CLK_TOGGLE;
         if (i-- == 0) {
-            printf_P(PSTR("bus request timed out\n"));
             BUSRQ_HI;
             return 0;
         }
@@ -100,7 +99,7 @@ uint8_t bus_request(void)
 /**
  *  Return control of the bus to the Z80
  */
-void bus_release(void)
+uint8_t bus_release(void)
 {
     uint8_t i = 255;
 
@@ -116,10 +115,10 @@ void bus_release(void)
     while (!GET_BUSACK)  {
         CLK_TOGGLE;
         if (i-- == 0) {
-            printf_P(PSTR("bus release timed out\n"));
-            return;
+            return 0;
         }
     }
+    return 1;
 }
 
 /**
@@ -195,7 +194,8 @@ void bus_init(void)
     RESET_INPUT;
 
     // Start out in control of the bus
-    bus_request();
+    if (!bus_request())
+        printf_P(PSTR("bus request timed out"));
 }
 
 /**
