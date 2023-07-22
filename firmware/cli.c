@@ -428,11 +428,11 @@ void cli_clkdiv(int argc, char *argv[])
     if (argc >= 2)
         tmp = strtoul(argv[1], NULL, 10);
     if (tmp > 1)
-        clkdiv = tmp;
+        set_clkdiv(tmp);
     else
         printf_P(PSTR("usage: clkdiv <divider>; minimum divider is 2\n"));
-    uint16_t freq = F_CPU / clkdiv / 1000;
-    printf_P(PSTR("current speed is %u.%03u MHz (clkdiv=%d)\n"), freq/1000, freq-(freq/1000)*1000, clkdiv);
+    uint16_t freq = F_CPU / get_clkdiv() / 1000;
+    printf_P(PSTR("current speed is %u.%03u MHz (clkdiv=%d)\n"), freq/1000, freq-(freq/1000)*1000, get_clkdiv());
 }
 
 /**
@@ -450,7 +450,7 @@ void cli_screen(int argc, char *argv[])
     if (tmpheight >= 24)
         screenheight = tmpheight;
         printf_P(PSTR("usage: screen <width> <height>\n"));
-    uint16_t freq = F_CPU / clkdiv / 1000;
+    uint16_t freq = F_CPU / get_clkdiv() / 1000;
     printf_P(PSTR("current screen size is %dx%d\n"), screenwidth, screenheight);
 }
 
@@ -836,7 +836,7 @@ void cli_base(int argc, char *argv[])
 /**
  * Boot from a disk
  */
-void cli_boot(int argc, char*argv[])
+void cli_boot(int argc, char *argv[])
 {
     if (argc == 2) {
         drive_mount(0, argv[1]);
@@ -845,6 +845,40 @@ void cli_boot(int argc, char*argv[])
         z80_reset(0);
         z80_run();
     }
+}
+
+/**
+ * Load and run a coleco ROM
+ */
+void cli_coleco(int argc, char *argv[])
+{
+    uint8_t prevdiv = get_clkdiv();
+    uint8_t prevmask = get_haltmask();
+    char *coleco_rom = "coleco.rom";
+    char *game_rom;
+    if (argc > 2)
+        coleco_rom = argv[2];
+    if (argc > 1) {
+        game_rom = argv[1];
+    } else {
+        printf_P(PSTR("usage: coleco game.rom [coleco.rom]\n"));
+        return;
+    }
+    if (f_stat(game_rom, NULL) != FR_OK) {
+        printf_P(PSTR("file not found: %s\n"), game_rom);
+        return;
+    } else if (f_stat(coleco_rom, NULL) != FR_OK) {
+        printf_P(PSTR("file not found: %s\n"), coleco_rom);
+        return;
+    } 
+    loadbin(coleco_rom, MEM, 0, 0, 0);
+    loadbin(game_rom, MEM, 0x8000, 0, 0);
+    set_clkdiv(5);
+    set_haltmask(RESET);
+    z80_reset(0);
+    z80_run();
+    set_haltmask(prevmask);
+    set_clkdiv(prevdiv);
 }
 
 /**
@@ -1002,16 +1036,16 @@ void cli_baud(int argc, char *argv[]) {
 void cli_halt(int argc, char *argv[]) {
     if (argc == 2) {
         if (strcmp_P(argv[1], PSTR("on")) == 0 || strcmp_P(argv[1], PSTR("both")) == 0)
-            halt_mask = RESET | HALT;
+            set_haltmask(RESET | HALT);
         else if (strcmp_P(argv[1], PSTR("off")) == 0 || strcmp_P(argv[1], PSTR("reset")) == 0)
-            halt_mask = RESET;
+            set_haltmask(RESET);
         else if (strcmp_P(argv[1], PSTR("halt")) == 0)
-            halt_mask = HALT;
+            set_haltmask(HALT);
         else if (strcmp_P(argv[1], PSTR("none")) == 0)
-            halt_mask = 0;
+            set_haltmask(0);
     }
-    printf_P(PSTR("halt on reset signal is %S\n"), halt_mask & RESET ? PSTR("enabled") : PSTR("disabled"));
-    printf_P(PSTR("halt on halt signal is %S\n"), halt_mask & HALT ? PSTR("enabled") : PSTR("disabled"));
+    printf_P(PSTR("halt on reset signal is %S\n"), get_haltmask() & RESET ? PSTR("enabled") : PSTR("disabled"));
+    printf_P(PSTR("halt on halt signal is %S\n"), get_haltmask() & HALT ? PSTR("enabled") : PSTR("disabled"));
 }
 
 /**
@@ -1251,6 +1285,7 @@ const char cli_cmd_names[] PROGMEM =
     "chdir\0"
     "clkdiv\0"
     "cls\0"
+    "coleco\0"
     "copy\0"
     "cp\0"
 #ifdef USE_RTC
@@ -1333,6 +1368,7 @@ const char cli_cmd_help[] PROGMEM =
     "\0"                                            // chdir
     "set Z80 clock divider\0"                       // clkdiv
     "clear screen\0"                                // cls
+    "run a colecovision game\0"                       // coleco
     "copy a file (alias cp)\0"                      // copy
     "\0"                                            // cp
 #ifdef USE_RTC
@@ -1417,6 +1453,7 @@ void * const cli_cmd_functions[] PROGMEM = {
     &cli_chdir,
     &cli_clkdiv,
     &cli_cls,
+    &cli_coleco,
     &cli_copy,       // copy
     &cli_copy,       // cp
 #ifdef USE_RTC

@@ -49,6 +49,22 @@ void clk_cycle(uint8_t cycles)
 uint8_t clkdiv = 2;
 
 /**
+ * Set clock divider
+*/
+void set_clkdiv(uint8_t div)
+{
+    clkdiv = div;
+}
+
+/**
+ * Get clock divider
+*/
+uint8_t get_clkdiv(void)
+{
+    return clkdiv;
+}
+
+/**
  * Run the Z80's clock
  */
 void clk_run(void)

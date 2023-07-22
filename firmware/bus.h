@@ -259,9 +259,10 @@ typedef struct {
         uint8_t data;
 } bus_stat;
 
-extern uint8_t clkdiv;
 extern uint32_t base_addr;
 
+void set_clkdiv(uint8_t div);
+uint8_t get_clkdiv(void);
 void clk_cycle(uint8_t cycles);
 void clk_run(void);
 void clk_stop(void);

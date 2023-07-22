@@ -55,6 +55,22 @@ range watches[] = {{0xffff, 0}, {0xffff, 0}, {0xffff, 0}, {0xffff, 0}, {0xffff, 
 uint8_t halt_mask = RESET | HALT;
 
 /**
+ * Set the halt mask
+ */
+void set_haltmask(uint8_t mask)
+{
+    halt_mask = mask;
+}
+
+/**
+ * Get the halt maks
+ */
+uint8_t get_haltmask(void)
+{
+    return halt_mask;
+}
+
+/**
  * Reset the Z80 to a specified address
  */
 void z80_reset(uint32_t addr)

@@ -40,12 +40,13 @@ typedef struct {
 
 extern range breaks[];
 extern range watches[];
-extern uint8_t halt_mask;
 extern const char debug_names[];
 
 #define INRANGE(ranges, type, addr) ((ranges)[(type)].start <= (addr) && (addr) <= (ranges)[type].end)
 #define ENABLED(ranges, type) ((ranges)[(type)].start <= (ranges)[(type)].end)
 
+void set_haltmask(uint8_t mask);
+uint8_t get_haltmask(void);
 void z80_page(uint32_t p);
 void z80_reset(uint32_t addr);
 void z80_run(void);
