@@ -474,8 +474,8 @@ uint8_t bdos_open()
     // Command-specific behavior
     if (dma_command == BDOS_OPEN) {
         // Search for first existing file to match any wildcards
-        if ((fr = bdos_search(BDOS_SFIRST)) != BDOS_SUCCESS)
-            return bdos_error(fr);
+        if (bdos_search(BDOS_SFIRST) != BDOS_SUCCESS)
+            return BDOS_ERROR;
         curfcb.s2 = 0;  // s2 is always zeroed by open call
     } else {
         // Otherwise make a new file
