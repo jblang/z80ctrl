@@ -56,27 +56,52 @@
 
 // BDOS function calls
 enum {
-    BDOS_TERMCPM = 0,
-    BDOS_OPEN = 15,
-    BDOS_CLOSE = 16,
-    BDOS_SFIRST = 17,
-    BDOS_SNEXT = 18,
-    BDOS_DELETE = 19,
-    BDOS_READ = 20,
-    BDOS_WRITE = 21,
-    BDOS_MAKE = 22,
-    BDOS_RENAME = 23,
-    BDOS_ATTRIB = 30,
-    BDOS_READRAND = 33,
-    BDOS_WRITERAND = 34,
-    BDOS_SIZE = 35,
-    BDOS_RANDREC = 36,
-    BDOS_WRITEZF = 40
+    P_TERMCPM = 0,
+    C_READ = 1,
+    C_WRITE = 2,
+    A_READ = 3,
+    A_WRITE = 4,
+    L_WRITE = 5,
+    C_RAWIO = 6,
+    C_GETIOB = 7,
+    C_SETIOB = 8,
+    C_WRITESTR = 9,
+    C_READSTR = 10,
+    C_STAT = 11,
+    S_BDOSVER = 12,
+    DRV_ALLRESET = 13,
+    DRV_SET = 14,
+    F_OPEN = 15,
+    F_CLOSE = 16,
+    F_SFIRST = 17,
+    F_SNEXT = 18,
+    F_DELETE = 19,
+    F_READ = 20,
+    F_WRITE = 21,
+    F_MAKE = 22,
+    F_RENAME = 23,
+    DRV_LOGINVEC = 24,
+    DRV_GET = 25,
+    F_DMAOFF = 26,
+    DRV_ALLOCVEC = 27,
+    DRV_SETRO = 28,
+    DRV_ROVEC = 29,
+    F_ATTRIB = 30,
+    DRV_DPB = 31,
+    F_USERNUM = 32,
+    F_READRAND = 33,
+    F_WRITERAND = 34,
+    F_SIZE = 35,
+    F_RANDREC = 36,
+    DRV_RESET = 37,
+    DRV_ACCESS = 38,
+    DRV_FREE = 39,
+    F_WRITEZF = 40
 };
 
 const char bdos_names[] PROGMEM = {
     "P_TERMCPM\0" "C_READ\0" "C_WRITE\0" "A_READ\0" "A_WRITE\0" "L_WRITE\0" 
-    "C_RAWIO\0" "A_STATIN\0" "A_STATOUT\0" "C_WRITESTR\0" "C_READSTR\0"
+    "C_RAWIO\0" "C_GETIOB\0" "C_SETIOB\0" "C_WRITESTR\0" "C_READSTR\0"
     "C_STAT\0" "S_BDOSVER\0" "DRV_ALLRESET\0" "DRV_SET\0" "F_OPEN\0" "F_CLOSE\0"
     "F_SFIRST\0" "F_SNEXT\0" "F_DELETE\0" "F_READ\0" "F_WRITE\0" "F_MAKE\0"
     "F_RENAME\0" "DRV_LOGINVEC\0" "DRV_GET\0" "F_DMAOFF\0" "DRV_ALLOCVEC\0"
@@ -324,7 +349,7 @@ uint8_t dir_dump(dir_t *d)
 void bdos_log(const char *message)
 {
     printf_P(PSTR("\n%S: BDOS %d %S   fcb %04xh   dma %04xh   ret %02x\n"), message, dma_command, strlookup(bdos_names, dma_command), params.fcbaddr, params.dmaaddr, params.ret);
-    if (dma_command != BDOS_SNEXT && dma_command != BDOS_TERMCPM)
+    if (dma_command != F_SNEXT && dma_command != P_TERMCPM)
         fcb_dump(&curfcb);
 }
 
@@ -357,7 +382,7 @@ uint8_t bdos_search(uint8_t mode)
     uint8_t buf[RECSIZ];
 
     // On first search, save mask and extent, then reopen directory
-    if (mode == BDOS_SFIRST) {
+    if (mode == F_SFIRST) {
         memcpy(mask, curfcb.fn, 11);
         mask[11] = 0;
         searchex = curfcb.ex;
@@ -433,7 +458,7 @@ uint8_t bdos_search(uint8_t mode)
     }
 
     // Only write directory entry to dma buffer for actual search command
-    if (dma_command == BDOS_SFIRST || dma_command == BDOS_SNEXT) {
+    if (dma_command == F_SFIRST || dma_command == F_SNEXT) {
         // Pad extra space with empty directory entries
         memcpy(buf, &dirfcb, sizeof(dir_t));
         memset(buf+sizeof(dir_t), 0xe5, RECSIZ-sizeof(dir_t));
@@ -472,9 +497,9 @@ uint8_t bdos_open()
         mode |= FA_WRITE;
 
     // Command-specific behavior
-    if (dma_command == BDOS_OPEN) {
+    if (dma_command == F_OPEN) {
         // Search for first existing file to match any wildcards
-        if (bdos_search(BDOS_SFIRST) != BDOS_SUCCESS)
+        if (bdos_search(F_SFIRST) != BDOS_SUCCESS)
             return BDOS_ERROR;
         curfcb.s2 = 0;  // s2 is always zeroed by open call
     } else {
@@ -521,20 +546,20 @@ uint8_t bdos_readwrite()
     if ((fr = fcb_openfil(&curfcb, FA_READ|FA_WRITE)) != FR_OK)
         return bdos_error(fr);
     // Calculate offset for access method
-    if (dma_command == BDOS_READ || dma_command == BDOS_WRITE) {
+    if (dma_command == F_READ || dma_command == F_WRITE) {
         offset = fcb_seqoffset(&curfcb);
     } else {
         offset = fcb_randoffset(&curfcb); 
     }
     // Don't seek past EOF when reading
-    if (offset >= f_size(&curfil) && (dma_command == BDOS_READ || dma_command == BDOS_READRAND))
+    if (offset >= f_size(&curfil) && (dma_command == F_READ || dma_command == F_READRAND))
         return BDOS_EOF;
     // Seek to calculated offset if different from current offset
     if (offset != f_tell(&curfil))
         if ((fr = f_lseek(&curfil, offset)) != FR_OK)
             return bdos_error(fr);
     // Do the read or write operation
-    if (dma_command == BDOS_READRAND || dma_command == BDOS_READ) {
+    if (dma_command == F_READRAND || dma_command == F_READ) {
         if ((fr = f_read(&curfil, buf, RECSIZ, &br)) != FR_OK)
             return bdos_error(fr);
         // pad incomplete record with 0
@@ -546,7 +571,7 @@ uint8_t bdos_readwrite()
             return bdos_error(fr);
     }
     // Automatically increment record if in sequential mode
-    if (dma_command == BDOS_READ || dma_command == BDOS_WRITE)
+    if (dma_command == F_READ || dma_command == F_WRITE)
         offset += RECSIZ;
     fcb_setseq(&curfcb, offset);
     // Write back FCB except for random fields
@@ -572,11 +597,11 @@ uint8_t bdos_delete()
 {
     FRESULT fr = FR_OK;
     // Search for files matching wildcards
-    uint8_t ret = bdos_search(BDOS_SFIRST);
+    uint8_t ret = bdos_search(F_SFIRST);
     while (!ret) {
         if (fr = f_unlink(curfno.fname) != FR_OK)
             return bdos_error(fr);
-        ret = bdos_search(BDOS_SNEXT);
+        ret = bdos_search(F_SNEXT);
     }
     return bdos_error(fr);
 }
@@ -598,7 +623,7 @@ uint8_t bdos_rename()
 uint8_t bdos_size()
 {
     uint8_t ret;
-    if (ret = bdos_search(BDOS_SFIRST))
+    if (ret = bdos_search(F_SFIRST))
         return ret;
     fcb_setrand(&curfcb, (curfno.fsize + RECSIZ-1)/ RECSIZ);
     mem_write(params.fcbaddr, &curfcb, sizeof(fcb_t));
@@ -622,46 +647,46 @@ void bdos_dma_execute()
     mem_read(dma_mailbox, &params, sizeof(bdos_mailbox_t));
 
     // Get the specified FCB
-    if (dma_command != BDOS_SNEXT) {
+    if (dma_command != F_SNEXT) {
         mem_read(params.fcbaddr, &curfcb, sizeof(fcb_t));
     }
     if (bdos_debug)
         bdos_log(PSTR("Before"));
 
     switch (dma_command) {
-        case BDOS_TERMCPM:
+        case P_TERMCPM:
             params.ret = bdos_terminate();
             break;
-        case BDOS_OPEN:
-        case BDOS_MAKE:
+        case F_OPEN:
+        case F_MAKE:
             params.ret = bdos_open();
             break;
-        case BDOS_CLOSE:
+        case F_CLOSE:
             params.ret = bdos_close();
             break;
-        case BDOS_SFIRST:
-        case BDOS_SNEXT:
+        case F_SFIRST:
+        case F_SNEXT:
             params.ret = bdos_search(dma_command);
             break;
-        case BDOS_READ:
-        case BDOS_WRITE:
-        case BDOS_READRAND:
-        case BDOS_WRITERAND:
-        case BDOS_WRITEZF:
+        case F_READ:
+        case F_WRITE:
+        case F_READRAND:
+        case F_WRITERAND:
+        case F_WRITEZF:
             params.ret = bdos_readwrite();
             break;
-        case BDOS_DELETE:
+        case F_DELETE:
             params.ret = bdos_delete();
             break;
-        case BDOS_RENAME:
+        case F_RENAME:
             params.ret = bdos_rename();
             break;
-        case BDOS_ATTRIB:
+        case F_ATTRIB:
             break; // currently unimplemented
-        case BDOS_SIZE:
+        case F_SIZE:
             params.ret = bdos_size();
             break;
-        case BDOS_RANDREC:
+        case F_RANDREC:
             params.ret = bdos_randrec();
             break;
         default:
