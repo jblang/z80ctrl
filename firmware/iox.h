@@ -81,11 +81,4 @@ uint16_t iox0_read16(uint8_t reg);
 void iox0_write(uint8_t reg, uint8_t data);
 void iox0_set(uint8_t reg, uint8_t mask);
 void iox0_clear(uint8_t reg, uint8_t mask);
-
-void iox_setdev(uint8_t dev);
-uint8_t iox_getdev();
-void iox_setreg(uint8_t reg);
-uint8_t iox_getreg();
-void iox_writeval(uint8_t data);
-uint8_t iox_readval();
 #endif

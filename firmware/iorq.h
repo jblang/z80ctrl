@@ -47,12 +47,10 @@ typedef enum {
     EMU_MSXKEY_ROW,
 #endif
 
-#ifdef IOX_BASE
-    Z80CTRL_SPI_DEV,
-    Z80CTRL_SPI_REG,
-    Z80CTRL_SPI_DATA,
-#endif
-
+    Z80CTRL_DEV,
+    Z80CTRL_REG,
+    Z80CTRL_LO,
+    Z80CTRL_HI,
     Z80CTRL_FATFS_DMA,
     Z80CTRL_BDOS_EMU,
 

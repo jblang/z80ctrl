@@ -33,6 +33,9 @@
 #include "sioemu.h"
 #include "filedma.h"
 #include "bdosemu.h"
+#ifdef USE_RTC
+#include "rtc.h"
+#endif
 #ifdef TMS_BASE
 #include "tms.h"
 #endif
@@ -76,11 +79,10 @@ const char device_name[] PROGMEM =
     "msxrow\0"
 #endif
 
-#ifdef IOX_BASE
-    "spidev\0"
-    "spireg\0"
-    "spidata\0"
-#endif
+    "z8cdev\0"
+    "z8creg\0"
+    "z8cdlo\0"
+    "z8cdhi\0"
 
     "fatfs\0"
     "bdos\0"
@@ -122,11 +124,10 @@ const char device_description[] PROGMEM =
     "MSX keyboard row\0"
 #endif
 
-#ifdef IOX_BASE
-    "SPI device select\0"
-    "SPI register select\0"
-    "SPI data\0"
-#endif
+    "z80ctrl device select\0"
+    "z80ctrl register/command select\0"
+    "z80ctrl data (lo)\0"
+    "z80ctrl data (hi)\0"
 
     "FatFS DMA control\0"
     "BDOS DMA control\0"
@@ -148,6 +149,15 @@ const char device_description[] PROGMEM =
 
     "Invalid device\0";
 
+void z8c_setdev(uint8_t dev);
+uint8_t z8c_getdev();
+void z8c_setreg(uint8_t reg);
+uint8_t z8c_getreg();
+void z8c_setlo(uint8_t data);
+uint8_t z8c_getlo();
+void z8c_sethi(uint8_t data);
+uint8_t z8c_gethi();
+
 /**
  * Device read functions
  */
@@ -168,12 +178,10 @@ void * const device_read[] PROGMEM = {
     NULL,               // EMU_MSX_KEY_ROW
 #endif
 
-#ifdef IOX_BASE
-    &iox_getdev,        // Z80CTRL_IOX_DEV
-    &iox_getreg,        // Z80CTRL_IOX_REG
-    &iox_readval,       // Z80CTRL_IOX_VAL
-#endif
-
+    &z8c_getdev,        // Z80CTRL_DEV
+    &z8c_getreg,        // Z80CTRL_REG
+    &z8c_setlo,         // Z80CTRL_LO
+    &z8c_sethi,         // Z80CTRL_HI
     &file_dma_reset,    // Z80CTRL_FATFS_DMA
     &bdos_dma_reset,    // Z80CTRL_BDOS_EMU
 
@@ -215,12 +223,10 @@ void * const device_write[] PROGMEM = {
     &msx_setrow,        // EMU_MSX_KEY_ROW 
 #endif
 
-#ifdef IOX_BASE
-    &iox_setdev,        // Z80CTRL_IOX_DEV 
-    &iox_setreg,        // Z80CTRL_IOX_REG 
-    &iox_writeval,      // Z80CTRL_IOX_VAL 
-#endif
-
+    &z8c_setdev,        // Z80CTRL_DEV 
+    &z8c_setreg,        // Z80CTRL_REG 
+    &z8c_getlo,         // Z80CTRL_LO
+    &z8c_gethi,         // Z80CTRL_HI
     &file_dma_command,  // Z80CTRL_FATFS_DMA 
     &bdos_dma_command,  // Z80CTRL_BDOS_EMU 
 
@@ -309,11 +315,10 @@ uint8_t iorq_assign(uint8_t port, device_mode mode, device_type device)
  * Default ports for internal devices
  */
 const uint8_t default_ports[] PROGMEM = {
-#ifdef IOX_BASE
-    0x00, Z80CTRL_SPI_DEV,
-    0x01, Z80CTRL_SPI_REG,
-    0x02, Z80CTRL_SPI_DATA,
-#endif
+    0x00, Z80CTRL_DEV,
+    0x01, Z80CTRL_REG,
+    0x02, Z80CTRL_LO,
+    0x03, Z80CTRL_HI,
 
     0x10, EMU_ACIA0_STATUS,
     0x11, EMU_ACIA0_DATA,
@@ -439,4 +444,62 @@ uint8_t iorq_dispatch()
         BUSRQ_HI;
     }
     return data;
+}
+
+#define Z8C_RTC 0x00
+#define Z8C_GPIO_MIN 0x01
+#define Z8C_GPIO_MAX 0x07
+#define Z8C_BDOS_EMU 0x08
+
+static uint8_t z8c_dev = 0;
+static uint8_t z8c_reg = 0;
+
+void z8c_setdev(uint8_t dev)
+{
+    z8c_dev = dev;
+}
+
+uint8_t z8c_getdev()
+{
+    return z8c_dev;
+}
+
+void z8c_setreg(uint8_t reg)
+{
+    z8c_reg = reg;
+}
+
+uint8_t z8c_getreg()
+{
+    return z8c_reg;
+}
+
+void z8c_setlo(uint8_t data)
+{
+    if (z8c_dev == Z8C_RTC) {
+#ifdef USE_RTC
+        rtc_write(z8c_reg, data);
+#endif
+    } else if (z8c_dev >= Z8C_GPIO_MIN && z8c_dev <= Z8C_GPIO_MAX) {
+        iox_write(z8c_dev, z8c_reg, data);
+    }
+}
+
+void z8c_sethi(uint8_t data)
+{
+}
+
+uint8_t z8c_getlo()
+{
+    if (z8c_dev == Z8C_RTC) {
+#ifdef USE_RTC
+        return rtc_read(z8c_reg);
+#endif
+    } else if (z8c_dev >= Z8C_GPIO_MIN && z8c_dev <= Z8C_GPIO_MAX) {
+        return iox_read(z8c_dev, z8c_reg);
+    }
+}
+
+uint8_t z8c_gethi()
+{
 }

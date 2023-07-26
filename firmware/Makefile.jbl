@@ -28,9 +28,6 @@ TMS_BASE=0xBE
 # Port assigned to SN76489 sound chip
 SN76489_PORT=0xFF
 
-# Base port on which to expose I/O expander card to Z80
-IOX_BASE=0x00
-
 # Base port for MSX keyboard
 MSX_KEY_BASE=0xA9
 
@@ -102,9 +99,6 @@ endif
 ifdef DS1302_RTC
 	FEATURE_DEFINES += -DDS1302_RTC -DUSE_RTC
 	OBJS += ds1302.o
-endif
-ifdef IOX_BASE
-	FEATURE_DEFINES += -DIOX_BASE=$(IOX_BASE)
 endif
 ifdef RTC_BASE
 	FEATURE_DEFINES += -DRTC_BASE=$(RTC_BASE)
