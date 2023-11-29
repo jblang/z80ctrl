@@ -550,7 +550,7 @@ void cli_chdir(int argc, char *argv[])
 
     fr = f_chdir(argv[1]);
     if (fr)
-        printf_P(PSTR("error changing directory: %S\n"), strlookup(fr_text, fr));
+        printf_P(PSTR("error changing directory: %S\n"), ff_error(fr));
 }
 
 /**
@@ -567,7 +567,7 @@ void cli_mkdir(int argc, char *argv[])
 
     for (uint8_t i = 1; i < argc; i++) {
         if (fr = f_mkdir(argv[i]))
-            printf_P(PSTR("error making directory %s: %S\n"), argv[i], strlookup(fr_text, fr));
+            printf_P(PSTR("error making directory %s: %S\n"), argv[i], ff_error(fr));
     }
 }
 
@@ -598,7 +598,7 @@ void cli_dir(int argc, char *argv[])
             glob = dirname;
             dirname = ".";
         } else if (fr != FR_OK) {
-            printf_P(PSTR("error opening directory: %S\n"), strlookup(fr_text, fr));
+            printf_P(PSTR("error opening directory: %S\n"), ff_error(fr));
             return;
         }
     }
@@ -614,7 +614,7 @@ void cli_dir(int argc, char *argv[])
     cnt = 0;
     for(;;) {
         if (fr != FR_OK) {
-            printf_P(PSTR("error reading directory: %S\n"), strlookup(fr_text, fr));
+            printf_P(PSTR("error reading directory: %S\n"), ff_error(fr));
             break;
         }
         if ((cnt % maxcnt == 0 && cnt != 0) || !finfo.fname[0])
@@ -1661,7 +1661,7 @@ int main(void)
 
     disk_initialize(DRV_MMC);
     if ((fr = f_mount(&fs, "", 1)) != FR_OK)
-        printf_P(PSTR("error mounting drive: %S\n"), strlookup(fr_text, fr));
+        printf_P(PSTR("error mounting drive: %S\n"), ff_error(fr));
 
     bus_init();
     iorq_init();

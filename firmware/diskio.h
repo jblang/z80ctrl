@@ -16,7 +16,7 @@ extern "C" {
 #define _USE_IOCTL	1	/**< 1: Enable disk_ioctl fucntion */
 #define _USE_ISDIO	1	/**< 1: Enable iSDIO controls via disk_ioctl */
 
-#include "integer.h"
+#include "ff.h"
 
 
 /* Status of Disk Functions */

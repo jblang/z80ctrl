@@ -25,19 +25,19 @@
  */
 
 #include <stdint.h>
-#include <avr/pgmspace.h>
 #include <avr/interrupt.h>
 #include <stdio.h>
 #include <string.h>
 
 #include "util.h"
+#include "compat.h"
 
 /**
  * Look up a text string by index from a NULL-separated PROGMEM array
  */
-PGM_P strlookup(PGM_P str, uint32_t index)
+const char* strlookup(const char* str, uint32_t index)
 {
-    PGM_P p;
+    const char* p;
     uint32_t i;
 
     for (p = str, i = 0; i != index; i++)

@@ -43,7 +43,7 @@ F_CPU?=20000000L
 
 # Programmer options
 PROGRAMMER?=arduino
-PORT?=COM3
+PORT?=COM8
 BAUD?=115200
 
 AVRCC?=avr-gcc

@@ -41,6 +41,7 @@
 #include "iorq.h"
 #include "util.h"
 #include "ff.h"
+#include "ffwrap.h"
 
 // Uncomment for debug messages
 
@@ -362,7 +363,7 @@ uint8_t bdos_error(FRESULT fr)
         return BDOS_SUCCESS;
     } else {
         bdos_log(PSTR("Error"));
-        printf_P(PSTR("FatFs error %d: %S\n"), fr, strlookup(fr_text, fr));
+        printf_P(PSTR("FatFs error %d: %S\n"), fr, ff_error(fr));
         return BDOS_ERROR;
     }
 }
