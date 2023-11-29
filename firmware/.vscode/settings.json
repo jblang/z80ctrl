@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "pgmspace.h": "c",
+        "interrupt.h": "c"
+    }
+}
