@@ -29,7 +29,7 @@
 #ifndef EMULATION_SIMHBOOT_H
 #define EMULATION_SIMHBOOT_H
 
-#include <avr/pgmspace.h>
+#include "util/pgmspace.h"
 
 unsigned const char simhboot_bin[] PROGMEM = {
     0xf3, 0x06, 0x80, 0x3e, 0x0e, 0xd3, 0xfe, 0x05, /* ff00-ff07 */

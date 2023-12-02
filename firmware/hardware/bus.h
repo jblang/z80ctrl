@@ -28,6 +28,7 @@
 #define HARDWARE_BUS_H
 
 #include <avr/io.h>
+
 #include "mcp23s17.h"
 
 /**

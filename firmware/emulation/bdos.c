@@ -31,11 +31,10 @@
  * @file bdos.c BDOS disk emulation on FatFS
  */
 
-#include <avr/pgmspace.h>
-#include <stdint.h>
-#include <string.h>
-#include <stdio.h>
 #include <ctype.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
 
 #include "fatfs/ff.h"
 
@@ -44,6 +43,7 @@
 #include "hardware/timer.h"
 
 #include "util/ffwrap.h"
+#include "util/pgmspace.h"
 #include "util/string.h"
 
 #include "bdos.h"

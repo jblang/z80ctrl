@@ -24,14 +24,15 @@
  * @file memory.c memory-related commands
  */
 
-#include <avr/pgmspace.h>
 #include <stdint.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "hardware/io.h"
 #include "hardware/memory.h"
 #include "hardware/tms9918.h"
+
+#include "util/pgmspace.h"
 
 #include "impl.h"
 

@@ -24,12 +24,11 @@
  * @file cli.c Command-line interface
  */
 
-#include <avr/pgmspace.h>
 #include <avr/interrupt.h>
 #include <ctype.h>
 #include <stdint.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "emulation/filedma.h"
@@ -37,10 +36,11 @@
 #include "hardware/z80.h"
 
 #include "util/ffwrap.h"
+#include "util/pgmspace.h"
 #include "util/string.h"
 
-#include "impl.h"
 #include "cli.h"
+#include "impl.h"
 
 /**
  * Lookup table of monitor command names
@@ -309,8 +309,6 @@ void cli_help(int argc, char *argv[])
     }
 }
 
-#define endswith(str, suf) (strcmp((str) + strlen(str) - strlen(suf), (suf)) == 0)
-#define endswith_P(str, suf) (strcmp_P((str) + strlen(str) - strlen_P(suf), (suf)) == 0)
 /**
  * Run a .PRG file (binary with start address)
  */
@@ -319,7 +317,7 @@ uint8_t cli_runprg(int argc, char *argv[])
     char filename[256];
     FILINFO fno;
     strcpy(filename, argv[0]);
-    if (!endswith_P(filename, PSTR(".prg")))
+    if (!endswith(filename, PSTR(".prg")))
         strcat_P(filename, PSTR(".prg"));
     if (f_stat(filename, NULL) == FR_OK) {
         file_dma_save_cli(argc, argv);

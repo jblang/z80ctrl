@@ -1,7 +1,7 @@
 #ifndef HARDWARE_FONT_H
 #define HARDWARE_FONT_H
 
-#include <avr/pgmspace.h>
+#include "util/pgmspace.h"
 
 const char font[] PROGMEM = {
     0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,

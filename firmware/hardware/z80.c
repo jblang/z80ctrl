@@ -26,21 +26,20 @@
 
 #include <stdint.h>
 #include <stdio.h>
-#include <avr/pgmspace.h>
 
 #include "util/disasm.h"
+#include "util/pgmspace.h"
 
 #include "bus.h"
 #include "io.h"
 #include "memory.h"
 #include "sn76489.h"
 #include "timer.h"
-#include "uart.h"
-#include "z80.h"
-
 #ifdef TMS_BASE
 #include "hardware/tms9918.h"
 #endif
+#include "uart.h"
+#include "z80.h"
 
 /**
  * Breakpoints and watch names

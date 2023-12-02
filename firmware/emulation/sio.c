@@ -25,11 +25,14 @@
  */
 
 #include <stdint.h>
-#include <avr/pgmspace.h>
 
 #include "fatfs/ff.h"
+
 #include "hardware/uart.h"
+
 #include "util/ffwrap.h"
+#include "util/pgmspace.h"
+
 #include "sio.h"
 
 /**

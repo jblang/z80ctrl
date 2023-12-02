@@ -26,8 +26,8 @@
 
 #include <time.h>
 
-#include "rtc.h"
 #include "rtc_ds1306.h"
+#include "rtc.h"
 #include "spi.h"
 
 void rtc_begin()

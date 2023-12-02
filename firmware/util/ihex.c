@@ -26,9 +26,10 @@
 
 #include <stdint.h>
 #include <string.h>
-#include <avr/pgmspace.h>
 
 #include "hardware/memory.h"
+
+#include "util/pgmspace.h"
 
 #include "ihex.h"
 #include "string.h"

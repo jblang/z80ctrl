@@ -24,12 +24,12 @@
  * @file rtc_ds1302.c DS1302+ RTC functions
  */
 
-#include <time.h>
 #include <stdio.h>
+#include <time.h>
 #include <util/delay.h>
 
-#include "rtc.h"
 #include "rtc_ds1302.h"
+#include "rtc.h"
 #include "spi.h"
 
 void rtc_begin()

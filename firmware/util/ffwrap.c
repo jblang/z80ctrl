@@ -24,7 +24,6 @@
  * @file ffwrap.c Wrapper functions for FatFS
  */
 
-#include <avr/pgmspace.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -33,6 +32,8 @@
 
 #include "hardware/memory.h"
 #include "hardware/tms9918.h"
+
+#include "util/pgmspace.h"
 
 #include "ffwrap.h"
 #include "string.h"

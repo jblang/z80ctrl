@@ -24,15 +24,16 @@
  * @file hardware.c commands for interacting with hardware
  */
 
-#include <avr/pgmspace.h>
 #include <stdint.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <time.h>
 
 #include "hardware/mcp23s17.h"
 #include "hardware/rtc.h"
 #include "hardware/uart.h"
+
+#include "util/pgmspace.h"
 
 /**
  * Set the baud rate for the UART

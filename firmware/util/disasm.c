@@ -27,12 +27,13 @@
  * in http://www.z80.info/decoding.htm.
  */
 
-#include <avr/pgmspace.h>
 #include <stdint.h>
-#include <string.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "hardware/memory.h"
+
+#include "util/pgmspace.h"
 
 #include "disasm.h"
 

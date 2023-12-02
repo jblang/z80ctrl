@@ -31,15 +31,15 @@
  */
 
 #include <stdint.h>
-#include <string.h>
 #include <stdio.h>
-#include <avr/pgmspace.h>
+#include <string.h>
 
 #include "fatfs/ff.h"
 
 #include "hardware/memory.h"
 
 #include "util/ffwrap.h"
+#include "util/pgmspace.h"
 
 #include "disk.h"
 #include "simhboot.h"

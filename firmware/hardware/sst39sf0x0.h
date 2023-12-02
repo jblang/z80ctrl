@@ -28,7 +28,6 @@
 #define HARDWARE_SST39SF0X0_H
 
 #include <stdint.h>
-#include "bus.h"
 
 uint8_t sst_erase(uint32_t addr);
 uint8_t sst_write(uint32_t addr, uint8_t *buf, uint32_t len);

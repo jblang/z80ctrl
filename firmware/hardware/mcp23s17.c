@@ -24,8 +24,9 @@
  * @file mcp23s17.c MCP23S17 convenience functions
  */
 
-#include <avr/pgmspace.h>
 #include <stdio.h>
+
+#include "util/pgmspace.h"
 
 #include "mcp23s17.h"
 #include "rtc.h"

@@ -24,15 +24,15 @@
  * @file z80.c Z80-related commands
  */
 
-#include <avr/pgmspace.h>
 #include <stdint.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "hardware/bus.h"
 #include "hardware/z80.h"
 
 #include "util/disasm.h"
+#include "util/pgmspace.h"
 #include "util/string.h"
 
 /**

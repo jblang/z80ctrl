@@ -1,4 +1,4 @@
-#include <avr/pgmspace.h>
+#include "util/pgmspace.h"
 
 #include "cli/cli.h"
 

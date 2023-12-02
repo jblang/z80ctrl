@@ -27,8 +27,6 @@
 #ifndef EMULATION_FILEDMA_H
 #define EMULATION_FILEDMA_H
 
-#include "fatfs/ff.h"
-
 #ifndef FILE_DMA
 #define FILE_DMA 0xB
 #endif

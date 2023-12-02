@@ -26,8 +26,8 @@
 
 #include <util/delay.h>
 
-#include "sst39sf0x0.h"
 #include "bus.h"
+#include "sst39sf0x0.h"
 
 // Reference: http://ww1.microchip.com/downloads/en/DeviceDoc/20005022C.pdf
 

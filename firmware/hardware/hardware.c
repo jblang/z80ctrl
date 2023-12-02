@@ -28,8 +28,8 @@
 
 #include "bus.h"
 #include "io.h"
-#include "tms9918.h"
 #include "sn76489.h"
+#include "tms9918.h"
 
 void hardware_init()
 {

@@ -24,9 +24,9 @@
  * @file spi.c Low-level SPI convenience functions
  */
 
-#include "spi.h"
-
 #include <avr/io.h>
+
+#include "spi.h"
 
 void spi_init(void)
 {

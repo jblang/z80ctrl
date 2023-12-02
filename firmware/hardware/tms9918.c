@@ -25,15 +25,16 @@
  */
 
 #include <stdio.h>
-#include <avr/pgmspace.h>
-#include <util/delay.h>
 #include <stdlib.h>
 #include <string.h>
+#include <util/delay.h>
 
 #include "hardware/io.h"
 
-#include "tms9918.h"
+#include "util/pgmspace.h"
+
 #include "font.h"
+#include "tms9918.h"
 
 uint8_t tms_base;
 uint16_t control_bits;

@@ -28,7 +28,6 @@
 #define HARDWARE_TMS9918_H
 
 #include <stdint.h>
-#include "hardware/bus.h"
 
 #define TMS_TILE 0xc000
 #define TMS_BITMAP 0xc002

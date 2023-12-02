@@ -32,16 +32,18 @@
  * @file xmodem.c X and Y modem transmit and receive functions
  */
 
-#include <avr/pgmspace.h>
-#include <util/delay.h>
-#include <util/crc16.h>
-#include <stdio.h>
 #include <stdint.h>
-#include <string.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <util/crc16.h>
+#include <util/delay.h>
 
 #include "fatfs/ff.h"
+
 #include "hardware/uart.h"
+
+#include "util/pgmspace.h"
 
 #define SOH 0x01
 #define STX 0x02

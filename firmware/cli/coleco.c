@@ -23,10 +23,9 @@
 /**
  * @file coleco.c coleco command
  */
-#include <avr/pgmspace.h>
-#include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "fatfs/ff.h"
 
@@ -34,6 +33,8 @@
 #include "hardware/z80.h"
 
 #include "util/ffwrap.h"
+#include "util/pgmspace.h"
+
 
 /**
  * Load and run a coleco ROM

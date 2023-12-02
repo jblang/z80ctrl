@@ -24,7 +24,6 @@
  * @file file.c file-related commands
  */
 
-#include <avr/pgmspace.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -35,6 +34,7 @@
 
 #include "util/ffwrap.h"
 #include "util/ihex.h"
+#include "util/pgmspace.h"
 #include "util/xmodem.h"
 
 #include "impl.h"

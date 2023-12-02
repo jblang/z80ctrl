@@ -12,11 +12,10 @@
  * @file uart.c Interrupt-driven buffered UART driver
  */
 
+#include <avr/interrupt.h>
+#include <avr/io.h>
 #include <stdint.h>
 #include <stdio.h>
-
-#include <avr/io.h>
-#include <avr/interrupt.h>
 
 #include "uart.h"
 

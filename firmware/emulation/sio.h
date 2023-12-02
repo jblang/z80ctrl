@@ -27,6 +27,8 @@
 #ifndef EMULATION_SIO_H
 #define EMULATION_SIO_H
 
+#include <stdint.h>
+
 #ifndef SIO_BASE
 #define SIO_BASE 0x10
 #endif

@@ -24,18 +24,18 @@
  * @file io.c I/O request handler
  */
 
-#include <avr/pgmspace.h>
-#include <util/delay.h>
 #include <stdio.h>
+#include <util/delay.h>
 
-#include "emulation/disk.h"
-#include "emulation/sio.h"
-#include "emulation/filedma.h"
 #include "emulation/bdos.h"
+#include "emulation/disk.h"
+#include "emulation/filedma.h"
 #ifdef MSX_KEY_BASE
 #include "emulation/msxkey.h"
 #endif
+#include "emulation/sio.h"
 
+#include "util/pgmspace.h"
 #include "util/string.h"
 
 #include "io.h"

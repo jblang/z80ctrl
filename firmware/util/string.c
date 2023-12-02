@@ -24,7 +24,8 @@
  * @file string.h string utility functions
  */
 
-#include <avr/pgmspace.h>
+#include "util/pgmspace.h"
+
 #include "string.h"
 
 /**

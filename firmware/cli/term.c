@@ -24,11 +24,12 @@
  * @file term.c terminal-related commands
  */
 
-#include <avr/pgmspace.h>
 #include <stdint.h>
 #include <stdlib.h>
 
 #include "hardware/uart.h"
+
+#include "util/pgmspace.h"
 
 uint8_t screenwidth = 80;
 uint8_t screenheight = 24;

@@ -27,8 +27,8 @@
 #ifndef HARDWARE_SPI_H
 #define HARDWARE_SPI_H
 
-#include <stdint.h>
 #include <avr/io.h>
+#include <stdint.h>
 
 // SPI pins
 #define SPI_DDR DDRB

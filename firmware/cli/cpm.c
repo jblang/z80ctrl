@@ -24,10 +24,9 @@
  * @file cpm.c CP/M-related commands
  */
 
-#include <avr/pgmspace.h>
-#include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "fatfs/ff.h"
@@ -39,6 +38,7 @@
 #include "hardware/z80.h"
 
 #include "util/ffwrap.h"
+#include "util/pgmspace.h"
 #include "util/string.h"
 
 #include "cli.h"
@@ -138,7 +138,7 @@ uint8_t cli_runcom(int argc, char *argv[])
 {
     char filename[256];
     strcpy(filename, argv[0]);
-    if (!endswith_P(filename, PSTR(".com")))
+    if (!endswith(filename, PSTR(".com")))
         strcat_P(filename, PSTR(".com"));
     if (f_stat(filename, NULL) == FR_OK) {
         // Look for BDOS runtime file in current directory then root directory

@@ -25,9 +25,11 @@
  */
 
 #include <stdint.h>
-#include <avr/pgmspace.h>
 
 #include "hardware/uart.h"
+
+#include "util/pgmspace.h"
+
 #include "msxkey.h"
 
 // Table to translate ASCII to MSX keyboard matrix

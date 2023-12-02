@@ -26,11 +26,14 @@
 
 #ifndef UTIL_STRING_H
 #define UTIL_STRING_H
+
 #include <stdint.h>
+#include <string.h>
+
+#include "util/pgmspace.h"
 
 const char *strlookup(const char *str, uint32_t index); /**< Lookup a string by index in a NULL-separated PROGMEM array */
 
-#define endswith(str, suf) (strcmp((str) + strlen(str) - strlen(suf), (suf)) == 0)
-#define endswith_P(str, suf) (strcmp_P((str) + strlen(str) - strlen_P(suf), (suf)) == 0)
+#define endswith(str, suf) (strcmp_P((str) + strlen(str) - strlen_P(suf), (suf)) == 0)
 
 #endif

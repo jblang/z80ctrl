@@ -25,7 +25,8 @@
  */
 
 #include <avr/cpufunc.h>
-#include <avr/pgmspace.h>
+
+#include "util/pgmspace.h"
 
 #include "bus.h"
 #include "io.h"

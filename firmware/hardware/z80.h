@@ -28,8 +28,6 @@
 #define HARDWARE_Z80_H
 
 #include <stdint.h>
-#include "bus.h"
-
 
 enum {MEMRD, MEMWR, IORD, IOWR, OPFETCH, BUS, DEBUGCNT};
 

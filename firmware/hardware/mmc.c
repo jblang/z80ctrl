@@ -12,16 +12,17 @@
 /
 /-------------------------------------------------------------------------*/
 
-#include <avr/io.h>
 #include <avr/interrupt.h>
+#include <avr/io.h>
 #include <time.h>
 
 #include "fatfs/diskio.h"
+
 #include "mmc.h"
-#include "spi.h"
 #ifdef USE_RTC
 #include "rtc.h"
 #endif
+#include "spi.h"
 
 #if (BOARD_REV == 3 || BOARD_REV == 4)
 #include "mcp23s17.h"

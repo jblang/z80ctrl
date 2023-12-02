@@ -24,13 +24,14 @@
  * @file cpm.c I/O-related commands
  */
 
-#include <avr/pgmspace.h>
 #include <stdint.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "hardware/io.h"
 #include "hardware/tms9918.h"
+
+#include "util/pgmspace.h"
 
 /**
  * Assign a device to a port

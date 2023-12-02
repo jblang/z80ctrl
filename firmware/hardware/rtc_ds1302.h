@@ -30,8 +30,6 @@
 #include <stdint.h>
 #include <time.h>
 
-#include "mcp23s17.h"
-
 #define RTC_READ 1
 
 #define RTC_SEC 0x80

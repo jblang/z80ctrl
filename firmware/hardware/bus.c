@@ -24,12 +24,12 @@
  * @file bus.c Low-level control of the Z80 bus
  */
 
-#include <avr/interrupt.h>
 #include <avr/cpufunc.h>
-#include <avr/pgmspace.h>
-#include <util/delay.h>
+#include <avr/interrupt.h>
 #include <stdio.h>
+#include <util/delay.h>
 
+#include "util/pgmspace.h"
 #include "util/string.h"
 
 #include "bus.h"

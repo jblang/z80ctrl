@@ -25,19 +25,20 @@
  */
 
 #include <stdint.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 
-#include <avr/io.h>
 #include <avr/interrupt.h>
-#include <avr/pgmspace.h>
+#include <avr/io.h>
 
 #include "fatfs/ff.h"
 
-#include "hardware/timer.h"
 #include "hardware/bus.h"
 #include "hardware/memory.h"
+#include "hardware/timer.h"
 #include "hardware/uart.h"
+
+#include "util/pgmspace.h"
 
 /**
  * Run a benchmark
