@@ -22,7 +22,7 @@
 
 /**
  * @file simhboot.h SIMH AltairZ80 bootloader
- * 
+ *
  * Assembled version of simhboot.asm
  */
 

@@ -1,9 +1,9 @@
 /*
  * Copyright 2001-2010 Georges Menie (www.menie.org)
  * All rights reserved.
- * 
+ *
  * YMODEM support added by J.B. Langston
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
  *
@@ -70,11 +70,12 @@ int inbyte(uint16_t timeout) // msec timeout
     return uart_getc(0);
 }
 
-void outbyte(char c) {
-    uart_putc(0, c); 
+void outbyte(char c)
+{
+    uart_putc(0, c);
 }
 
-uint16_t crc16(const uint8_t *buf, int len)
+uint16_t crc16(const uint8_t* buf, int len)
 {
     uint16_t crc = 0;
     while (len--)
@@ -82,7 +83,7 @@ uint16_t crc16(const uint8_t *buf, int len)
     return crc;
 }
 
-static int check(int crc, const uint8_t *buf, int sz)
+static int check(int crc, const uint8_t* buf, int sz)
 {
     if (crc) {
         uint16_t crc = crc16(buf, sz);
@@ -110,12 +111,11 @@ static void flushinput(void)
 
 static void cancel(void)
 {
-        flushinput();
-        outbyte(CAN);
-        outbyte(CAN);
-        outbyte(CAN);
+    flushinput();
+    outbyte(CAN);
+    outbyte(CAN);
+    outbyte(CAN);
 }
-
 
 /*
 Reference: http://pauillac.inria.fr/~doligez/zmodem/ymodem.txt
@@ -154,10 +154,10 @@ Reference: http://pauillac.inria.fr/~doligez/zmodem/ymodem.txt
                                                    ACK
  */
 
-int xm_receive(int argc, char *argv[])
+int xm_receive(int argc, char* argv[])
 {
     uint8_t xbuff[1030]; /* 1024 for XModem 1k + 3 head chars + 2 crc + nul */
-    uint8_t *p;
+    uint8_t* p;
     int bufsz, crc = 0;
     uint8_t trychar = 'C';
     uint8_t packetno = 1;
@@ -180,53 +180,53 @@ int xm_receive(int argc, char *argv[])
                 outbyte(trychar);
             if ((c = inbyte(10000)) >= 0) {
                 switch (c) {
-                    case SOH:
-                        bufsz = 128;
-                        goto start_recv;
-                    case STX:
-                        bufsz = 1024;
-                        goto start_recv;
-                    case EOT:
-                        // done with current file
-                        if (f_error(&fil) == FR_OK) {
-                            // ymodem size was specified, remove extra bytes
-                            if (size > 0) {
-                                f_lseek(&fil, size);
-                                f_truncate(&fil);
-                            }
-                            f_close(&fil);
+                case SOH:
+                    bufsz = 128;
+                    goto start_recv;
+                case STX:
+                    bufsz = 1024;
+                    goto start_recv;
+                case EOT:
+                    // done with current file
+                    if (f_error(&fil) == FR_OK) {
+                        // ymodem size was specified, remove extra bytes
+                        if (size > 0) {
+                            f_lseek(&fil, size);
+                            f_truncate(&fil);
                         }
-                        if (ymodem == 0) {
-                            // xmodem EOT; ack and return
-                            flushinput();
-                            outbyte(ACK);
-                            return len;
-                        } else if (ymodem == 1) {
-                            // ymodem first EOT; nak and prepare to ack second EOT
-                            outbyte(NAK);
-                            ymodem = 2;
-                            retry = 0;
-                            continue;
-                        } else if (ymodem == 2) {
-                            // ymodem second EOT; ack and wait for next file
-                            outbyte(ACK);
-                            trychar = 'C';
-                            ymodem = 0;
-                            packetno = 1;
-                            retry = 0;
-                            continue;
-                        }
-                        break;
-                    case CAN:
-                        if ((c = inbyte(1000)) == CAN) {
-                            flushinput();
-                            outbyte(ACK);
-                            return -1; /* canceled by remote */
-                        }
-                        break;
-                    default:
+                        f_close(&fil);
+                    }
+                    if (ymodem == 0) {
+                        // xmodem EOT; ack and return
                         flushinput();
-                        break;
+                        outbyte(ACK);
+                        return len;
+                    } else if (ymodem == 1) {
+                        // ymodem first EOT; nak and prepare to ack second EOT
+                        outbyte(NAK);
+                        ymodem = 2;
+                        retry = 0;
+                        continue;
+                    } else if (ymodem == 2) {
+                        // ymodem second EOT; ack and wait for next file
+                        outbyte(ACK);
+                        trychar = 'C';
+                        ymodem = 0;
+                        packetno = 1;
+                        retry = 0;
+                        continue;
+                    }
+                    break;
+                case CAN:
+                    if ((c = inbyte(1000)) == CAN) {
+                        flushinput();
+                        outbyte(ACK);
+                        return -1; /* canceled by remote */
+                    }
+                    break;
+                default:
+                    flushinput();
+                    break;
                 }
             }
         }
@@ -249,9 +249,7 @@ int xm_receive(int argc, char *argv[])
             *p++ = c;
         }
 
-        if (xbuff[1] == (uint8_t)(~xbuff[2]) &&
-            (xbuff[1] == packetno || xbuff[1] == (uint8_t)packetno - 1) &&
-            check(crc, &xbuff[3], bufsz)) {
+        if (xbuff[1] == (uint8_t)(~xbuff[2]) && (xbuff[1] == packetno || xbuff[1] == (uint8_t)packetno - 1) && check(crc, &xbuff[3], bufsz)) {
             if (xbuff[1] == 0) {
                 // ymodem metadata packet
                 if (xbuff[3] == 0) {
@@ -277,7 +275,7 @@ int xm_receive(int argc, char *argv[])
             if (xbuff[1] == packetno) {
                 if (packetno == 1) {
                     // first data packet; open new file
-                    if (curfile < argc)     // override filename if given locally
+                    if (curfile < argc) // override filename if given locally
                         strncpy(filename, argv[curfile], 255);
                     curfile++;
                     if (f_open(&fil, filename, FA_WRITE | FA_CREATE_ALWAYS) != FR_OK) {
@@ -307,7 +305,7 @@ int xm_receive(int argc, char *argv[])
     }
 }
 
-int xm_transmit(FIL *file)
+int xm_transmit(FIL* file)
 {
     uint8_t
         xbuff[1030]; /* 1024 for XModem 1k + 3 head chars + 2 crc + nul */
@@ -320,21 +318,21 @@ int xm_transmit(FIL *file)
         for (retry = 0; retry < 16; ++retry) {
             if ((c = inbyte(10000)) >= 0) {
                 switch (c) {
-                    case 'C':
-                        crc = 1;
-                        goto start_trans;
-                    case NAK:
-                        crc = 0;
-                        goto start_trans;
-                    case CAN:
-                        if ((c = inbyte(1000)) == CAN) {
-                            outbyte(ACK);
-                            flushinput();
-                            return -1; /* canceled by remote */
-                        }
-                        break;
-                    default:
-                        break;
+                case 'C':
+                    crc = 1;
+                    goto start_trans;
+                case NAK:
+                    crc = 0;
+                    goto start_trans;
+                case CAN:
+                    if ((c = inbyte(1000)) == CAN) {
+                        outbyte(ACK);
+                        flushinput();
+                        return -1; /* canceled by remote */
+                    }
+                    break;
+                default:
+                    break;
                 }
             }
         }
@@ -379,20 +377,20 @@ int xm_transmit(FIL *file)
                     }
                     if ((c = inbyte(1000)) >= 0) {
                         switch (c) {
-                            case ACK:
-                                ++packetno;
-                                len += bufsz;
-                                goto start_trans;
-                            case CAN:
-                                if ((c = inbyte(1000)) == CAN) {
-                                    outbyte(ACK);
-                                    flushinput();
-                                    return -1; /* canceled by remote */
-                                }
-                                break;
-                            case NAK:
-                            default:
-                                break;
+                        case ACK:
+                            ++packetno;
+                            len += bufsz;
+                            goto start_trans;
+                        case CAN:
+                            if ((c = inbyte(1000)) == CAN) {
+                                outbyte(ACK);
+                                flushinput();
+                                return -1; /* canceled by remote */
+                            }
+                            break;
+                        case NAK:
+                        default:
+                            break;
                         }
                     }
                 }

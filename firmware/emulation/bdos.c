@@ -1,22 +1,22 @@
 /* z80ctrl (https://github.com/jblang/z80ctrl)
  * Copyright 2018-2023 J.B. Langston
  *
- * Permission is hereby granted, free of charge, to any person obtaining a 
- * copy of this software and associated documentation files (the "Software"), 
- * to deal in the Software without restriction, including without limitation 
- * the rights to use, copy, modify, merge, publish, distribute, sublicense, 
- * and/or sell copies of the Software, and to permit persons to whom the 
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
  * Software is furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
 
@@ -51,14 +51,14 @@
 // Uncomment for debug messages
 
 // CP/M constants
-#define RECSIZ 128L                 // # of bytes in a record (rc)
-#define RECCNT 128L                 // Max # of records in an extent
-#define EXTSIZ (RECSIZ*RECCNT)      // # of bytes in an extent (ex)
-#define EXTCNT 32L                  // Max # of extents in a module
-#define MODSIZ (EXTSIZ*EXTCNT)      // # of bytes in a module (s2)
-#define MODCNT 16L                  // Max # of modules in a file
-#define DEFFCB 0x5c                 // Default FCB location
-#define DEFDMA 0x80                 // Default DMA buffer
+#define RECSIZ 128L // # of bytes in a record (rc)
+#define RECCNT 128L // Max # of records in an extent
+#define EXTSIZ (RECSIZ * RECCNT) // # of bytes in an extent (ex)
+#define EXTCNT 32L // Max # of extents in a module
+#define MODSIZ (EXTSIZ * EXTCNT) // # of bytes in a module (s2)
+#define MODCNT 16L // Max # of modules in a file
+#define DEFFCB 0x5c // Default FCB location
+#define DEFDMA 0x80 // Default DMA buffer
 
 // BDOS function calls
 enum {
@@ -106,14 +106,47 @@ enum {
 };
 
 const char bdos_names[] PROGMEM = {
-    "P_TERMCPM\0" "C_READ\0" "C_WRITE\0" "A_READ\0" "A_WRITE\0" "L_WRITE\0" 
-    "C_RAWIO\0" "C_GETIOB\0" "C_SETIOB\0" "C_WRITESTR\0" "C_READSTR\0"
-    "C_STAT\0" "S_BDOSVER\0" "DRV_ALLRESET\0" "DRV_SET\0" "F_OPEN\0" "F_CLOSE\0"
-    "F_SFIRST\0" "F_SNEXT\0" "F_DELETE\0" "F_READ\0" "F_WRITE\0" "F_MAKE\0"
-    "F_RENAME\0" "DRV_LOGINVEC\0" "DRV_GET\0" "F_DMAOFF\0" "DRV_ALLOCVEC\0"
-    "DRV_SETRO\0" "DRV_ROVEC\0" "F_ATTRIB\0" "DRV_DPB\0" "F_USERNUM\0"
-    "F_READRAND\0" "F_WRITERAND\0" "F_SIZE\0" "F_RANDREC\0" "DRV_RESET\0"
-    "DRV_ACCESS\0" "DRV_FREE\0" "F_WRITEZF\0"
+    "P_TERMCPM\0"
+    "C_READ\0"
+    "C_WRITE\0"
+    "A_READ\0"
+    "A_WRITE\0"
+    "L_WRITE\0"
+    "C_RAWIO\0"
+    "C_GETIOB\0"
+    "C_SETIOB\0"
+    "C_WRITESTR\0"
+    "C_READSTR\0"
+    "C_STAT\0"
+    "S_BDOSVER\0"
+    "DRV_ALLRESET\0"
+    "DRV_SET\0"
+    "F_OPEN\0"
+    "F_CLOSE\0"
+    "F_SFIRST\0"
+    "F_SNEXT\0"
+    "F_DELETE\0"
+    "F_READ\0"
+    "F_WRITE\0"
+    "F_MAKE\0"
+    "F_RENAME\0"
+    "DRV_LOGINVEC\0"
+    "DRV_GET\0"
+    "F_DMAOFF\0"
+    "DRV_ALLOCVEC\0"
+    "DRV_SETRO\0"
+    "DRV_ROVEC\0"
+    "F_ATTRIB\0"
+    "DRV_DPB\0"
+    "F_USERNUM\0"
+    "F_READRAND\0"
+    "F_WRITERAND\0"
+    "F_SIZE\0"
+    "F_RANDREC\0"
+    "DRV_RESET\0"
+    "DRV_ACCESS\0"
+    "DRV_FREE\0"
+    "F_WRITEZF\0"
 };
 
 // BDOS return codes
@@ -177,8 +210,8 @@ static uint8_t dma_command = 0;
 static dma_status_t dma_status = DMA_MAILBOX_UNSET;
 static bdos_mailbox_t params;
 
-uint8_t curfn[11];              // FCB filename of the currently open file
-static fcb_t curfcb;            // FCB for the current command
+uint8_t curfn[11]; // FCB filename of the currently open file
+static fcb_t curfcb; // FCB for the current command
 static FIL curfil;
 static FILINFO curfno;
 
@@ -187,7 +220,7 @@ uint8_t bdos_debug = 0;
 /**
  * Get null-terminated filename.ext from fixed length FCB field
  */
-void fcb_fatname(uint8_t *fatname, uint8_t *fcbname)
+void fcb_fatname(uint8_t* fatname, uint8_t* fcbname)
 {
     uint8_t j = 0;
     for (uint8_t i = 0; i < 11; i++) {
@@ -202,7 +235,7 @@ void fcb_fatname(uint8_t *fatname, uint8_t *fcbname)
 /**
  * Set fixed-length FCB field from null-terminated filename.ext
  */
-void fcb_setname(uint8_t *fcbname, uint8_t *fatname)
+void fcb_setname(uint8_t* fcbname, uint8_t* fatname)
 {
     uint8_t i = 0, j = 0;
     while (i < 8)
@@ -226,7 +259,7 @@ void fcb_setname(uint8_t *fcbname, uint8_t *fatname)
 /**
  * Parse d:filename.ext argument and set FCB fields
  */
-void fcb_setdrivename(uint8_t *drive, uint8_t *filename, char *arg)
+void fcb_setdrivename(uint8_t* drive, uint8_t* filename, char* arg)
 {
     if (arg[1] == ':') {
         if (arg[0] >= 'a' && arg[0] <= 'p')
@@ -235,7 +268,7 @@ void fcb_setdrivename(uint8_t *drive, uint8_t *filename, char *arg)
             *drive = arg[0] - 'A' + 1;
         else
             *drive = 0;
-        fcb_setname(filename, arg+2);
+        fcb_setname(filename, arg + 2);
     } else {
         fcb_setname(filename, arg);
     }
@@ -244,7 +277,7 @@ void fcb_setdrivename(uint8_t *drive, uint8_t *filename, char *arg)
 /**
  * Calculate a 32-bit offset from random fields in FCB
  */
-uint32_t fcb_randoffset(fcb_t *f)
+uint32_t fcb_randoffset(fcb_t* f)
 {
     return (((uint32_t)f->r2 << 16) | (f->r1 << 8) | f->r0) * RECSIZ;
 }
@@ -252,7 +285,7 @@ uint32_t fcb_randoffset(fcb_t *f)
 /**
  * Calculate a 32-bit offset from sequential fields in FCB
  */
-uint32_t fcb_seqoffset(fcb_t *f)
+uint32_t fcb_seqoffset(fcb_t* f)
 {
     return f->s2 * MODSIZ + f->ex * EXTSIZ + f->cr * RECSIZ;
 }
@@ -260,7 +293,7 @@ uint32_t fcb_seqoffset(fcb_t *f)
 /**
  * Set sequential fields in FCB from 32-bit offset
  */
-void fcb_setseq(fcb_t *f, uint32_t offset)
+void fcb_setseq(fcb_t* f, uint32_t offset)
 {
     f->cr = (offset / RECSIZ) % RECCNT;
     f->ex = (offset / EXTSIZ) % EXTCNT;
@@ -270,7 +303,7 @@ void fcb_setseq(fcb_t *f, uint32_t offset)
 /**
  * Set random fields in FCB from 32-bit offset
  */
-uint32_t fcb_setrand(fcb_t *f, uint32_t offset)
+uint32_t fcb_setrand(fcb_t* f, uint32_t offset)
 {
     f->r0 = offset & 0xff;
     f->r1 = (offset >> 8) & 0xff;
@@ -280,7 +313,7 @@ uint32_t fcb_setrand(fcb_t *f, uint32_t offset)
 /**
  * Check whether file matches mask using CP/M wildcard rules
  */
-uint8_t fcb_match(uint8_t *mask, uint8_t *fcbname)
+uint8_t fcb_match(uint8_t* mask, uint8_t* fcbname)
 {
     for (uint8_t i = 0; i < 11; i++)
         if (mask[i] != '?' && toupper(mask[i]) != toupper(fcbname[i]))
@@ -291,7 +324,7 @@ uint8_t fcb_match(uint8_t *mask, uint8_t *fcbname)
 /**
  * Print the filename from an FCB
  */
-uint8_t fcb_printfn(uint8_t *fn)
+uint8_t fcb_printfn(uint8_t* fn)
 {
     for (uint8_t i = 0; i < 11; i++) {
         if (i == 8)
@@ -306,13 +339,13 @@ uint8_t fcb_printfn(uint8_t *fn)
 /**
  * Print the FAT filename from an FCB
  */
-uint8_t fcb_printfatfn(uint8_t *fn)
+uint8_t fcb_printfatfn(uint8_t* fn)
 {
     for (uint8_t i = 0; i < 12; i++) {
         if (fn[i] == 0) {
             while (i++ < 12)
                 putchar(' ');
-            break;            
+            break;
         }
         if (fn[i] >= 20)
             putchar(fn[i]);
@@ -324,20 +357,20 @@ uint8_t fcb_printfatfn(uint8_t *fn)
 /**
  * Dump the contents of an FCB
  */
-uint8_t fcb_dump(fcb_t *f)
+uint8_t fcb_dump(fcb_t* f)
 {
     printf_P(PSTR("dr filename ext   cr ex s2   r0 r1 r2   rc s1\n"));
     printf_P(PSTR("%02x "), f->dr);
     fcb_printfn(f->fn);
     printf_P(PSTR("   %02x %02x %02x"), f->cr, f->ex, f->s2);
-    printf_P(PSTR("   %02x %02x %02x"), f->r0, f->r1, f->r2);    
+    printf_P(PSTR("   %02x %02x %02x"), f->r0, f->r1, f->r2);
     printf_P(PSTR("   %02x %02x\n"), f->rc, f->s1);
 }
 
 /**
  * Dump the contents of a directory entry
  */
-uint8_t dir_dump(dir_t *d)
+uint8_t dir_dump(dir_t* d)
 {
     printf_P(PSTR("uu filename ext   ex s2   rc s1   alloc\n"));
     printf_P(PSTR("%02x "), d->uu);
@@ -352,7 +385,7 @@ uint8_t dir_dump(dir_t *d)
 /**
  * Log the current command and parameters
  */
-void bdos_log(const char *message)
+void bdos_log(const char* message)
 {
     printf_P(PSTR("\n%S: BDOS %d %S   fcb %04xh   dma %04xh   ret %02x\n"), message, dma_command, strlookup(bdos_names, dma_command), params.fcbaddr, params.dmaaddr, params.ret);
     if (dma_command != F_SNEXT && dma_command != P_TERMCPM)
@@ -378,7 +411,7 @@ uint8_t bdos_error(FRESULT fr)
  */
 uint8_t bdos_search(uint8_t mode)
 {
-    static dir_t dirfcb;            // Directory entry returned by the last search command
+    static dir_t dirfcb; // Directory entry returned by the last search command
     static uint8_t mask[12];
     static uint8_t searchex;
     static uint32_t bytesleft;
@@ -398,19 +431,19 @@ uint8_t bdos_search(uint8_t mode)
         memset(&dirfcb, 0, sizeof(dir_t));
         bytesleft = 0;
         blockno = 1;
-    } 
-    
+    }
+
     // Get the next file if done with current file
-    if (bytesleft == 0) {    
+    if (bytesleft == 0) {
         do {
             do {
                 if (fr = f_readdir(&dir, &curfno) != FR_OK)
                     return bdos_error(fr);
-                if (curfno.fname[0] == 0)  // indicate end of directory
+                if (curfno.fname[0] == 0) // indicate end of directory
                     return BDOS_ERROR;
             } while (curfno.fattrib & AM_DIR); // skip directories
             fcb_setname(dirfcb.fn, curfno.fname);
-        } while (!fcb_match(mask, dirfcb.fn));  // check filename match
+        } while (!fcb_match(mask, dirfcb.fn)); // check filename match
 
         // Translate attributes
         if (curfno.fattrib & AM_RDO)
@@ -437,7 +470,7 @@ uint8_t bdos_search(uint8_t mode)
     }
 
     // Calculate the record count in this extent
-    dirfcb.rc = (bytesleft + RECSIZ-1) / RECSIZ;
+    dirfcb.rc = (bytesleft + RECSIZ - 1) / RECSIZ;
     if (dirfcb.rc > RECSIZ)
         dirfcb.rc = RECSIZ;
 
@@ -467,7 +500,7 @@ uint8_t bdos_search(uint8_t mode)
     if (dma_command == F_SFIRST || dma_command == F_SNEXT) {
         // Pad extra space with empty directory entries
         memcpy(buf, &dirfcb, sizeof(dir_t));
-        memset(buf+sizeof(dir_t), 0xe5, RECSIZ-sizeof(dir_t));
+        memset(buf + sizeof(dir_t), 0xe5, RECSIZ - sizeof(dir_t));
         // Save directory entry to DMA buffer
         mem_write(params.dmaaddr, buf, RECSIZ);
     }
@@ -477,7 +510,7 @@ uint8_t bdos_search(uint8_t mode)
 /**
  * Open the FAT file needed by the FCB if it's not already
  */
-FRESULT fcb_openfil(fcb_t *fcb, uint8_t mode)
+FRESULT fcb_openfil(fcb_t* fcb, uint8_t mode)
 {
     uint8_t fatfn[13];
     fcb_fatname(fatfn, fcb->fn);
@@ -498,7 +531,7 @@ uint8_t bdos_open()
     FRESULT fr;
 
     // Handle read-only files
-    uint8_t mode = FA_READ; 
+    uint8_t mode = FA_READ;
     if (!(curfno.fattrib & AM_RDO))
         mode |= FA_WRITE;
 
@@ -507,12 +540,12 @@ uint8_t bdos_open()
         // Search for first existing file to match any wildcards
         if (bdos_search(F_SFIRST) != BDOS_SUCCESS)
             return BDOS_ERROR;
-        curfcb.s2 = 0;  // s2 is always zeroed by open call
+        curfcb.s2 = 0; // s2 is always zeroed by open call
     } else {
         // Otherwise make a new file
         mode |= FA_CREATE_NEW;
         // New files start at offset 0
-        fcb_setseq(&curfcb, 0); 
+        fcb_setseq(&curfcb, 0);
     }
 
     // Open the file
@@ -520,10 +553,9 @@ uint8_t bdos_open()
         return bdos_error(fr);
 
     // Write back FCB except for random fields
-    mem_write(params.fcbaddr, &curfcb, sizeof(fcb_t)-3);
+    mem_write(params.fcbaddr, &curfcb, sizeof(fcb_t) - 3);
     return BDOS_SUCCESS;
 }
-
 
 /**
  * Close file associated with fcb
@@ -534,7 +566,7 @@ uint8_t bdos_close()
     // Clear currently open filename
     memset(curfn, 0, 11);
     // Write back FCB except for random fields
-    mem_write(params.fcbaddr, &curfcb, sizeof(fcb_t)-3);
+    mem_write(params.fcbaddr, &curfcb, sizeof(fcb_t) - 3);
     return BDOS_SUCCESS;
 }
 
@@ -549,13 +581,13 @@ uint8_t bdos_readwrite()
     UINT br;
 
     // Try to get an active FP for this FCB
-    if ((fr = fcb_openfil(&curfcb, FA_READ|FA_WRITE)) != FR_OK)
+    if ((fr = fcb_openfil(&curfcb, FA_READ | FA_WRITE)) != FR_OK)
         return bdos_error(fr);
     // Calculate offset for access method
     if (dma_command == F_READ || dma_command == F_WRITE) {
         offset = fcb_seqoffset(&curfcb);
     } else {
-        offset = fcb_randoffset(&curfcb); 
+        offset = fcb_randoffset(&curfcb);
     }
     // Don't seek past EOF when reading
     if (offset >= f_size(&curfil) && (dma_command == F_READ || dma_command == F_READRAND))
@@ -569,7 +601,7 @@ uint8_t bdos_readwrite()
         if ((fr = f_read(&curfil, buf, RECSIZ, &br)) != FR_OK)
             return bdos_error(fr);
         // pad incomplete record with 0
-        memset(buf+br, 0x0, RECSIZ-br); 
+        memset(buf + br, 0x0, RECSIZ - br);
         mem_write(params.dmaaddr, buf, RECSIZ);
     } else {
         mem_read(params.dmaaddr, buf, RECSIZ);
@@ -581,7 +613,7 @@ uint8_t bdos_readwrite()
         offset += RECSIZ;
     fcb_setseq(&curfcb, offset);
     // Write back FCB except for random fields
-    mem_write(params.fcbaddr, &curfcb, sizeof(fcb_t)-3);
+    mem_write(params.fcbaddr, &curfcb, sizeof(fcb_t) - 3);
     // Indicate success
     return 0;
 }
@@ -591,7 +623,7 @@ uint8_t bdos_readwrite()
  */
 uint8_t bdos_randrec()
 {
-    fcb_setrand(&curfcb, (fcb_seqoffset(&curfcb) + RECSIZ-1) / RECSIZ);
+    fcb_setrand(&curfcb, (fcb_seqoffset(&curfcb) + RECSIZ - 1) / RECSIZ);
     mem_write(params.fcbaddr, &curfcb, sizeof(fcb_t));
     return 0;
 }
@@ -619,7 +651,7 @@ uint8_t bdos_rename()
 {
     uint8_t old[13], new[13];
     fcb_fatname(old, curfcb.fn);
-    fcb_fatname(new, curfcb.al+1);
+    fcb_fatname(new, curfcb.al + 1);
     return bdos_error(f_rename(old, new));
 }
 
@@ -631,13 +663,13 @@ uint8_t bdos_size()
     uint8_t ret;
     if (ret = bdos_search(F_SFIRST))
         return ret;
-    fcb_setrand(&curfcb, (curfno.fsize + RECSIZ-1)/ RECSIZ);
+    fcb_setrand(&curfcb, (curfno.fsize + RECSIZ - 1) / RECSIZ);
     mem_write(params.fcbaddr, &curfcb, sizeof(fcb_t));
 }
 
 /**
  * Close any files left open
-*/
+ */
 uint8_t bdos_terminate()
 {
     memset(curfn, 0, 11);
@@ -660,44 +692,44 @@ void bdos_dma_execute()
         bdos_log(PSTR("Before"));
 
     switch (dma_command) {
-        case P_TERMCPM:
-            params.ret = bdos_terminate();
-            break;
-        case F_OPEN:
-        case F_MAKE:
-            params.ret = bdos_open();
-            break;
-        case F_CLOSE:
-            params.ret = bdos_close();
-            break;
-        case F_SFIRST:
-        case F_SNEXT:
-            params.ret = bdos_search(dma_command);
-            break;
-        case F_READ:
-        case F_WRITE:
-        case F_READRAND:
-        case F_WRITERAND:
-        case F_WRITEZF:
-            params.ret = bdos_readwrite();
-            break;
-        case F_DELETE:
-            params.ret = bdos_delete();
-            break;
-        case F_RENAME:
-            params.ret = bdos_rename();
-            break;
-        case F_ATTRIB:
-            break; // currently unimplemented
-        case F_SIZE:
-            params.ret = bdos_size();
-            break;
-        case F_RANDREC:
-            params.ret = bdos_randrec();
-            break;
-        default:
-            params.ret = bdos_error(FR_INVALID_PARAMETER);
-            break;
+    case P_TERMCPM:
+        params.ret = bdos_terminate();
+        break;
+    case F_OPEN:
+    case F_MAKE:
+        params.ret = bdos_open();
+        break;
+    case F_CLOSE:
+        params.ret = bdos_close();
+        break;
+    case F_SFIRST:
+    case F_SNEXT:
+        params.ret = bdos_search(dma_command);
+        break;
+    case F_READ:
+    case F_WRITE:
+    case F_READRAND:
+    case F_WRITERAND:
+    case F_WRITEZF:
+        params.ret = bdos_readwrite();
+        break;
+    case F_DELETE:
+        params.ret = bdos_delete();
+        break;
+    case F_RENAME:
+        params.ret = bdos_rename();
+        break;
+    case F_ATTRIB:
+        break; // currently unimplemented
+    case F_SIZE:
+        params.ret = bdos_size();
+        break;
+    case F_RANDREC:
+        params.ret = bdos_randrec();
+        break;
+    default:
+        params.ret = bdos_error(FR_INVALID_PARAMETER);
+        break;
     }
     if (bdos_debug)
         bdos_log(PSTR("After"));
@@ -709,7 +741,7 @@ void bdos_dma_execute()
 /**
  * Initialize default FCB and command tail
  */
-void bdos_init(int argc, char *argv[])
+void bdos_init(int argc, char* argv[])
 {
     char comtail[256];
     fcb_t deffcb;
@@ -718,17 +750,17 @@ void bdos_init(int argc, char *argv[])
     memset(&deffcb, 0, sizeof(fcb_t));
     if (argc >= 2)
         fcb_setdrivename(&deffcb.dr, deffcb.fn, argv[1]);
-    else 
+    else
         memset(deffcb.fn, ' ', 11);
     if (argc >= 3)
-        fcb_setdrivename(deffcb.al, deffcb.al+1, argv[2]);
+        fcb_setdrivename(deffcb.al, deffcb.al + 1, argv[2]);
     else
-        memset(deffcb.al+1, ' ', 11);
+        memset(deffcb.al + 1, ' ', 11);
     mem_write(DEFFCB, &deffcb, sizeof(fcb_t));
     memset(comtail, ' ', 256);
 
     // Save the entire command line tail to DMA buffer
-    char *next = comtail + 1;
+    char* next = comtail + 1;
     for (int i = 1; i < argc; i++) {
         strcpy(next, argv[i]);
         next += strlen(argv[i]);
@@ -752,22 +784,22 @@ uint8_t bdos_dma_reset()
 /**
  * Queue a DMA command for execution
  */
-void bdos_dma_command(uint8_t data) 
+void bdos_dma_command(uint8_t data)
 {
     switch (dma_status) {
-        case DMA_MAILBOX_UNSET:
-            dma_mailbox = data;
-            dma_status = DMA_MAILBOX_HALFSET;
-            break;
-        case DMA_MAILBOX_HALFSET:
-            dma_mailbox |= (data << 8);
-            dma_status = DMA_MAILBOX_SET;
-            break;
-        case DMA_MAILBOX_SET:
-            dma_command = data;
-            dma_function = bdos_dma_execute;
-            break;
-        default:
-            dma_function = NULL;
+    case DMA_MAILBOX_UNSET:
+        dma_mailbox = data;
+        dma_status = DMA_MAILBOX_HALFSET;
+        break;
+    case DMA_MAILBOX_HALFSET:
+        dma_mailbox |= (data << 8);
+        dma_status = DMA_MAILBOX_SET;
+        break;
+    case DMA_MAILBOX_SET:
+        dma_command = data;
+        dma_function = bdos_dma_execute;
+        break;
+    default:
+        dma_function = NULL;
     }
 }

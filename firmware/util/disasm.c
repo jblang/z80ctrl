@@ -1,29 +1,29 @@
 /* z80ctrl (https://github.com/jblang/z80ctrl)
  * Copyright 2018-2023 J.B. Langston
  *
- * Permission is hereby granted, free of charge, to any person obtaining a 
- * copy of this software and associated documentation files (the "Software"), 
- * to deal in the Software without restriction, including without limitation 
- * the rights to use, copy, modify, merge, publish, distribute, sublicense, 
- * and/or sell copies of the Software, and to permit persons to whom the 
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
  * Software is furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR a PARTICULAR PURPOSE AND NONINFRINGEMENT. in NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
- * LIABILITY, WHETHER in AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
- * FROM, out OF OR in CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER in AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, out OF OR in CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS in THE SOFTWARE.
  */
 
 /**
  * @file disasm.c Z80 disassembler
- * 
- * This disassembler decodes Z80 instructions using techniques described 
+ *
+ * This disassembler decodes Z80 instructions using techniques described
  * in http://www.z80.info/decoding.htm.
  */
 
@@ -57,7 +57,7 @@
  stored in a separate PROGMEM string, which is verbose and ugly, and wastes
  an extra byte per literal for the terminating null character.
 
- The `literal` function is provided to copy the literal string associated 
+ The `literal` function is provided to copy the literal string associated
  with the specified token into a buffer.
 */
 
@@ -206,13 +206,13 @@ const uint8_t blockops[] PROGMEM = {
 };
 
 // Decode token and copy the corresponding characters into output buffer
-uint8_t literal(uint8_t token, char *output)
+uint8_t literal(uint8_t token, char* output)
 {
     if (token >= NONLIT)
         return 0;
-    const char *literals[] = {lit1, lit2, lit3, lit4};
+    const char* literals[] = { lit1, lit2, lit3, lit4 };
     uint8_t len = token >> 6;
-    const char *input = literals[len] + (token & 077) * ++len;
+    const char* input = literals[len] + (token & 077) * ++len;
     uint8_t i = len;
     while (i--)
         *output++ = pgm_read_byte(input++);
@@ -220,13 +220,14 @@ uint8_t literal(uint8_t token, char *output)
 }
 
 // Output an operand in the correct format
-uint8_t operand(uint8_t op, int8_t offset, uint8_t (*input)(), char *output)
+uint8_t operand(uint8_t op, int8_t offset, uint8_t (*input)(), char* output)
 {
-    char *start = output;
+    char* start = output;
 
     // Return if no operand
-    if (op == _) return 0;
-    
+    if (op == _)
+        return 0;
+
     // Skip space
     *output++ = ' ';
 
@@ -275,22 +276,22 @@ uint8_t operand(uint8_t op, int8_t offset, uint8_t (*input)(), char *output)
 const uint8_t regsub(uint8_t reg, uint8_t submode)
 {
     if (submode == IX) {
-        if (reg == HL) 
+        if (reg == HL)
             reg = IX;
-        else if (reg == HLI) 
+        else if (reg == HLI)
             reg = IXI;
-        else if (reg == H) 
+        else if (reg == H)
             reg = IXH;
-        else if (reg == L) 
+        else if (reg == L)
             reg = IXL;
     } else if (submode == IY) {
-        if (reg == HL) 
+        if (reg == HL)
             reg = IY;
-        else if (reg == HLI) 
+        else if (reg == HLI)
             reg = IYI;
-        else if (reg == H) 
+        else if (reg == H)
             reg = IYH;
-        else if (reg == L) 
+        else if (reg == L)
             reg = IYL;
     }
     return reg;
@@ -299,9 +300,9 @@ const uint8_t regsub(uint8_t reg, uint8_t submode)
 #define LOOKUP(table, index) pgm_read_byte(&table[index])
 
 // Disassemble an instruction
-uint8_t disasm(uint8_t (*input)(), char *output)
+uint8_t disasm(uint8_t (*input)(), char* output)
 {
-    // Consume any number of 0xDD and 0xFD prefix bytes and set 
+    // Consume any number of 0xDD and 0xFD prefix bytes and set
     // IX/IY substituion mode according to last byte encountered
     uint8_t opcode = 0;
     uint8_t submode = HL;
@@ -320,7 +321,7 @@ uint8_t disasm(uint8_t (*input)(), char *output)
     int8_t offset = -1;
     if (opcode == 0xED) {
         prefix = 0xED;
-        submode = HL;            // Address register for 0xED prefix is always HL
+        submode = HL; // Address register for 0xED prefix is always HL
         opcode = input();
     } else if (opcode == 0xCB) {
         prefix = 0xCB;
@@ -331,9 +332,9 @@ uint8_t disasm(uint8_t (*input)(), char *output)
     }
 
     // Slice the opcode into xxyyyzzz (see http://www.z80.info/decoding.htm)
-    uint8_t x = opcode >> 6;                // x = opcode[7:6]
-    uint8_t y = (opcode >> 3) & 7;          // y = opcode[5:3]
-    uint8_t z = opcode & 7;                 // z = opcode[2:0]
+    uint8_t x = opcode >> 6; // x = opcode[7:6]
+    uint8_t y = (opcode >> 3) & 7; // y = opcode[5:3]
+    uint8_t z = opcode & 7; // z = opcode[2:0]
     uint8_t rz = LOOKUP(reg, z);
 
     // Initialize instruction and operands to blank
@@ -427,12 +428,12 @@ uint8_t disasm(uint8_t (*input)(), char *output)
     *output = '\0';
 }
 
-static uint8_t disasm_index = 0;   /**< index of next byte within 256 byte buffer */
-static uint32_t disasm_addr = 0;   /**< address of next chunk to read from external RAM */
-static uint8_t *disasm_buf;        /**< pointer to disassembly buffer */
+static uint8_t disasm_index = 0; /**< index of next byte within 256 byte buffer */
+static uint32_t disasm_addr = 0; /**< address of next chunk to read from external RAM */
+static uint8_t* disasm_buf; /**< pointer to disassembly buffer */
 
-static uint8_t instr_bytes[8];     /**< bytes contained in the current instruction */
-static uint8_t instr_length = 0;   /**< length of the current construction */
+static uint8_t instr_bytes[8]; /**< bytes contained in the current instruction */
+static uint8_t instr_length = 0; /**< length of the current construction */
 
 /**
  * Return next byte for instruction from memory

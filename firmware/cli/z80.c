@@ -1,22 +1,22 @@
 /* z80ctrl (https://github.com/jblang/z80ctrl)
  * Copyright 2018-2023 J.B. Langston
  *
- * Permission is hereby granted, free of charge, to any person obtaining a 
- * copy of this software and associated documentation files (the "Software"), 
- * to deal in the Software without restriction, including without limitation 
- * the rights to use, copy, modify, merge, publish, distribute, sublicense, 
- * and/or sell copies of the Software, and to permit persons to whom the 
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
  * Software is furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
 
@@ -38,7 +38,7 @@
 /**
  * Disassemble code from memory
  */
-void cli_disasm(int argc, char *argv[])
+void cli_disasm(int argc, char* argv[])
 {
     uint32_t start, end;
     if (argc < 2) {
@@ -56,7 +56,7 @@ void cli_disasm(int argc, char *argv[])
 /**
  * Reduce the Z80 clock speed by the specified factor
  */
-void cli_clkdiv(int argc, char *argv[])
+void cli_clkdiv(int argc, char* argv[])
 {
     uint8_t tmp = 0;
     if (argc >= 2)
@@ -66,13 +66,13 @@ void cli_clkdiv(int argc, char *argv[])
     else
         printf_P(PSTR("usage: clkdiv <divider>; minimum divider is 2\n"));
     uint16_t freq = F_CPU / get_clkdiv() / 1000;
-    printf_P(PSTR("current speed is %u.%03u MHz (clkdiv=%d)\n"), freq/1000, freq-(freq/1000)*1000, get_clkdiv());
+    printf_P(PSTR("current speed is %u.%03u MHz (clkdiv=%d)\n"), freq / 1000, freq - (freq / 1000) * 1000, get_clkdiv());
 }
 
 /**
  * Reset the processor and optionally set up a reset vector
  */
-void cli_reset(int argc, char *argv[])
+void cli_reset(int argc, char* argv[])
 {
     uint32_t addr = 0;
     if (argc >= 2) {
@@ -84,7 +84,7 @@ void cli_reset(int argc, char *argv[])
 /**
  * Run the processor at full speed from an optional starting address
  */
-void cli_run(int argc, char *argv[])
+void cli_run(int argc, char* argv[])
 {
     if (argc >= 2) {
         uint32_t addr = strtoul(argv[1], NULL, 16) & 0xfffff;
@@ -96,7 +96,7 @@ void cli_run(int argc, char *argv[])
 /**
  * Run the processor with debugging enabled from an optional starting address
  */
-void cli_debug(int argc, char *argv[])
+void cli_debug(int argc, char* argv[])
 {
     if (argc >= 2) {
         uint32_t addr = strtoul(argv[1], NULL, 16) & 0xfffff;
@@ -108,18 +108,18 @@ void cli_debug(int argc, char *argv[])
 /**
  * Run the processor for a specified number of instructions
  */
-void cli_step(int argc, char *argv[])
+void cli_step(int argc, char* argv[])
 {
     uint32_t cycles = 1;
     if (argc >= 2)
-        cycles = strtoul(argv[1], NULL, 10);            
+        cycles = strtoul(argv[1], NULL, 10);
     z80_debug(cycles);
 }
 
 /**
  * Display the bus status
  */
-void cli_bus(int argc, char *argv[]) 
+void cli_bus(int argc, char* argv[])
 {
     bus_log(bus_status());
 }
@@ -127,7 +127,8 @@ void cli_bus(int argc, char *argv[])
 /**
  * Enable or disable halt
  */
-void cli_halt(int argc, char *argv[]) {
+void cli_halt(int argc, char* argv[])
+{
     if (argc == 2) {
         if (strcmp_P(argv[1], PSTR("on")) == 0 || strcmp_P(argv[1], PSTR("both")) == 0)
             set_haltmask(RESET | HALT);
@@ -145,16 +146,16 @@ void cli_halt(int argc, char *argv[]) {
 /**
  * Interrogate or set breakpoint and watch ranges
  */
-void cli_breakwatch(int argc, char *argv[])
+void cli_breakwatch(int argc, char* argv[])
 {
-    range *ranges;
+    range* ranges;
     uint8_t type;
 
     if (strcmp_P(argv[0], PSTR("break")) == 0)
         ranges = breaks;
     else
         ranges = watches;
-    
+
     // If no parameters given, show current status
     if (argc == 1) {
         printf_P(PSTR("%s status:\n"), argv[0]);

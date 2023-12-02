@@ -1,22 +1,22 @@
 /* z80ctrl (https://github.com/jblang/z80ctrl)
  * Copyright 2018-2023 J.B. Langston
  *
- * Permission is hereby granted, free of charge, to any person obtaining a 
- * copy of this software and associated documentation files (the "Software"), 
- * to deal in the Software without restriction, including without limitation 
- * the rights to use, copy, modify, merge, publish, distribute, sublicense, 
- * and/or sell copies of the Software, and to permit persons to whom the 
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
  * Software is furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
 
@@ -51,7 +51,7 @@ uint8_t clkdiv = 2;
 
 /**
  * Set clock divider
-*/
+ */
 void set_clkdiv(uint8_t div)
 {
     clkdiv = div;
@@ -59,7 +59,7 @@ void set_clkdiv(uint8_t div)
 
 /**
  * Get clock divider
-*/
+ */
 uint8_t get_clkdiv(void)
 {
     return clkdiv;
@@ -95,9 +95,9 @@ uint8_t bus_request(void)
 {
     uint8_t i = 255;
 
-    BUSRQ_LO;           // request bus
+    BUSRQ_LO; // request bus
     // Clock the Z80 until it releases control of the bus
-    while (GET_BUSACK)  {
+    while (GET_BUSACK) {
         CLK_TOGGLE;
         if (i-- == 0) {
             BUSRQ_HI;
@@ -129,7 +129,7 @@ uint8_t bus_release(void)
     BUSRQ_HI;
 
     // Clock the Z80 until it takes back control of the bus
-    while (!GET_BUSACK)  {
+    while (!GET_BUSACK) {
         CLK_TOGGLE;
         if (i-- == 0) {
             return 0;
@@ -175,16 +175,16 @@ void bus_log(bus_stat status)
         status.addr,
         status.data,
         0x20 <= status.data && status.data <= 0x7e ? status.data : ' ',
-        !MREQ_STATUS ? "mreq" :
-        !IORQ_STATUS ? "iorq " : "    ",
-        !RD_STATUS ? "rd  " :
-        !WR_STATUS ? "wr  " :
-        !RFSH_STATUS ? "rfsh" : "    ",
+        !MREQ_STATUS ? "mreq" : !IORQ_STATUS ? "iorq "
+                                             : "    ",
+        !RD_STATUS ? "rd  " : !WR_STATUS ? "wr  "
+            : !RFSH_STATUS               ? "rfsh"
+                                         : "    ",
         !M1_STATUS ? "m1" : "  ",
         !BUSRQ_STATUS ? "busrq" : "     ",
         !BUSACK_STATUS ? "busack" : "      ",
         !WAIT_STATUS ? "wait" : "    ",
-        !HALT_STATUS ? "halt" : "    ", 
+        !HALT_STATUS ? "halt" : "    ",
         !INT_STATUS ? "int" : "   ",
         !NMI_STATUS ? "nmi" : "   ",
         !RESET_STATUS ? "reset" : "     ");

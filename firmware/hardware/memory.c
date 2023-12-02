@@ -188,7 +188,7 @@ void mem_write_banked_P(uint32_t addr, const void* buf, uint32_t len)
     return mem_iterate_banked(addr, (addr + (len - 1)), mem_write_page_P, (void*)buf);
 }
 
-uint32_t mem_loadbin(mem_writefunc_t mem_writefunc, char *filename, int32_t start, uint32_t offset, uint32_t len)
+uint32_t mem_loadbin(mem_writefunc_t mem_writefunc, char* filename, int32_t start, uint32_t offset, uint32_t len)
 {
     FIL fil;
     FRESULT fr;
@@ -227,7 +227,7 @@ uint32_t mem_loadbin(mem_writefunc_t mem_writefunc, char *filename, int32_t star
 /**
  * Save an region of memory to a binary file on disk
  */
-void mem_savebin(mem_readfunc_t mem_readfunc, char *filename, uint32_t start, uint32_t len)
+void mem_savebin(mem_readfunc_t mem_readfunc, char* filename, uint32_t start, uint32_t len)
 {
     FRESULT fr;
     FILE file;
@@ -246,5 +246,5 @@ void mem_savebin(mem_readfunc_t mem_readfunc, char *filename, uint32_t start, ui
             start += len;
         }
         ffw_close(&fil);
-    }        
+    }
 }

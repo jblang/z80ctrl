@@ -1,22 +1,22 @@
 /* z80ctrl (https://github.com/jblang/z80ctrl)
  * Copyright 2018-2023 J.B. Langston
  *
- * Permission is hereby granted, free of charge, to any person obtaining a 
- * copy of this software and associated documentation files (the "Software"), 
- * to deal in the Software without restriction, including without limitation 
- * the rights to use, copy, modify, merge, publish, distribute, sublicense, 
- * and/or sell copies of the Software, and to permit persons to whom the 
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
  * Software is furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
 
@@ -42,8 +42,8 @@
 static FIL sio_writefile[2];
 static FIL sio_readfile[2];
 
-static uint8_t sio_writemode[2] = {SIO_UART0, SIO_UART1};
-static uint8_t sio_readmode[2] = {SIO_UART0, SIO_UART1};
+static uint8_t sio_writemode[2] = { SIO_UART0, SIO_UART1 };
+static uint8_t sio_readmode[2] = { SIO_UART0, SIO_UART1 };
 
 #define SIO_EOF 0x1A
 
@@ -55,30 +55,30 @@ void sio_unattach(uint8_t port, uint8_t dir)
         return;
     }
 
-    uint8_t *sio_mode = sio_readmode;
-    FIL *sio_file = sio_readfile;
+    uint8_t* sio_mode = sio_readmode;
+    FIL* sio_file = sio_readfile;
 
     if (dir == SIO_OUTPUT) {
         sio_mode = sio_writemode;
         sio_file = sio_writefile;
     }
-    
+
     if (sio_mode[port] == SIO_FILE)
         ffw_close(&sio_file[port]);
-    sio_mode[port] = SIO_UNATTACHED;        
+    sio_mode[port] = SIO_UNATTACHED;
 }
 
 /**
  * Attach a file to serial port
  */
-void sio_attach(uint8_t port, uint8_t dir, uint8_t mode, char *filename) 
+void sio_attach(uint8_t port, uint8_t dir, uint8_t mode, char* filename)
 {
     if (port > 1) {
         printf_P(PSTR("error: valid port numbers are 0-1\n"));
         return;
     }
-    uint8_t *sio_mode = sio_readmode;
-    FIL *sio_file = sio_readfile;
+    uint8_t* sio_mode = sio_readmode;
+    FIL* sio_file = sio_readfile;
 
     if (dir == SIO_OUTPUT) {
         sio_mode = sio_writemode;
@@ -115,7 +115,7 @@ uint8_t sio_read(uint8_t port)
             return SIO_EOF;
         return data;
     } else if (sio_readmode[port] != SIO_UNATTACHED) {
-            return uart_getc(sio_readmode[port]);
+        return uart_getc(sio_readmode[port]);
     }
     return 0;
 }
@@ -146,10 +146,12 @@ void sio_write(uint8_t port, uint8_t data)
         uart_putc(sio_writemode[port], data);
     }
 }
+
 void sio0_write(uint8_t data)
 {
     sio_write(0, data);
 }
+
 void sio1_write(uint8_t data)
 {
     sio_write(1, data);
@@ -171,7 +173,7 @@ uint8_t sio_status(uint8_t port)
         status |= (1 << 1);
     else if (sio_writemode[port] != SIO_UNATTACHED)
         status |= ((uart_testtx(sio_writemode[port]) == 0)) << 1;
-    
+
     if (sio_readmode[port] == SIO_FILE)
         status |= 1;
     else if (sio_readmode[port] != SIO_UNATTACHED)
@@ -182,6 +184,7 @@ uint8_t sio0_status()
 {
     return sio_status(0);
 }
+
 uint8_t sio1_status()
 {
     return sio_status(1);

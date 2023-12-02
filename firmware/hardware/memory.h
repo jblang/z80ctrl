@@ -46,7 +46,7 @@ void mem_write_banked_P(uint32_t addr, const void* buf, uint32_t len);
 
 typedef void (*mem_readfunc_t)(uint32_t, void*, uint32_t);
 typedef void (*mem_writefunc_t)(uint32_t, const void*, uint32_t);
-uint32_t mem_loadbin(mem_writefunc_t mem_writefunc, char *filename, int32_t start, uint32_t offset, uint32_t len);
-void mem_savebin(mem_readfunc_t mem_readfunc, char *filename, uint32_t start, uint32_t len);
+uint32_t mem_loadbin(mem_writefunc_t mem_writefunc, char* filename, int32_t start, uint32_t offset, uint32_t len);
+void mem_savebin(mem_readfunc_t mem_readfunc, char* filename, uint32_t start, uint32_t len);
 
 #endif

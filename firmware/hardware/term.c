@@ -16,13 +16,13 @@
 
 #include "uart.h"
 
-#define LINE_BUFF  80
+#define LINE_BUFF 80
 
 /*
  * Send character c down the UART Tx, wait until tx holding register
  * is empty.
  */
-int term_putchar(char c, FILE * stream)
+int term_putchar(char c, FILE* stream)
 {
 
     if (c == '\n')
@@ -65,12 +65,12 @@ int term_putchar(char c, FILE * stream)
  * Successive calls to term_getchar() will be satisfied from the
  * internal buffer until that buffer is emptied again.
  */
-int term_getchar(FILE * stream)
+int term_getchar(FILE* stream)
 {
     uint8_t c;
     char *cp, *cp2;
     static char b[LINE_BUFF];
-    static char *rxp;
+    static char* rxp;
 
     if (rxp == 0)
         for (cp = b;;) {
@@ -89,8 +89,7 @@ int term_getchar(FILE * stream)
             } else if (c == '\t')
                 c = ' ';
 
-            if ((c >= (uint8_t) ' ' && c <= (uint8_t) '\x7e') ||
-                c >= (uint8_t) '\xa0') {
+            if ((c >= (uint8_t)' ' && c <= (uint8_t)'\x7e') || c >= (uint8_t)'\xa0') {
                 if (cp == b + LINE_BUFF - 1)
                     term_putchar('\a', stream);
                 else {

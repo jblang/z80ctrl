@@ -1,4 +1,4 @@
-/* 
+/*
    z80ctrl (https://github.com/jblang/z80ctrl)
    Copyright (c) 2018-2023 J.B. Langston
    Copyright (c) 1997-2010, Charles E. Owen
@@ -62,7 +62,7 @@ typedef struct _drive {
 #define NUMTRACKS 254ul // Altair disk has 77 but SIMH allows disk images with more
 #define NUMSECTORS 32ul
 #define SECTORSIZE 137ul
-#define TRACKSIZE NUMSECTORS*SECTORSIZE
+#define TRACKSIZE NUMSECTORS* SECTORSIZE
 #define DPBSIZE 17
 #define SKEWSIZE 32
 
@@ -95,18 +95,18 @@ typedef struct _drive {
 #define NUMDRIVES 8
 
 static drive drives[NUMDRIVES];
-static drive *selected;
+static drive* selected;
 
-static uint8_t sectorbuf[SECTORSIZE+1];
+static uint8_t sectorbuf[SECTORSIZE + 1];
 static uint8_t dirtysector = 0;
 
 /**
  * Unmount a disk image
  */
-void drive_unmount(uint8_t drv) 
+void drive_unmount(uint8_t drv)
 {
     if (drv >= NUMDRIVES) {
-        printf_P(PSTR("error: valid drive numbers are 0-%d\n"), NUMDRIVES-1);
+        printf_P(PSTR("error: valid drive numbers are 0-%d\n"), NUMDRIVES - 1);
         return;
     }
     FRESULT fr;
@@ -117,12 +117,12 @@ void drive_unmount(uint8_t drv)
 /**
  * Mount a disk image
  */
-void drive_mount(uint8_t drv, char *filename) 
+void drive_mount(uint8_t drv, char* filename)
 {
     UINT br;
     uint8_t buf[3];
     if (drv >= NUMDRIVES) {
-        printf_P(PSTR("error: valid drive numbers are 0-%d\n"), NUMDRIVES-1);
+        printf_P(PSTR("error: valid drive numbers are 0-%d\n"), NUMDRIVES - 1);
         return;
     }
     FRESULT fr;
@@ -149,7 +149,7 @@ void drive_mount(uint8_t drv, char *filename)
 /**
  * Write the current sector to SD card
  */
-void write_sector(void) 
+void write_sector(void)
 {
     FRESULT fr;
     UINT bw;
@@ -171,7 +171,7 @@ void write_sector(void)
 /**
  * Select the active drive
  */
-void drive_select(uint8_t newdrv) 
+void drive_select(uint8_t newdrv)
 {
     if (dirtysector)
         write_sector();
@@ -200,7 +200,7 @@ void drive_select(uint8_t newdrv)
 /**
  * Get the current drive's status
  */
-uint8_t drive_status() 
+uint8_t drive_status()
 {
     if (selected) {
         return ~selected->status;
@@ -213,7 +213,7 @@ uint8_t drive_status()
 /**
  * Update the current drive's control register
  */
-void drive_control(uint8_t cmd) 
+void drive_control(uint8_t cmd)
 {
     if (!selected) {
         printf_P(PSTR("drive control error: no drive selected\n"));
@@ -221,7 +221,7 @@ void drive_control(uint8_t cmd)
     }
 
     if (cmd & (1 << C_STEPIN)) {
-        if (selected->track < NUMTRACKS-1)
+        if (selected->track < NUMTRACKS - 1)
             selected->track++;
         selected->status &= ~(1 << S_TRACK0);
         if (dirtysector)
@@ -263,7 +263,7 @@ void drive_control(uint8_t cmd)
 /**
  * Get the current drive's active sector
  */
-uint8_t drive_sector(void) 
+uint8_t drive_sector(void)
 {
     if (!selected) {
         printf_P(PSTR("drive sector error: no drive selected\n"));
@@ -286,7 +286,7 @@ uint8_t drive_sector(void)
 /**
  * Write a byte to the current drive
  */
-void drive_write(uint8_t data) 
+void drive_write(uint8_t data)
 {
     if (!selected) {
         printf_P(PSTR("drive write error: no drive selected\n"));
@@ -306,7 +306,7 @@ void drive_write(uint8_t data)
 /**
  * Read a byte from the current drive
  */
-uint8_t drive_read(void) 
+uint8_t drive_read(void)
 {
     FRESULT fr;
     UINT br;
@@ -317,7 +317,7 @@ uint8_t drive_read(void)
         return 0;
     }
 
-    //printf("read from track %d sector %d\n", selected->track, selected->sector);
+    // printf("read from track %d sector %d\n", selected->track, selected->sector);
     if ((i = selected->byte) < SECTORSIZE) {
         selected->byte++;
         return sectorbuf[i];
@@ -329,7 +329,6 @@ uint8_t drive_read(void)
     }
 }
 
-
 /**
  * Load a CPM boot sector directly from disk image mounted on drive 0
  */
@@ -337,7 +336,7 @@ int drive_bootload()
 {
     FRESULT fr;
     UINT read;
-    uint8_t buf[SECTORSIZE+1];
+    uint8_t buf[SECTORSIZE + 1];
     if (drives[0].status & (1 << S_MOUNTED)) {
         // SIMH BIOS expects the bootloader to be there even though we don't use it
         if (drives[0].format == DISK_FORMAT_SIMH)
@@ -349,7 +348,7 @@ int drive_bootload()
                 return 0;
             if ((fr = ffw_read(&drives[0].fp, buf, SECTORSIZE, &read)) != FR_OK)
                 return 0;
-            mem_write_banked(addr, buf+3, 0x80);
+            mem_write_banked(addr, buf + 3, 0x80);
             sector += 2;
             if (sector == NUMSECTORS)
                 sector = 1;

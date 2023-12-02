@@ -45,7 +45,7 @@ static void sst_cmd_prefix(void)
 
 void sst_write(uint32_t addr, const void* buf, uint32_t len)
 {
-    const uint8_t *bytebuf;
+    const uint8_t* bytebuf;
     if (GET_BUSACK)
         return 0;
     // first two banks must be physical pages 0 and 1

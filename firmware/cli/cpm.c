@@ -1,22 +1,22 @@
 /* z80ctrl (https://github.com/jblang/z80ctrl)
  * Copyright 2018-2023 J.B. Langston
  *
- * Permission is hereby granted, free of charge, to any person obtaining a 
- * copy of this software and associated documentation files (the "Software"), 
- * to deal in the Software without restriction, including without limitation 
- * the rights to use, copy, modify, merge, publish, distribute, sublicense, 
- * and/or sell copies of the Software, and to permit persons to whom the 
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
  * Software is furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
 
@@ -47,12 +47,12 @@
 /**
  * Boot from a disk
  */
-void cli_boot(int argc, char *argv[])
+void cli_boot(int argc, char* argv[])
 {
     if (argc == 2) {
         drive_mount(0, argv[1]);
     }
-    if(drive_bootload()) {
+    if (drive_bootload()) {
         z80_reset(0);
         z80_run();
     }
@@ -61,11 +61,11 @@ void cli_boot(int argc, char *argv[])
 /**
  * Attach a virtual UART to a physical one
  */
-void cli_attach(int argc, char *argv[])
+void cli_attach(int argc, char* argv[])
 {
     uint8_t dir;
     uint8_t mode = SIO_UNATTACHED;
-    char *filename = NULL;
+    char* filename = NULL;
     if (argc != 4) {
         printf_P(PSTR("usage: attach [0|1] [read|write] [uart0|uart1|filename]\n"));
         return;
@@ -80,7 +80,7 @@ void cli_attach(int argc, char *argv[])
         mode = SIO_UART0;
     else if (strcmp_P(argv[3], PSTR("uart1")) == 0)
         mode = SIO_UART1;
-    else { 
+    else {
         mode = SIO_FILE;
         filename = argv[3];
     }
@@ -90,21 +90,21 @@ void cli_attach(int argc, char *argv[])
 /**
  * Mount a disk image
  */
-void cli_mount(int argc, char *argv[])
+void cli_mount(int argc, char* argv[])
 {
     if (argc != 3) {
         printf_P(PSTR("usage: mount <drive #> <filename>\n"));
         return;
     }
     uint8_t drv = strtoul(argv[1], NULL, 10);
-    char *filename = argv[2];
+    char* filename = argv[2];
     drive_mount(drv, filename);
 }
 
 /**
  * Unmount a disk image
  */
-void cli_unmount(int argc, char *argv[])
+void cli_unmount(int argc, char* argv[])
 {
     if (argc != 2) {
         printf_P(PSTR("usage: unmount <drive #>\n"));
@@ -117,7 +117,7 @@ void cli_unmount(int argc, char *argv[])
 /**
  * Enable/disable BDOS debug messages
  */
-void cli_bdosdbg(int argc, char *argv[])
+void cli_bdosdbg(int argc, char* argv[])
 {
     if (argc == 2) {
         if (strcmp_P(argv[1], PSTR("on")) == 0)
@@ -131,11 +131,10 @@ void cli_bdosdbg(int argc, char *argv[])
         printf("bdos debug is disabled\n");
 }
 
-
 /**
  * Run a CP/M .COM file
  */
-uint8_t cli_runcom(int argc, char *argv[])
+uint8_t cli_runcom(int argc, char* argv[])
 {
     char filename[256];
     strcpy(filename, argv[0]);
@@ -163,4 +162,3 @@ uint8_t cli_runcom(int argc, char *argv[])
         return 0;
     }
 }
-

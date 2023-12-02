@@ -1,22 +1,22 @@
 /* z80ctrl (https://github.com/jblang/z80ctrl)
  * Copyright 2018-2023 J.B. Langston
  *
- * Permission is hereby granted, free of charge, to any person obtaining a 
- * copy of this software and associated documentation files (the "Software"), 
- * to deal in the Software without restriction, including without limitation 
- * the rights to use, copy, modify, merge, publish, distribute, sublicense, 
- * and/or sell copies of the Software, and to permit persons to whom the 
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
  * Software is furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
 
@@ -51,7 +51,7 @@ enum ihex_rectype {
  */
 enum ihex_rc {
     IHEX_OK = 0,
-    IHEX_FORMAT, 
+    IHEX_FORMAT,
     IHEX_COUNT,
     IHEX_CKSUM,
     IHEX_RECTYPE
@@ -109,7 +109,7 @@ uint8_t tohex(uint8_t nyb)
 /**
  * Parse a single Intel HEX record and convert it to binary
  */
-ihex_rec ihex_to_bin(char *ihex, uint8_t *bin) 
+ihex_rec ihex_to_bin(char* ihex, uint8_t* bin)
 {
     ihex_rec record;
     int i;
@@ -137,11 +137,11 @@ ihex_rec ihex_to_bin(char *ihex, uint8_t *bin)
     record.type = fromhex(ihex[7]) << 4 | fromhex(ihex[8]);
     uint8_t check1 = record.count + (record.addr >> 8) + (record.addr & 0xff) + record.type;
     for (i = 0; i < record.count; i++) {
-        bin[i] = fromhex(ihex[i*2+9]) << 4 | fromhex(ihex[i*2+10]);
+        bin[i] = fromhex(ihex[i * 2 + 9]) << 4 | fromhex(ihex[i * 2 + 10]);
         check1 += bin[i];
     }
     check1 = ~check1 + 1;
-    uint8_t check2 = fromhex(ihex[record.count*2+9]) << 4 | fromhex(ihex[record.count*2+10]);
+    uint8_t check2 = fromhex(ihex[record.count * 2 + 9]) << 4 | fromhex(ihex[record.count * 2 + 10]);
     if (check1 != check2) {
         record.rc = IHEX_CKSUM;
         return record;
@@ -156,7 +156,7 @@ ihex_rec ihex_to_bin(char *ihex, uint8_t *bin)
 /**
  * Load an Intel HEX file into memory
  */
-ihex_res load_ihex(FILE *file)
+ihex_res load_ihex(FILE* file)
 {
     char ihex[524];
     uint8_t bin[256];
@@ -196,7 +196,7 @@ ihex_res load_ihex(FILE *file)
 /**
  * Encode a byte array to a single Intel HEX record
  */
-void bin_to_ihex(uint8_t *bin, char *ihex, uint16_t addr, uint8_t count) 
+void bin_to_ihex(uint8_t* bin, char* ihex, uint16_t addr, uint8_t count)
 {
     uint8_t check = count + (addr >> 8) + (addr & 0xff);
     int i;
@@ -216,24 +216,24 @@ void bin_to_ihex(uint8_t *bin, char *ihex, uint16_t addr, uint8_t count)
         ihex[8] = '1';
     }
     for (i = 0; i < count; i++) {
-        ihex[i*2+9] = tohex(bin[i] >> 4);
-        ihex[i*2+10] = tohex(bin[i] & 0xf);
+        ihex[i * 2 + 9] = tohex(bin[i] >> 4);
+        ihex[i * 2 + 10] = tohex(bin[i] & 0xf);
         check += bin[i];
     }
     check = ~check + 1;
-    ihex[count*2+9] = tohex(check >> 4);
-    ihex[count*2+10] = tohex(check & 0xf);
-    ihex[count*2+11] = '\0';
+    ihex[count * 2 + 9] = tohex(check >> 4);
+    ihex[count * 2 + 10] = tohex(check & 0xf);
+    ihex[count * 2 + 11] = '\0';
 }
 
 /**
  * Save a range of memory to an Intel HEX file
  */
-int save_ihex(uint32_t start, uint16_t end, FILE *file)
+int save_ihex(uint32_t start, uint16_t end, FILE* file)
 {
     uint8_t count;
     char bin[BYTESPERLINE];
-    char ihex[BYTESPERLINE*2+12];
+    char ihex[BYTESPERLINE * 2 + 12];
     uint16_t i;
     for (;;) {
         if (end - start + 1 > BYTESPERLINE)

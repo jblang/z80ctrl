@@ -1,22 +1,22 @@
 /* z80ctrl (https://github.com/jblang/z80ctrl)
  * Copyright 2018-2023 J.B. Langston
  *
- * Permission is hereby granted, free of charge, to any person obtaining a 
- * copy of this software and associated documentation files (the "Software"), 
- * to deal in the Software without restriction, including without limitation 
- * the rights to use, copy, modify, merge, publish, distribute, sublicense, 
- * and/or sell copies of the Software, and to permit persons to whom the 
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
  * Software is furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
 
@@ -40,7 +40,7 @@
 /**
  * Set the base address in memory
  */
-void cli_base(int argc, char *argv[])
+void cli_base(int argc, char* argv[])
 {
     if (argc == 2) {
         if (base_addr & 0xFFFF != 0)
@@ -53,11 +53,10 @@ void cli_base(int argc, char *argv[])
 }
 #endif
 
-
 /**
  * Generate a hex dump from memory
  */
-void cli_dump(int argc, char *argv[])
+void cli_dump(int argc, char* argv[])
 {
     uint8_t tms = (strcmp_P(argv[0], PSTR("tmsdump")) == 0);
     if (argc < 2) {
@@ -70,7 +69,7 @@ void cli_dump(int argc, char *argv[])
         start = strtoul(argv[1], NULL, 16);
     if (argc >= 3)
         end = strtoul(argv[2], NULL, 16);
-    
+
     uint8_t buf[16];
 
     uint8_t buflen = 16;
@@ -92,7 +91,6 @@ void cli_dump(int argc, char *argv[])
         printf_P(PSTR("%X"), j);
     printf_P(PSTR("\n"));
 
-    
     for (uint32_t i = start; i <= end;) {
         printf_P(PSTR("%05lX  "), base_addr + i);
 #ifdef TMS_BASE
@@ -122,7 +120,7 @@ void cli_dump(int argc, char *argv[])
 /**
  * Fill memory with a specified byte for a specified range
  */
-void cli_fill(int argc, char *argv[])
+void cli_fill(int argc, char* argv[])
 {
     if (argc != 4) {
         printf_P(PSTR("usage: fill <start> <end> <value>\n"));
@@ -143,7 +141,7 @@ void cli_fill(int argc, char *argv[])
         for (uint16_t i = 0; i < 256; i++)
             buf[i] = value;
     }
-    
+
     for (;;) {
         if (end - start > 256) {
 #ifdef TMS_BASE
@@ -168,7 +166,7 @@ void cli_fill(int argc, char *argv[])
 /**
  * Poke values into memory
  */
-void cli_poke(int argc, char *argv[])
+void cli_poke(int argc, char* argv[])
 {
     uint8_t value;
     if (argc < 2)
@@ -190,7 +188,7 @@ void cli_poke(int argc, char *argv[])
         if (fgets(buf, sizeof buf - 1, stdin) == NULL) {
             break;
         } else {
-            char *end;
+            char* end;
             value = strtoul(buf, &end, 16);
             if (*buf == '\n' || *buf == '\r' || *buf == '\0') {
                 addr++;
@@ -203,14 +201,13 @@ void cli_poke(int argc, char *argv[])
             }
         }
     }
-    
 }
 
 #ifdef SST_FLASH
 /**
  * Erase a flash sector or entire chip
  */
-void cli_erase(int argc, char *argv[])
+void cli_erase(int argc, char* argv[])
 {
     if (argc < 2) {
         printf_P(PSTR("usage: erase <addr> | erase all\n"));
