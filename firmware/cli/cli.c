@@ -46,7 +46,8 @@
 /**
  * Lookup table of monitor command names
  */
-const char cli_cmd_names[] PROGMEM = 
+const char cli_cmd_names[] PROGMEM =
+    "about\0"
     "ascii\0"
     "assign\0"
     "attach\0"
@@ -130,6 +131,7 @@ const char cli_cmd_names[] PROGMEM =
  * Lookup table of help text for monitor commands
  */
 const char cli_cmd_help[] PROGMEM =
+    "z80ctrl license and copyright information\0"   // about
     "\0"                                            // ascii
     "assign a device to a port\0"                   // assign
     "attach virtual uart\0"                         // attach
@@ -209,12 +211,11 @@ const char cli_cmd_help[] PROGMEM =
     "receive a file via xmodem\0"                   // xmrx
     "send a file via xmodem";                       // xmtx
 
-void cli_help(int argc, char *argv[]);
-
 /**
  * Lookup table of function pointers for monitor commands
  */
 void * const cli_cmd_functions[] PROGMEM = {
+    &cli_about,
     &cli_ascii,
     &cli_assign,
     &cli_attach,
@@ -296,6 +297,14 @@ void * const cli_cmd_functions[] PROGMEM = {
 };
 
 #define NUM_CMDS (sizeof(cli_cmd_functions)/sizeof(void *))
+
+/**
+ * Display license and copyright information
+ */
+void cli_about(int argc, char* argv[])
+{
+    printf_P(PSTR("%S\n%S\n"), z80ctrl_banner, z80ctrl_copyright);
+}
 
 /**
  * List available commands with help text
@@ -384,7 +393,7 @@ void cli_loop(void)
 
 void cli_start(void)
 {
-    printf_P(PSTR("\n\ntype help to list available commands\n"));
+    printf_P(PSTR("\n\ntype help to list available commands; about for credits\n"));
     cli_exec(AUTOEXEC);
     cli_loop();
 }

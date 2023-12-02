@@ -38,6 +38,8 @@ void cli_bench(int argc, char* argv[]);
 
 /* cli.c */
 void cli_dispatch(char* buf);
+void cli_about(int argc, char *argv[]);
+void cli_help(int argc, char *argv[]);
 
 /* coleco.c */
 void cli_coleco(int argc, char* argv[]);

@@ -28,4 +28,6 @@
 #define CLI_H
 #include <stdint.h>
 void cli_start(void);
+extern const char z80ctrl_banner[];
+extern const char z80ctrl_copyright[];
 #endif
