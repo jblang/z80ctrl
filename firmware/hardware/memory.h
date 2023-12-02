@@ -1,22 +1,22 @@
 /* z80ctrl (https://github.com/jblang/z80ctrl)
  * Copyright 2018-2023 J.B. Langston
  *
- * Permission is hereby granted, free of charge, to any person obtaining a 
- * copy of this software and associated documentation files (the "Software"), 
- * to deal in the Software without restriction, including without limitation 
- * the rights to use, copy, modify, merge, publish, distribute, sublicense, 
- * and/or sell copies of the Software, and to permit persons to whom the 
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
  * Software is furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
 
@@ -36,18 +36,17 @@ void mem_bank_addr(uint32_t addr);
 #define mem_bank_addr(addr)
 #endif
 
-typedef void (*pagefunc_t)(uint8_t, uint8_t, void*);
-void mem_read_page(uint8_t start, uint8_t end, void *buf);
-void mem_write_page(uint8_t start, uint8_t end, void *buf);
-void mem_write_page_P(uint8_t start, uint8_t end, void *buf);
-void mem_iterate(uint16_t start, uint16_t end, pagefunc_t dopage, void *buf);
-void mem_iterate_banked(uint32_t start, uint32_t end, pagefunc_t dopage, void *buf);
+void mem_read(uint32_t addr, void* buf, uint32_t len);
+void mem_write(uint32_t addr, const void* buf, uint32_t len);
+void mem_write_P(uint32_t addr, const void* buf, uint32_t len);
 
-#define mem_read(addr, buf, len) mem_iterate((addr), ((addr) + ((len) - 1)), mem_read_page, (buf));
-#define mem_write(addr, buf, len) mem_iterate((addr), ((addr) + ((len) - 1)), mem_write_page, (buf));
-#define mem_write_P(addr, buf, len) mem_iterate((addr), ((addr) + ((len) - 1)), mem_write_page_P, (void *)(buf));
+void mem_read_banked(uint32_t addr, void* buf, uint32_t len);
+void mem_write_banked(uint32_t addr, const void* buf, uint32_t len);
+void mem_write_banked_P(uint32_t addr, const void* buf, uint32_t len);
 
-#define mem_read_banked(addr, buf, len) mem_iterate_banked((addr), ((addr) + ((len) - 1)), mem_read_page, (buf));
-#define mem_write_banked(addr, buf, len) mem_iterate_banked((addr), ((addr) + ((len) - 1)), mem_write_page, (buf));
-#define mem_write_banked_P(addr, buf, len) mem_iterate_banked((addr), ((addr) + ((len) - 1)), mem_write_page_P, (void *)(buf));
+typedef void (*mem_readfunc_t)(uint32_t, void*, uint32_t);
+typedef void (*mem_writefunc_t)(uint32_t, const void*, uint32_t);
+uint32_t mem_loadbin(mem_writefunc_t mem_writefunc, char *filename, int32_t start, uint32_t offset, uint32_t len);
+void mem_savebin(mem_readfunc_t mem_readfunc, char *filename, uint32_t start, uint32_t len);
+
 #endif

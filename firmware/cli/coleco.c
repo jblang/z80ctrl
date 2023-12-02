@@ -30,6 +30,7 @@
 #include "fatfs/ff.h"
 
 #include "hardware/bus.h"
+#include "hardware/memory.h"
 #include "hardware/z80.h"
 
 #include "util/ffwrap.h"
@@ -60,8 +61,8 @@ void cli_coleco(int argc, char *argv[])
         printf_P(PSTR("file not found: %s\n"), coleco_rom);
         return;
     } 
-    ffw_loadbin(coleco_rom, MEM, 0, 0, 0);
-    ffw_loadbin(game_rom, MEM, 0x8000, 0, 0);
+    mem_loadbin(mem_write_banked, coleco_rom, 0, 0, 0);
+    mem_loadbin(mem_write_banked, game_rom, 0x8000, 0, 0);
     set_clkdiv(5);
     set_haltmask(RESET);
     z80_reset(0);

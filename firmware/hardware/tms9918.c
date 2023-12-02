@@ -1,22 +1,22 @@
 /* z80ctrl (https://github.com/jblang/z80ctrl)
  * Copyright 2018-2023 J.B. Langston
  *
- * Permission is hereby granted, free of charge, to any person obtaining a 
- * copy of this software and associated documentation files (the "Software"), 
- * to deal in the Software without restriction, including without limitation 
- * the rights to use, copy, modify, merge, publish, distribute, sublicense, 
- * and/or sell copies of the Software, and to permit persons to whom the 
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
  * Software is furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
 
@@ -49,7 +49,6 @@ uint8_t last_status;
 uint8_t last_reg_write;
 uint8_t reg_high_byte;
 
-
 enum {
     // TMS9918A registers
     TMS_CONTROL0 = 0,
@@ -73,8 +72,9 @@ enum {
     TMS_SPRITE_MAG = 0x100
 };
 
-uint8_t _tms_write(uint16_t addr, const uint8_t *buf, uint16_t len, uint8_t pgmspace)
+void _tms_write(uint16_t addr, const void* buf, uint16_t len, uint8_t pgmspace)
 {
+    const uint8_t* bytebuf = buf;
     addr &= 0x3fff;
     addr |= 0x4000;
     DATA_OUTPUT;
@@ -84,19 +84,29 @@ uint8_t _tms_write(uint16_t addr, const uint8_t *buf, uint16_t len, uint8_t pgms
     _delay_us(2);
     for (uint16_t i = 0; i < len; i++) {
         if (pgmspace)
-            io_out(tms_base, pgm_read_byte(&buf[i]));
+            io_out(tms_base, pgm_read_byte(&bytebuf[i]));
         else
-            io_out(tms_base, buf[i]);
+            io_out(tms_base, bytebuf[i]);
         if (control_bits & 0x40)
             _delay_us(8);
         else
             _delay_us(2);
     }
-    return 1;
 }
 
-uint8_t tms_read(uint16_t addr, uint8_t *buf, uint16_t len)
+void tms_write(uint32_t addr, const void* buf, uint32_t len)
 {
+    _tms_write(addr, buf, len, 0);
+}
+
+void tms_write_P(uint32_t addr, const void* buf, uint32_t len)
+{
+    _tms_write(addr, buf, len, 1);
+}
+
+void tms_read(uint32_t addr, void* buf, uint32_t len)
+{
+    uint8_t* bytebuf = buf;
     DATA_OUTPUT;
     addr &= 0x3fff;
     io_out(tms_base + 1, addr & 0xff);
@@ -105,13 +115,12 @@ uint8_t tms_read(uint16_t addr, uint8_t *buf, uint16_t len)
     _delay_us(2);
     DATA_INPUT;
     for (uint16_t i = 0; i < len; i++) {
-        buf[i] = io_in(tms_base);
+        bytebuf[i] = io_in(tms_base);
         if (control_bits & 0x40)
             _delay_us(8);
         else
             _delay_us(2);
     }
-    return 1;
 }
 
 uint8_t tms_readreg()
@@ -166,33 +175,33 @@ void tms_save_reg(uint8_t data)
 {
     if (reg_high_byte) {
         if (data & 0x80) {
-            switch(data & 0x7) {
-                case TMS_CONTROL0:
-                    control_bits &= 0xff00;
-                    control_bits |= last_reg_write;
-                    break;
-                case TMS_CONTROL1:
-                    control_bits &= 0xff;
-                    control_bits |= (last_reg_write << 8);
-                    break;
-                case TMS_NAME_TABLE:
-                    name_table = last_reg_write * 0x400;
-                    break;
-                case TMS_COLOR_TABLE:
-                    color_table = last_reg_write * 0x40;
-                    break;
-                case TMS_PATTERN_TABLE:
-                    pattern_table = last_reg_write * 0x800;
-                    break;
-                case TMS_SPRITE_ATTRIBUTE_TABLE:
-                    sprite_attribute_table = last_reg_write * 0x80;
-                    break;
-                case TMS_SPRITE_PATTERN_TABLE:
-                    sprite_pattern_table = last_reg_write * 0x800;
-                    break;
-                case TMS_SCREEN_COLORS:
-                    screen_colors = last_reg_write;
-                    break;
+            switch (data & 0x7) {
+            case TMS_CONTROL0:
+                control_bits &= 0xff00;
+                control_bits |= last_reg_write;
+                break;
+            case TMS_CONTROL1:
+                control_bits &= 0xff;
+                control_bits |= (last_reg_write << 8);
+                break;
+            case TMS_NAME_TABLE:
+                name_table = last_reg_write * 0x400;
+                break;
+            case TMS_COLOR_TABLE:
+                color_table = last_reg_write * 0x40;
+                break;
+            case TMS_PATTERN_TABLE:
+                pattern_table = last_reg_write * 0x800;
+                break;
+            case TMS_SPRITE_ATTRIBUTE_TABLE:
+                sprite_attribute_table = last_reg_write * 0x80;
+                break;
+            case TMS_SPRITE_PATTERN_TABLE:
+                sprite_pattern_table = last_reg_write * 0x800;
+                break;
+            case TMS_SCREEN_COLORS:
+                screen_colors = last_reg_write;
+                break;
             }
         }
         reg_high_byte = 0;
@@ -281,21 +290,21 @@ void tms_init(uint16_t mode)
     tms_config();
     tms_fill(0, 0, 0x3fff);
     screen_colors = 0xf0;
-    name_table = 0x3800;     
+    name_table = 0x3800;
     color_table = 0x2000;
     pattern_table = 0;
     sprite_attribute_table = 0x3bc0;
     sprite_pattern_table = 0x1800;
     switch (mode) {
-        case TMS_TEXT:
-            tms_loadfont(font);
-            break;
-        case TMS_BITMAP:
-            tms_bitmap_name();
-            break;
-        case TMS_MULTICOLOR:
-            tms_multicolor_name();
-            break;
+    case TMS_TEXT:
+        tms_loadfont(font);
+        break;
+    case TMS_BITMAP:
+        tms_bitmap_name();
+        break;
+    case TMS_MULTICOLOR:
+        tms_multicolor_name();
+        break;
     }
     control_bits = mode;
     tms_config();
@@ -303,19 +312,19 @@ void tms_init(uint16_t mode)
 
 uint8_t tms_detect()
 {
-    uint8_t addresses[] = {0xbe, 0x98, 0x10, 8};
+    uint8_t addresses[] = { 0xbe, 0x98, 0x10, 8 };
     for (uint8_t i = 0; i < sizeof(addresses); i++) {
         tms_base = addresses[i];
-        tms_readreg();  // clear vsync bit
+        tms_readreg(); // clear vsync bit
         uint8_t reg = tms_readreg(); // confirm that it's cleared
         if (reg & 0x80)
-            continue;               // if not, check next port
+            continue; // if not, check next port
         uint16_t j = 0xffff;
         while (j--) {
-            reg = tms_readreg();    // wait for vsync to be set again
+            reg = tms_readreg(); // wait for vsync to be set again
             if (reg & 0x80)
-                return tms_base;    // if set, we found TMS9918A
+                return tms_base; // if set, we found TMS9918A
         }
     }
-    return 1;   // indicate failure (base address cannot be odd)
+    return 1; // indicate failure (base address cannot be odd)
 }

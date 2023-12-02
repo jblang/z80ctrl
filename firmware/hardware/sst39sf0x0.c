@@ -1,22 +1,22 @@
 /* z80ctrl (https://github.com/jblang/z80ctrl)
  * Copyright 2018-2023 J.B. Langston
  *
- * Permission is hereby granted, free of charge, to any person obtaining a 
- * copy of this software and associated documentation files (the "Software"), 
- * to deal in the Software without restriction, including without limitation 
- * the rights to use, copy, modify, merge, publish, distribute, sublicense, 
- * and/or sell copies of the Software, and to permit persons to whom the 
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
  * Software is furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
 
@@ -33,18 +33,19 @@
 
 static void sst_cmd_prefix(void)
 {
-        SET_ADDR(0x5555);
-        SET_DATA(0xAA);
-        WR_LO;
-        WR_HI;
-        SET_ADDR(0x2AAA);
-        SET_DATA(0x55);
-        WR_LO;
-        WR_HI;
+    SET_ADDR(0x5555);
+    SET_DATA(0xAA);
+    WR_LO;
+    WR_HI;
+    SET_ADDR(0x2AAA);
+    SET_DATA(0x55);
+    WR_LO;
+    WR_HI;
 }
 
-uint8_t sst_write(uint32_t addr, uint8_t *buf, uint32_t len)
+void sst_write(uint32_t addr, const void* buf, uint32_t len)
 {
+    const uint8_t *bytebuf;
     if (GET_BUSACK)
         return 0;
     // first two banks must be physical pages 0 and 1
@@ -70,7 +71,7 @@ uint8_t sst_write(uint32_t addr, uint8_t *buf, uint32_t len)
             MREQ_LO;
         }
         SET_ADDR((addr & 0x3fff) + 0x8000);
-        SET_DATA(buf[i]);
+        SET_DATA(bytebuf[i]);
         DATA_OUTPUT;
         WR_LO;
         WR_HI;
@@ -81,14 +82,12 @@ uint8_t sst_write(uint32_t addr, uint8_t *buf, uint32_t len)
     }
     MREQ_HI;
     DATA_INPUT;
-    return 1;
 }
 
-
-/** 
+/**
  * Erase the 4KB sector that the address falls within
  */
-uint8_t sst_erase(uint32_t addr)
+void sst_erase(uint32_t addr)
 {
     if (GET_BUSACK)
         return 0;
@@ -126,5 +125,4 @@ uint8_t sst_erase(uint32_t addr)
     }
     MREQ_HI;
     DATA_INPUT;
-    return 1;
 }

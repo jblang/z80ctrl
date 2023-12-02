@@ -35,6 +35,7 @@
 #include "emulation/disk.h"
 #include "emulation/sio.h"
 
+#include "hardware/memory.h"
 #include "hardware/z80.h"
 
 #include "util/ffwrap.h"
@@ -144,16 +145,16 @@ uint8_t cli_runcom(int argc, char *argv[])
         // Look for BDOS runtime file in current directory then root directory
         uint16_t start;
         if (f_stat("bdos.bin", NULL) == FR_OK) {
-            start = ffw_loadbin("bdos.bin", MEM, -1, 0, 0);
+            start = mem_loadbin(mem_write_banked, "bdos.bin", -1, 0, 0);
         } else if (f_stat("/bdos.bin", NULL) == FR_OK) {
-            start = ffw_loadbin("/bdos.bin", MEM, -1, 0, 0);
+            start = mem_loadbin(mem_write_banked, "/bdos.bin", -1, 0, 0);
         } else {
             // Last resort: warn and try to run the program without bdos loaded
             printf_P(PSTR("warning: bdos.bin not found in current or root directory.\n"));
             start = 0x100;
         }
         bdos_init(argc, argv);
-        ffw_loadbin(filename, MEM, 0x100, 0, 0);
+        mem_loadbin(mem_write_banked, filename, 0x100, 0, 0);
         z80_reset(start);
         z80_run();
         putchar('\n');

@@ -238,54 +238,6 @@ const char* ffw_error(FRESULT fr)
     return strlookup(fr_text, fr);
 }
 
-uint32_t ffw_loadbin(char *filename, uint8_t dest, int32_t start, uint32_t offset, uint32_t len)
-{
-    FIL fil;
-    FRESULT fr;
-    UINT br;
-    uint8_t buf[512];
-    uint16_t load = start;
-    if (len == 0)
-        len = 0x100000;
-    if ((fr = ffw_open(&fil, NULL, filename, FA_READ)) != FR_OK)
-        return -1;
-    if ((fr = ffw_seek(&fil, offset)) == FR_OK) {
-        if (start < 0) {
-            // if starting address is not specified, get it from
-            // the first two bytes of file a la C64 PRG files
-            if (fr = ffw_read(&fil, &load, 2, &br) != FR_OK) {
-                ffw_close(&fil);
-                return 0;
-            }
-            start = load;
-        }
-        while ((fr = ffw_read(&fil, buf, sizeof buf, &br)) == FR_OK) {
-            if (br > len)
-                br = len;
-            if (dest == MEM && br > 0) {
-                mem_write_banked(start, buf, br);
-            }
-#ifdef SST_FLASH
-            else if (dest == FLASH) {
-                sst_write(start, buf, br);
-            }
-#endif
-#ifdef TMS_BASE
-            else if (dest == TMS) {
-                tms_write(start, buf, br);
-            }
-#endif
-            if (br < sizeof buf)
-                break;
-            start += br;
-            len -= br;
-        }
-    }
-    ffw_close(&fil);
-    return load;
-}
-
-
 void ffw_init()
 {
     static FATFS fs;

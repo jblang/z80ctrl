@@ -33,6 +33,7 @@
 
 #include "emulation/filedma.h"
 
+#include "hardware/memory.h"
 #include "hardware/z80.h"
 
 #include "util/ffwrap.h"
@@ -321,7 +322,7 @@ uint8_t cli_runprg(int argc, char *argv[])
         strcat_P(filename, PSTR(".prg"));
     if (f_stat(filename, NULL) == FR_OK) {
         file_dma_save_cli(argc, argv);
-        uint16_t start = ffw_loadbin(filename, MEM, -1, 0, 0);
+        uint16_t start = mem_loadbin(mem_write_banked, filename, -1, 0, 0);
         z80_reset(start);
         z80_run();
         putchar('\n');

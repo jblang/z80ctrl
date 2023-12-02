@@ -1,22 +1,22 @@
 /* z80ctrl (https://github.com/jblang/z80ctrl)
  * Copyright 2018-2023 J.B. Langston
  *
- * Permission is hereby granted, free of charge, to any person obtaining a 
- * copy of this software and associated documentation files (the "Software"), 
- * to deal in the Software without restriction, including without limitation 
- * the rights to use, copy, modify, merge, publish, distribute, sublicense, 
- * and/or sell copies of the Software, and to permit persons to whom the 
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
  * Software is furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
 
@@ -31,6 +31,8 @@
 #include "fatfs/ff.h"
 
 #include "hardware/memory.h"
+#include "hardware/sst39sf0x0.h"
+#include "hardware/tms9918.h"
 
 #include "util/ffwrap.h"
 #include "util/ihex.h"
@@ -42,9 +44,9 @@
 /**
  * Change default directory
  */
-void cli_chdir(int argc, char *argv[])
+void cli_chdir(int argc, char* argv[])
 {
- 	FRESULT fr;
+    FRESULT fr;
 
     if (argc < 2) {
         printf_P(PSTR("usage: cd <directory>\n"));
@@ -59,9 +61,9 @@ void cli_chdir(int argc, char *argv[])
 /**
  * Create a directory
  */
-void cli_mkdir(int argc, char *argv[])
+void cli_mkdir(int argc, char* argv[])
 {
- 	FRESULT fr;
+    FRESULT fr;
 
     if (argc < 2) {
         printf_P(PSTR("usage: mkdir <dir>\n"));
@@ -77,14 +79,14 @@ void cli_mkdir(int argc, char *argv[])
 /**
  * Show a directory of files on the SD Card
  */
-void cli_dir(int argc, char *argv[])
+void cli_dir(int argc, char* argv[])
 {
- 	FRESULT fr;
+    FRESULT fr;
     FILINFO finfo;
     DIR dir;
-	UINT cnt;
-    char *dirname;
-    char *glob;
+    UINT cnt;
+    char* dirname;
+    char* glob;
     char buf[14];
 
     if (argc == 1) {
@@ -115,14 +117,14 @@ void cli_dir(int argc, char *argv[])
     uint8_t maxcnt = screenwidth / 13;
 
     cnt = 0;
-    for(;;) {
+    for (;;) {
         if (fr != FR_OK) {
             printf_P(PSTR("error reading directory: %S\n"), ffw_error(fr));
             break;
         }
         if ((cnt % maxcnt == 0 && cnt != 0) || !finfo.fname[0])
             printf_P(PSTR("\n"));
-        if (!finfo.fname[0]) 
+        if (!finfo.fname[0])
             break;
         strcpy(buf, finfo.fname);
         if (finfo.fattrib & AM_DIR)
@@ -138,42 +140,41 @@ void cli_dir(int argc, char *argv[])
         printf_P(PSTR("%u item(s)\n"), cnt);
     else
         printf_P(PSTR("file not found\n"));
-    
+
     f_closedir(&dir);
 }
 
-
-void cli_copy(int argc, char *argv[])
+void cli_copy(int argc, char* argv[])
 {
     if (argc < 3) {
         printf_P(PSTR("usage: %s <src>... <dest>\n"), argv[0]);
         return;
     }
-    ffw_iterate(ffw_copy, argc-2, &argv[1], argv[argc-1]);
+    ffw_iterate(ffw_copy, argc - 2, &argv[1], argv[argc - 1]);
 }
 
-void cli_ren(int argc, char *argv[])
+void cli_ren(int argc, char* argv[])
 {
     if (argc < 3) {
         printf_P(PSTR("usage: %s <src>... <dest>\n"), argv[0]);
         return;
     }
-    ffw_iterate(ffw_rename, argc-2, &argv[1], argv[argc-1]);
+    ffw_iterate(ffw_rename, argc - 2, &argv[1], argv[argc - 1]);
 }
 
-void cli_del(int argc, char *argv[])
+void cli_del(int argc, char* argv[])
 {
     if (argc < 2) {
         printf_P(PSTR("usage: %s <file>...\n"), argv[0]);
         return;
     }
-    ffw_iterate(ffw_delete, argc-1, &argv[1], NULL);
+    ffw_iterate(ffw_delete, argc - 1, &argv[1], NULL);
 }
 
 /**
  * Load an Intel HEX file from disk or stdin
  */
-void cli_loadhex(int argc, char *argv[])
+void cli_loadhex(int argc, char* argv[])
 {
     FIL fil;
     FILE file;
@@ -198,7 +199,7 @@ void cli_loadhex(int argc, char *argv[])
 /**
  * Save an Intel HEX file to disk or stdout
  */
-void cli_savehex(int argc, char *argv[])
+void cli_savehex(int argc, char* argv[])
 {
     FRESULT fr;
     FILE file;
@@ -224,64 +225,61 @@ void cli_savehex(int argc, char *argv[])
 /**
  * Load a binary file to specifie address from disk with optional offset and length
  */
-void cli_loadbin(int argc, char *argv[])
+void cli_loadbin(int argc, char* argv[])
 {
     if (argc < 3) {
         printf_P(PSTR("usage: %s <start addr> <filename> [offset] [length]\n"), argv[0]);
         return;
     }
-    uint8_t dest;
-    if (strcmp_P(argv[0], PSTR("flash")) == 0)
-        dest = FLASH;
-    else if (strcmp_P(argv[0], PSTR("tmslbin")) == 0)
-        dest = TMS;
-    else
-        dest = MEM;    
+    mem_writefunc_t mem_writefunc;
+    if (strcmp_P(argv[0], PSTR("loadbin")) == 0) {
+        mem_writefunc = mem_write_banked;
+    }
+#ifdef SST_FLASH
+    else if (strcmp_P(argv[0], PSTR("flash")) == 0) {
+        mem_writefunc = sst_write;
+    }
+#endif
+#ifdef TMS_BASE
+    else if (strcmp_P(argv[0], PSTR("tmslbin")) == 0) {
+        mem_writefunc = tms_write;
+    }
+#endif
+    else {
+        printf_P(PSTR("unknown command %s\n"), argv[0]);
+        return;
+    }
     uint32_t start = strtoul(argv[1], NULL, 16);
-    char *filename = argv[2];
+    char* filename = argv[2];
     uint32_t offset = 0;
     uint32_t len = 0;
     if (argc >= 4)
         offset = strtoul(argv[3], NULL, 16);
     if (argc >= 5)
         len = strtoul(argv[4], NULL, 16);
-    ffw_loadbin(filename, dest, start, offset, len);
+    mem_loadbin(mem_writefunc, filename, start, offset, len);
 }
 
 /**
  * Save an region of memory to a binary file on disk
  */
-void cli_savebin(int argc, char *argv[])
+void cli_savebin(int argc, char* argv[])
 {
-    FRESULT fr;
-    FILE file;
-    FIL fil;
-    UINT bw;
-    uint16_t len = 256;
-    uint8_t buf[256];
     if (argc < 4) {
-        printf_P(PSTR("usage: savebin <start> <end> [file]\n"));
+        printf_P(PSTR("usage: savebin <start> <end> <file>\n"));
         return;
     }
     uint32_t start = strtoul(argv[1], NULL, 16) & 0xfffff;
     uint32_t end = strtoul(argv[2], NULL, 16) & 0xfffff;
-    if ((fr = ffw_open(&fil, NULL, argv[3], FA_WRITE | FA_CREATE_ALWAYS)) == FR_OK) {
-        while (start <= end) {
-            if (end - start + 1 < len)
-                len = end - start + 1;
-            mem_read_banked(start, buf, len);
-            if ((fr = ffw_write(&fil, buf, len, &bw)) != FR_OK)
-                break;
-            start += len;
-        }
-        ffw_close(&fil);
-    }        
+    uint32_t len = end - start + 1;
+    char* filename = argv[3];
+    mem_savebin(mem_read_banked, filename, start, len);
 }
 
 /**
  * Receive a file via xmodem
  */
-void cli_xmrx(int argc, char *argv[])
+void cli_xmrx(int argc, char* argv[])
 {
     printf_P(PSTR("waiting for transfer to begin; press ^X twice to cancel\n"));
     xm_receive(argc - 1, &argv[1]);
@@ -290,7 +288,7 @@ void cli_xmrx(int argc, char *argv[])
 /**
  * Transmit a file via xmodem
  */
-void cli_xmtx(int argc, char *argv[])
+void cli_xmtx(int argc, char* argv[])
 {
     FIL fil;
     FILE file;
@@ -310,7 +308,7 @@ void cli_xmtx(int argc, char *argv[])
 /**
  * Execute the commands in a file
  */
-void cli_exec(char *filename)
+void cli_exec(char* filename)
 {
     FIL fil;
     FILE file;
@@ -330,7 +328,7 @@ void cli_exec(char *filename)
 /**
  * Submit the commands in a batch file
  */
-void cli_do(int argc, char *argv[]) 
+void cli_do(int argc, char* argv[])
 {
     if (argc < 2) {
         printf_P(PSTR("usage: do <filename>\n"));

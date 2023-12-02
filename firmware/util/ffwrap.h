@@ -49,7 +49,6 @@ FRESULT ffw_rename(const TCHAR* path_old, const TCHAR* path_new);
 FRESULT ffw_copy(const TCHAR* path_old, const TCHAR* path_new);
 void ffw_iterate(operation_t operation, int count, char* file[], char* dest);
 const char* ffw_error(FRESULT fr);
-uint32_t ffw_loadbin(char *filename, uint8_t dest, int32_t start, uint32_t offset, uint32_t len);
 void ffw_init();
 
 #endif
