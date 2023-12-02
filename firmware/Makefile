@@ -53,35 +53,69 @@ AVRDUDE?=avrdude
 CLEAN?=rm -rf
 
 BIN=z80ctrl
-FF_OBJS=ff.o diskio.o mmc_avr_spi.o
-OBJS=	cli.o \
-	uart.o \
-	spi.o \
-	iox.o \
-	bus.o \
-	z80.o \
-	iorq.o \
-	sioemu.o \
-	diskemu.o \
-	filedma.o \
-	ihex.o \
-	disasm.o \
-	util.o \
-	xmodem.o \
-	bdosemu.o \
-	ffwrap.o \
-	$(FF_OBJS)
+
+CLI_OBJS= \
+	cli/cli.o \
+	cli/benchmark.o \
+	cli/coleco.o \
+	cli/cpm.o \
+	cli/file.o \
+	cli/hardware.o \
+	cli/io.o \
+	cli/memory.o \
+	cli/term.o \
+	cli/z80.o
+
+EMULATION_OBJS= \
+	emulation/bdos.o \
+	emulation/disk.o \
+	emulation/filedma.o \
+	emulation/sio.o
+
+FATFS_OBJS= \
+	fatfs/ff.o \
+	fatfs/diskio.o \
+
+HARDWARE_OBJS= \
+	hardware/hardware.o \
+	hardware/bus.o \
+	hardware/z80.o \
+	hardware/io.o \
+	hardware/mcp23s17.o \
+	hardware/memory.o \
+	hardware/mmc.o \
+	hardware/sn76489.o \
+	hardware/spi.o \
+	hardware/term.o \
+	hardware/timer.o \
+	hardware/uart.o \
+	hardware/z80.o
+
+UTIL_OBJS= \
+	util/disasm.o \
+	util/ffwrap.o \
+	util/ihex.o \
+	util/string.o \
+	util/xmodem.o
+
+OBJS= \
+	$(CLI_OBJS) \
+	$(EMULATION_OBJS) \
+	$(FATFS_OBJS) \
+	$(HARDWARE_OBJS) \
+	$(UTIL_OBJS) \
+	z80ctrl.o
 
 ifdef BOARD_REV
 	FEATURE_DEFINES += -DBOARD_REV=$(BOARD_REV)
 endif
 ifdef SST_FLASH
 	FEATURE_DEFINES +=-DSST_FLASH
-	OBJS += flash.o
+	OBJS += hardware/sst39f0x0.o
 endif
 ifdef TMS_BASE
  	FEATURE_DEFINES += -DTMS_BASE=$(TMS_BASE)
-	OBJS += tms.o
+	OBJS += hardware/tms9918.o
 endif
 ifdef SN76489_PORT
  	FEATURE_DEFINES += -DSN76489_PORT=$(SN76489_PORT)
@@ -94,18 +128,18 @@ ifdef BANK_PORT
 endif
 ifdef DS1306_RTC
 	FEATURE_DEFINES += -DDS1306_RTC -DUSE_RTC
-	OBJS += ds1306.o
+	OBJS += hardware/rtc_ds1306.o
 endif
 ifdef DS1302_RTC
 	FEATURE_DEFINES += -DDS1302_RTC -DUSE_RTC
-	OBJS += ds1302.o
+	OBJS += hardware/rtc_ds1302.o
 endif
 ifdef RTC_BASE
 	FEATURE_DEFINES += -DRTC_BASE=$(RTC_BASE)
 endif
 ifdef MSX_KEY_BASE
 	FEATURE_DEFINES += -DMSX_KEY_BASE=$(MSX_KEY_BASE)
-	OBJS += msxkey.o
+	OBJS += emulation/msxkey.o
 endif
 ifdef SD_CARD_ADAFRUIT
 	FEATURE_DEFINES += -DMISO_INPUT_PULLUP

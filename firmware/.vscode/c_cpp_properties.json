@@ -2,9 +2,9 @@
     "configurations": [
         {
             "name": "AVR",
-            "includePath": ["C:/msys64/ucrt64/avr/include"],
+            "includePath": ["C:/msys64/ucrt64/avr/include", "."],
             "compilerPath": "C:/msys64/ucrt64/bin/avr-gcc.exe",
-            "compilerArgs": ["-mmcu=atmega328p", "-DF_CPU=20000000UL", "-Os"],
+            "compilerArgs": ["-mmcu=atmega1284p", "-DF_CPU=20000000UL", "-DBOARD_REV=6", "-Os"],
             "browse" : {
                 "limitSymbolsToIncludedHeaders" : true,
                 "databaseFilename" : ""
