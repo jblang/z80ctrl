@@ -1,8 +1,8 @@
 /*
    z80ctrl (https://github.com/jblang/z80ctrl)
-   Copyright (c) 2018-2023 J.B. Langston
-   Copyright (c) 1997-2010, Charles E. Owen
+   Copyright (c) 2018-2023, J.B. Langston
    Copyright (c) 2002-2014, Peter Schorn
+   Copyright (c) 1997-2010, Charles E. Owen
 
    Permission is hereby granted, free of charge, to any person obtaining a
    copy of this software and associated documentation files (the "Software"),
@@ -21,9 +21,9 @@
    IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
    CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-   Except as contained in this notice, the name of Charles E. Owen shall not be
+   Except as contained in this notice, the names of the authors shall not be
    used in advertising or otherwise to promote the sale, use or other dealings
-   in this Software without prior written authorization from Charles E. Owen.
+   in this Software without prior written authorization from the authors.
 */
 
 /**
