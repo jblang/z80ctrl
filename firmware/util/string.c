@@ -24,21 +24,22 @@
  * @file string.h string utility functions
  */
 
-#include "util/pgmspace.h"
+#include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include "string.h"
+#include "pgmspace.h"
 
 /**
  * Look up a text string by index from a NULL-separated PROGMEM array
  */
-const char* strlookup(const char* str, uint32_t index)
+const char* skip_strings(const char* str, uint32_t count)
 {
     const char* p;
     uint32_t i;
-
-    for (p = str, i = 0; i != index; i++)
+    for (p = str, i = 0; i < count; i++)
         while (pgm_read_byte(p++))
             ;
-
     return p;
 }

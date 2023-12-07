@@ -60,13 +60,12 @@ enum ihex_rc {
 /**
  * Error text corresponding to result codes
  */
-const char ihex_rc_text[] PROGMEM = {
-    "ok\0"
-    "invalid record format\0"
-    "insufficient bytes\0"
-    "checksum mismatch\0"
-    "unsupported record type"
-};
+const char ihex_rc_text[] PROGMEM = 
+    "ok\0"                      // IHEX_OK
+    "invalid record format\0"   // IHEX_FORMAT
+    "insufficient bytes\0"      // IHEX_COUNT
+    "checksum mismatch\0"       // IHEX_CKSUM
+    "unsupported record type";  // IHEX_RECTYPE
 
 /**
  * Decoded Intel HEX record
@@ -184,7 +183,7 @@ ihex_res load_ihex(FILE* file)
         } else if (record.rc == IHEX_OK && record.count == 0) {
             break;
         } else {
-            printf_P(PSTR("error: %S on line %d\n"), strlookup(ihex_rc_text, record.rc), line);
+            printf_P(PSTR("error: %S on line %d\n"), skip_strings(ihex_rc_text, record.rc), line);
             result.errors++;
         }
     }

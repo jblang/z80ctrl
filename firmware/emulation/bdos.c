@@ -105,7 +105,7 @@ enum {
     F_WRITEZF = 40
 };
 
-const char bdos_names[] PROGMEM = {
+const char bdos_names[] PROGMEM =
     "P_TERMCPM\0"
     "C_READ\0"
     "C_WRITE\0"
@@ -146,8 +146,7 @@ const char bdos_names[] PROGMEM = {
     "DRV_RESET\0"
     "DRV_ACCESS\0"
     "DRV_FREE\0"
-    "F_WRITEZF\0"
-};
+    "F_WRITEZF\0";
 
 // BDOS return codes
 enum {
@@ -387,7 +386,7 @@ uint8_t dir_dump(dir_t* d)
  */
 void bdos_log(const char* message)
 {
-    printf_P(PSTR("\n%S: BDOS %d %S   fcb %04xh   dma %04xh   ret %02x\n"), message, dma_command, strlookup(bdos_names, dma_command), params.fcbaddr, params.dmaaddr, params.ret);
+    printf_P(PSTR("\n%S: BDOS %d %S   fcb %04xh   dma %04xh   ret %02x\n"), message, dma_command, skip_strings(bdos_names, dma_command), params.fcbaddr, params.dmaaddr, params.ret);
     if (dma_command != F_SNEXT && dma_command != P_TERMCPM)
         fcb_dump(&curfcb);
 }
