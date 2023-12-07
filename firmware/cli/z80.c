@@ -161,9 +161,9 @@ void cli_breakwatch(int argc, char* argv[])
         printf_P(PSTR("%s status:\n"), argv[0]);
         for (uint8_t i = 0; i < DEBUGCNT; i++) {
             if (!ENABLED(ranges, i))
-                printf_P(PSTR("\t%S\tdisabled\n"), strlookup(debug_names, i));
+                printf_P(PSTR("\t%S\tdisabled\n"), skip_strings(debug_names, i));
             else
-                printf_P(PSTR("\t%S\t%04x-%04x\n"), strlookup(debug_names, i), ranges[i].start, ranges[i].end);
+                printf_P(PSTR("\t%S\t%04x-%04x\n"), skip_strings(debug_names, i), ranges[i].start, ranges[i].end);
         }
         printf_P(PSTR("\nusage:\n\t%s <type> [start] [end]\n"), argv[0]);
         printf_P(PSTR("\t%s <type> off to disable type\n"), argv[0]);
@@ -180,7 +180,7 @@ void cli_breakwatch(int argc, char* argv[])
     } else {
         // find the debugging type that the user specified
         for (type = 0; type < DEBUGCNT; type++)
-            if (strcmp_P(argv[1], strlookup(debug_names, type)) == 0)
+            if (strcmp_P(argv[1], skip_strings(debug_names, type)) == 0)
                 break;
         if (type == DEBUGCNT) {
             printf_P(PSTR("error: unknown type\n"));

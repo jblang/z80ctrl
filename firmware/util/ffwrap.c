@@ -228,14 +228,31 @@ void ffw_iterate(operation_t operation, int count, char* file[], char* dest)
         printf_P(PSTR("error enumerating files: %S\n"), ffw_error(fr));
 }
 
-const char fr_text[] PROGMEM = "OK\0disk error\0internal error\0drive not ready\0file not found\0path not found\0"
-                               "invalid path name\0access denied\0file already exists\0invalid object\0"
-                               "write protected\0invalid drive number\0drive not mounted\0invalid filesystem\0"
-                               "mkfs aborted\0timeout\0file locked\0out of memory\0too many open files\0invalid parameter\0";
+const char fr_text[] PROGMEM = 
+    "OK\0"                      // FR_OK
+    "disk error\0"              // FR_DISK_ERR
+    "internal error\0"          // FR_INT_ERR
+    "drive not ready\0"         // FR_NOT_READY
+    "file not found\0"          // FR_NO_FILE
+    "path not found\0"          // FR_NO_PATH
+    "invalid path name\0"       // FR_INVALID_NAME
+    "access denied\0"           // FR_DENIED
+    "file already exists\0"     // FR_EXIST
+    "invalid object\0"          // FR_INVALID_OBJECT
+    "write protected\0"         // FR_WRITE_PROTECTED
+    "invalid drive number\0"    // FR_INVALID_DRIVE
+    "drive not mounted\0"       // FR_NOT_ENABLED
+    "invalid filesystem\0"      // FR_NO_FILESYSTEM
+    "mkfs aborted\0"            // FR_MKFS_ABORTED
+    "timeout\0"                 // FR_TIMEOUT
+    "file locked\0"             // FR_LOCKED
+    "out of memory\0"           // FR_NOT_ENOUGH_CORE
+    "too many open files\0"     // FR_TOO_MANY_OPEN_FILES
+    "invalid parameter\0";      // FR_INVALID_PARAMETER
 
 const char* ffw_error(FRESULT fr)
 {
-    return strlookup(fr_text, fr);
+    return skip_strings(fr_text, fr);
 }
 
 void ffw_init()
@@ -243,5 +260,5 @@ void ffw_init()
     static FATFS fs;
     FRESULT fr;
     if ((fr = f_mount(&fs, "", 1)) != FR_OK)
-        printf_P(PSTR("error mounting drive: %S\n"), strlookup(fr_text, fr));
+        printf_P(PSTR("error mounting drive: %S\n"), skip_strings(fr_text, fr));
 }
