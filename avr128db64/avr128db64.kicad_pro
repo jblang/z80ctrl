@@ -392,14 +392,14 @@
     "pinned_symbol_libs": []
   },
   "meta": {
-    "filename": "z80neo.kicad_pro",
+    "filename": "avr128db64.kicad_pro",
     "version": 1
   },
   "net_settings": {
     "classes": [
       {
         "bus_width": 12,
-        "clearance": 0.2,
+        "clearance": 0.15,
         "diff_pair_gap": 0.25,
         "diff_pair_via_gap": 0.25,
         "diff_pair_width": 0.2,
