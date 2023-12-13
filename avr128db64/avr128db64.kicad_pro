@@ -48,14 +48,14 @@
           "min_clearance": 0.5
         }
       },
-      "diff_pair_dimensions": [],
-      "drc_exclusions": [
-        "starved_thermal|134874000|104140000|55db0afe-f610-4218-b00a-1d1cd867bad4|75e349c0-798b-4127-8bb6-ca23886fa143|F.Cu",
-        "starved_thermal|134874000|106680000|55db0afe-f610-4218-b00a-1d1cd867bad4|832a42c4-583c-4d16-8eab-e8ef6e93e486|B.Cu",
-        "starved_thermal|134874000|106680000|55db0afe-f610-4218-b00a-1d1cd867bad4|832a42c4-583c-4d16-8eab-e8ef6e93e486|F.Cu",
-        "starved_thermal|149490800|61964200|55db0afe-f610-4218-b00a-1d1cd867bad4|f369b23c-4bfe-4312-9a32-f8e40a250414|F.Cu",
-        "starved_thermal|170125200|60027600|55db0afe-f610-4218-b00a-1d1cd867bad4|d36e9915-c451-4844-87d4-929319d40de5|F.Cu"
+      "diff_pair_dimensions": [
+        {
+          "gap": 0.0,
+          "via_gap": 0.0,
+          "width": 0.0
+        }
       ],
+      "drc_exclusions": [],
       "meta": {
         "version": 2
       },
@@ -96,7 +96,7 @@
         "silk_overlap": "warning",
         "skew_out_of_range": "error",
         "solder_mask_bridge": "error",
-        "starved_thermal": "error",
+        "starved_thermal": "warning",
         "text_height": "warning",
         "text_thickness": "warning",
         "through_hole_pad_without_hole": "error",
@@ -171,8 +171,15 @@
           "td_width_to_size_filter_ratio": 0.9
         }
       ],
-      "track_widths": [],
-      "via_dimensions": [],
+      "track_widths": [
+        0.0
+      ],
+      "via_dimensions": [
+        {
+          "diameter": 0.0,
+          "drill": 0.0
+        }
+      ],
       "zones_allow_external_fillets": false
     },
     "layer_presets": [],
@@ -419,6 +426,23 @@
         "via_diameter": 0.8,
         "via_drill": 0.4,
         "wire_width": 6
+      },
+      {
+        "bus_width": 12,
+        "clearance": 0.15,
+        "diff_pair_gap": 0.25,
+        "diff_pair_via_gap": 0.25,
+        "diff_pair_width": 0.2,
+        "line_style": 0,
+        "microvia_diameter": 0.3,
+        "microvia_drill": 0.1,
+        "name": "Power",
+        "pcb_color": "rgba(0, 0, 0, 0.000)",
+        "schematic_color": "rgba(0, 0, 0, 0.000)",
+        "track_width": 0.3,
+        "via_diameter": 0.8,
+        "via_drill": 0.4,
+        "wire_width": 6
       }
     ],
     "meta": {
@@ -426,7 +450,20 @@
     },
     "net_colors": null,
     "netclass_assignments": null,
-    "netclass_patterns": []
+    "netclass_patterns": [
+      {
+        "netclass": "Power",
+        "pattern": "GND"
+      },
+      {
+        "netclass": "Power",
+        "pattern": "+3.3V"
+      },
+      {
+        "netclass": "Power",
+        "pattern": "+5V"
+      }
+    ]
   },
   "pcbnew": {
     "last_paths": {
