@@ -2,14 +2,16 @@
 
 **Important: This design has not yet been tested.  Manufacture at your own risk.**
 
-This is a new design for z80ctrl using the [Microchip AVR128DB64](https://www.microchip.com/en-us/product/avr128db64) microcontroller. This next-gen AVR has several advantages over the ATmega1284P used in the original design:
+This is a new design for z80ctrl using the [Microchip AVR128DB64](https://www.microchip.com/en-us/product/avr128db64) microcontroller. 
+
+This next-gen AVR has several advantages over the ATmega1284P used in the original design:
 
 - It's a 64-pin part with more than enough I/O to interface with the RC2014 bus without an I/O expander. This will allow much faster data transfers since all signals are accessed in parallel rather than serially.
 - It has built-in configurable logic used to assert the wait signal on I/O requests without external glue logic.
 - It has multi-voltage I/O where one port can run at 3.3V to interface the SD card and other peripherals directly without level shifters.
+- It has UPDI single-wire programming and debug interface, so it's possible to actually use the debugger in MPLAB X with a PicKit, without sacrificing too many pins to JTAG. UPDI also allows the part to be programmed directly from the USB to serial converter without a bootloader.
 - The TQFP package leaves enough space to incorporate 512KB of RAM with optional bank switching and an RTC on the same board.
-
-The disadvantage is that it's a fine-pitched surface mount part, but now that PCB manufacturers offer board assembly service, it is possible to order a board with the surface mount components pre-populated.
+- The one disadvantage is that it's a fine-pitched surface mount part, but now that PCB manufacturers offer board assembly service, it is possible to order a board with the surface mount components pre-populated.
 
 ![Front Render](z80ctrlng-front.png)
 
@@ -26,34 +28,35 @@ The RAM uses the same bank switching scheme as the original board, with two 32K 
 - Instead of using a 74HCT138 decoder to bank register, it is controlled directly by the AVR. The AVR will listen on a configurable I/O port for bank changes from the CPU and update the flip-flop as needed.
 
 The RAM and bank logic chips are still DIPs to keep the retro vibe, and for practical reasons as well:
-- Choosing not to populate the RAM and logic chips allows using the z80ctrl as a stand-alone AVR dev board.
-- Without these chips populated, all the pins used for A0-A18 and D0-D7 can used as GPIO.
 - It should still be possible to use z80ctrl for SBCs like the SC126, which already has RAM and ROM, by leaving the RAM on the z80ctrl unpopulated.
+- Choosing not to populate the RAM and logic chips allows using the z80ctrl as a stand-alone AVR dev board.
+  - Without these chips populated, all the pins used for A0-A18 and D0-D7, and the Z80 control singals can used as GPIO.
+  - The passive RCBus backplane can be used to connect non-retro components over the bus.
+
+### MicroSD Card
+
+The board incorporates a MicroSD card holder that the AVR controls over SPI on its 3.3V port.
 
 ### RTC
 
 The board includes an RTC for accurate timestamps on the files stored on the SD card:
 
-- The chip used is a [Microchip MCP2940N](https://www.microchip.com/en-us/product/mcp7940n) I2C RTC. 
-- The bus can be shared with additional I2C peripherals assuming they do not use the same address as the RTC.  
-- A slide switch can be used to completely detach the RTC from the SDA and SCL pins so they can  be used as GPIO on the UEXT port.
+- The chip used is an [NXP PCF8563T](https://www.nxp.com/part/PCF8563T) I2C RTC. It is backed up by a CR1216 coin cell.
+- The bus can be shared with additional I2C peripherals as long as they do not use the same address as the RTC.
+
+### USB Adapter
+
+An on-board [CH340C](https://cdn.sparkfun.com/assets/9/3/0/2/e/ch3402CDS.pdf) USB-to-Serial adapter allows connecting the z80ctrl directly to a host computer over a MicroUSB cable, without any external USB-to-Serial converter required.
+
+Using the PROG EN slide switch, it's also possible to enable programming of the chip via UPDI without a bootloader installed using the same USB connection used for serial communication.
 
 ### UEXT Bus
 
 - The 3-volt SPI, I2C, and UART signals are exposed on the [UEXT header](https://www.olimex.com/Products/Modules/UEXT/). This allows it to interface with many different 3V peripherals using I2C, UART, or SPI. 
-- Olimex sells many modules using the UEXT connector as well as adapters for the Sparkfun Qwiic and and Adafruit Stemma QT connectors so that these peripherals can also be used.
-- The CS pin is configurable using a slide switch:
-  - The same CS as the SD card. In this configuration, the SD card must be removed.
-  - The RX or TX pin of the 3V UART. In this configuration, the corresponding direction of the 3V UART is sacrificed.
+- Olimex sells many modules using the UEXT connector. For example, a $4 [ESP8266 module](https://www.olimex.com/Products/IoT/ESP8266/MOD-WIFI-ESP8266/open-source-hardware) will allow the z80ctrl to access the internet over its UART using the [ESP AT](https://github.com/espressif/esp-at) firmware.
 - The AVR can expose an parallel interface to peripherals over I/O requests on the RCbus.
-- If the RTC is disconnected via the 3V I2C slide switche, and the SD card is ejected, the UEXT connector can be used as a 3V 8-bit GPIO port.
 
-### RCBus Optional Connections
+### Optional RCBus Connections
 
-- The 5V level-shifted I2C bus can optionally be exposed on USER6 and USER7 pins of the RCbus (selectable via a slide switch). These are the same pins used for I2C by the [SC126](https://smallcomputercentral.com/sc126-z180-motherboard-rc2014/).
-- UART signals can be individually connected or disconnected from the RCbus using DIP switches.
-- The 5V supply for each separate serial header can be connected or disconnected from the board's power supply:
-  - The supply should be disconnected when using a USB-to-serial adapter when the z80ctrl is powered from the RCbus.
-  - The supply can be connected to power TTL to RS232 level shifters from the board's supply.
-  - When using the board as a stand-alone AVR dev board, you may wish to power it from the USB-to-serial adapter, in which case the supply can be connected.
-- Unlike previous versions of z80ctrl, the SPI bus is no longer exposed on the user pins. If desired, a ribbon cable can be used with the UEXT header to connect to SPI peripherals on other boards.
+- The second 5V UART can be connected or disconnected from RX1 or RX2 and TX1 or TX2 signals on the RCbus using jumpers on the serial header.
+- 3.3V SPI, I2C, and UART signals can be optionally exported onto the D8-D15 pins by creating a solder bridge on the corresponding surface mount jumpers.
