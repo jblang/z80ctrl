@@ -3782,7 +3782,7 @@
   )
 
   (symbol (lib_id "Connector_Generic:Conn_01x04") (at 169.545 133.985 0) (unit 1)
-    (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
+    (in_bom yes) (on_board yes) (dnp yes) (fields_autoplaced)
     (uuid d905b05b-e767-4d4d-b523-7fcac2315359)
     (property "Reference" "J3" (at 172.085 133.985 0)
       (effects (font (size 1.27 1.27)) (justify left))
