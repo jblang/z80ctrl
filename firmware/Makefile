@@ -1,7 +1,7 @@
 # All build variables can be set on command line. Build with a
 # command of this form:
 #
-#    TMS_BASE=0xBE SN76489_PORT=0xFF BOARD_REV=4 MSX_KEY_BASE=0xA9 PORT=/dev/tty.usbserial-00000000 make install
+#    BANK_PORT=0X78, TMS_BASE=0xBE SN76489_PORT=0xFF DS1302_RTC=1 BOARD_REV=6 MSX_KEY_BASE=0xA9 PORT=/dev/tty.usbserial-00000000 make install
 #
 
 # Hardware revision (Important: must be set to correct value)
@@ -55,48 +55,48 @@ CLEAN?=rm -rf
 BIN=z80ctrl
 
 CLI_OBJS= \
-	cli/cli.o \
-	cli/benchmark.o \
-	cli/coleco.o \
-	cli/cpm.o \
-	cli/file.o \
-	cli/hardware.o \
-	cli/io.o \
-	cli/memory.o \
-	cli/term.o \
-	cli/z80.o
+	src/cli/cli.o \
+	src/cli/benchmark.o \
+	src/cli/coleco.o \
+	src/cli/cpm.o \
+	src/cli/file.o \
+	src/cli/hardware.o \
+	src/cli/io.o \
+	src/cli/memory.o \
+	src/cli/term.o \
+	src/cli/z80.o
 
 EMULATION_OBJS= \
-	emulation/bdos.o \
-	emulation/disk.o \
-	emulation/filedma.o \
-	emulation/sio.o
+	src/emulation/bdos.o \
+	src/emulation/disk.o \
+	src/emulation/filedma.o \
+	src/emulation/sio.o
 
 FATFS_OBJS= \
-	fatfs/ff.o \
-	fatfs/diskio.o \
+	src/fatfs/ff.o \
+	src/fatfs/diskio.o \
 
 HARDWARE_OBJS= \
-	hardware/hardware.o \
-	hardware/bus.o \
-	hardware/z80.o \
-	hardware/io.o \
-	hardware/mcp23s17.o \
-	hardware/memory.o \
-	hardware/mmc.o \
-	hardware/sn76489.o \
-	hardware/spi.o \
-	hardware/term.o \
-	hardware/timer.o \
-	hardware/uart.o \
-	hardware/z80.o
+	src/hardware/hardware.o \
+	src/hardware/bus.o \
+	src/hardware/z80.o \
+	src/hardware/io.o \
+	src/hardware/mcp23s17.o \
+	src/hardware/memory.o \
+	src/hardware/mmc.o \
+	src/hardware/sn76489.o \
+	src/hardware/spi.o \
+	src/hardware/term.o \
+	src/hardware/timer.o \
+	src/hardware/uart.o \
+	src/hardware/z80.o
 
 UTIL_OBJS= \
-	util/disasm.o \
-	util/ffwrap.o \
-	util/ihex.o \
-	util/string.o \
-	util/xmodem.o
+	src/util/disasm.o \
+	src/util/ffwrap.o \
+	src/util/ihex.o \
+	src/util/string.o \
+	src/util/xmodem.o
 
 OBJS= \
 	$(CLI_OBJS) \
@@ -104,18 +104,18 @@ OBJS= \
 	$(FATFS_OBJS) \
 	$(HARDWARE_OBJS) \
 	$(UTIL_OBJS) \
-	z80ctrl.o
+	src/z80ctrl.o
 
 ifdef BOARD_REV
 	FEATURE_DEFINES += -DBOARD_REV=$(BOARD_REV)
 endif
 ifdef SST_FLASH
 	FEATURE_DEFINES +=-DSST_FLASH
-	OBJS += hardware/sst39f0x0.o
+	OBJS += src/hardware/sst39f0x0.o
 endif
 ifdef TMS_BASE
  	FEATURE_DEFINES += -DTMS_BASE=$(TMS_BASE)
-	OBJS += hardware/tms9918.o
+	OBJS += src/hardware/tms9918.o
 endif
 ifdef SN76489_PORT
  	FEATURE_DEFINES += -DSN76489_PORT=$(SN76489_PORT)
@@ -128,24 +128,24 @@ ifdef BANK_PORT
 endif
 ifdef DS1306_RTC
 	FEATURE_DEFINES += -DDS1306_RTC -DUSE_RTC
-	OBJS += hardware/rtc_ds1306.o
+	OBJS += src/hardware/rtc_ds1306.o
 endif
 ifdef DS1302_RTC
 	FEATURE_DEFINES += -DDS1302_RTC -DUSE_RTC
-	OBJS += hardware/rtc_ds1302.o
+	OBJS += src/hardware/rtc_ds1302.o
 endif
 ifdef RTC_BASE
 	FEATURE_DEFINES += -DRTC_BASE=$(RTC_BASE)
 endif
 ifdef MSX_KEY_BASE
 	FEATURE_DEFINES += -DMSX_KEY_BASE=$(MSX_KEY_BASE)
-	OBJS += emulation/msxkey.o
+	OBJS += src/emulation/msxkey.o
 endif
 ifdef SD_CARD_ADAFRUIT
 	FEATURE_DEFINES += -DMISO_INPUT_PULLUP
 endif
 
-CFLAGS=-std=c99 -flto -Os $(FEATURE_DEFINES) -DF_CPU=$(F_CPU) -DGITVERSION="\"${GITVERSION}\"" -mmcu=$(MCU) -I.
+CFLAGS=-std=c99 -flto -Os $(FEATURE_DEFINES) -DF_CPU=$(F_CPU) -DGITVERSION="\"${GITVERSION}\"" -mmcu=$(MCU) -Iinclude
 
 
 %.o: %.c

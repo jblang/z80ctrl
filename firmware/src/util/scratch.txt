@@ -1,0 +1,90 @@
+#define isdelim(c) ((c) == '\0' || isspace(c))
+
+#define FLAG_FLEXIBLE 0x80
+char* skip_space(char* start);
+uint32_t parse_number(char* start, char** end, uint8_t radix);
+char* parse_string(char* start, char** end);
+
+
+/**
+ * Return a pointer to the first non-space character in a string
+*/
+char* skip_space(char* start)
+{
+    while (isspace(*start) && *start != '\0') {
+        start++;
+    }
+    return start;
+}
+
+
+/**
+ * extends strtoul to accept 0o (octal) and 0d (decimal) prefix and
+ * an optional FLAG_FLEXIBLE flag that causes it to try progressively
+ * higher radices until one works or it runs out of options.
+ */
+uint32_t parse_number(char* start, char** end, uint8_t radix)
+{
+    uint8_t flex = radix & FLAG_FLEXIBLE;
+    radix &= ~FLAG_FLEXIBLE;
+    start = skip_space(start);
+    if (start[0] == '0') {
+        if (start[1] == 'b') {
+            radix = 2;
+        } else if (start[1] == 'o' || isdigit(start[1])) {
+            radix = 8;
+        } else if (start[1] == 'd') {
+            radix = 10;
+        } else if (start[1] == 'x') {
+            radix = 16;
+        }
+        start += 2;     // skip prefix before parsing with strtoul
+        flex = 0;
+    }
+    uint8_t value = strtoul(start, end, radix);
+    if (flex) {
+        while (!isdelim(**end)) {
+            // try parsing as the next highest valid radix
+            if (radix == 2)
+                radix = 8;
+            else if (radix == 8)
+                radix = 10;
+            else if (radix == 10)
+                radix = 16;
+            else
+                break; 
+            uint8_t value = strtoul(start, end, radix);
+        }
+    }
+    return value;
+}
+
+char* parse_string(char* start, char** end)
+{
+    start = skip_space(start);
+    char *c = start;
+    if (*c == '\'') {
+        start++;
+        do {
+            c++;
+        } while (*c != '\0' && *c != '\'');
+        if (*c == '\'')
+            *c = '\0';
+    } else if (*start == '\"') {
+        start++;
+        uint8_t esc = 0;
+        do {
+            esc = (!esc && *c == '\\');
+            c++;
+        } while (*c != '\0' && (esc || *c != '\"'));
+        if (*c == '\"')
+            *c = '\0';
+    } else {
+        do {
+            c++;
+        } while (*c != '\0' && !isspace(*c));
+    }
+    *c++ = '\0';
+    *end = c;
+    return start;
+}

@@ -1,14 +1,45 @@
+//
+// !!! WARNING !!! AUTO-GENERATED FILE!
+// PLEASE DO NOT MODIFY IT AND USE "platformio.ini":
+// https://docs.platformio.org/page/projectconf/section_env_build.html#build-flags
+//
 {
     "configurations": [
         {
-            "name": "AVR",
-            "includePath": ["C:/msys64/ucrt64/avr/include", "."],
-            "compilerPath": "C:/msys64/ucrt64/bin/avr-gcc.exe",
-            "compilerArgs": ["-mmcu=atmega1284p", "-DF_CPU=20000000UL", "-DBOARD_REV=6", "-Os"],
-            "browse" : {
-                "limitSymbolsToIncludedHeaders" : true,
-                "databaseFilename" : ""
-            }
+            "name": "PlatformIO",
+            "includePath": [
+                "d:/RC2014/z80ctrl/firmware/include",
+                "d:/RC2014/z80ctrl/firmware/src",
+                ""
+            ],
+            "browse": {
+                "limitSymbolsToIncludedHeaders": true,
+                "path": [
+                    "d:/RC2014/z80ctrl/firmware/include",
+                    "d:/RC2014/z80ctrl/firmware/src",
+                    ""
+                ]
+            },
+            "defines": [
+                "F_CPU=20000000L",
+                "PLATFORMIO=60113",
+                "ARDUINO_AVR_ATmega1284",
+                "BOARD_REV=6",
+                "BANK_PORT=0X78",
+                "TMS_BASE=0xBE",
+                "SN76489_PORT=0xFF",
+                "DS1302_RTC=1",
+                "MSX_KEY_BASE=0xA9",
+                "__AVR_ATmega1284P__",
+                ""
+            ],
+            "cStandard": "gnu11",
+            "cppStandard": "gnu++11",
+            "compilerPath": "C:/Users/jblan/.platformio/packages/toolchain-atmelavr/bin/avr-gcc.exe",
+            "compilerArgs": [
+                "-mmcu=atmega1284p",
+                ""
+            ]
         }
     ],
     "version": 4
