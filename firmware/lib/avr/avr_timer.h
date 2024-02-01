@@ -24,8 +24,8 @@
  * @file avr_timer.h AVR timer functions
  */
 
-#ifndef HARDWARE_TIMER_H
-#define HARDWARE_TIMER_H
+#ifndef AVR_TIMER_H
+#define AVR_TIMER_H
 
 /**
  * @file util.h Miscellaneous utility functions

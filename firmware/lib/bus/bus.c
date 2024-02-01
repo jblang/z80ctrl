@@ -145,10 +145,10 @@ bus_stat bus_status(void)
 {
     bus_stat status;
     uint16_t iox = iox0_read16(ADDRHI_GPIO);
-    status.flags = (PINB & CTRLB_MASK) | (PIND & CTRLD_MASK);
+    status.flags = (CTRL1_READ & CTRL1_MASK) | (CTRL2_READ & CTRL2_MASK);
     status.xflags = iox >> 8;
-    status.data = DATA_PIN;
-    status.addr = ADDRLO_PIN | ((iox & 0xFF) << 8);
+    status.data = DATA_READ;
+    status.addr = ADDRLO_READ | ((iox & 0xFF) << 8);
     return status;
 }
 
@@ -158,7 +158,7 @@ bus_stat bus_status(void)
 bus_stat bus_status_fast(void)
 {
     bus_stat status;
-    status.flags = (PINB & CTRLB_MASK) | (PIND & CTRLD_MASK);
+    status.flags = (CTRL1_READ & CTRL1_MASK) | (CTRL2_READ & CTRL2_MASK);
     status.xflags = 0xFF;
     status.data = GET_DATA;
     status.addr = GET_ADDRLO;
@@ -199,8 +199,8 @@ void bus_init(void)
     iox_init();
 
     // Initialize control signals
-    CTRLB_OUTPUT_INIT;
-    CTRLD_OUTPUT_INIT;
+    CTRL1_OUTPUT_INIT;
+    CTRL2_OUTPUT_INIT;
     CTRLX_OUTPUT_INIT;
     CTRLX_PULLUP_INIT;
 

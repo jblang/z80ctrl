@@ -23,8 +23,8 @@
 /**
  * @file avr_uart.h Interrupt-driven buffered UART driver
  */
-#ifndef HARDWARE_UART_H
-#define HARDWARE_UART_H
+#ifndef AVR_UART_H
+#define AVR_UART_H
 
 #include <stdint.h>
 #include <stdio.h>

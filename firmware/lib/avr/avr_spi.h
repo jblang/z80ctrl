@@ -24,8 +24,8 @@
  * @file avr_spi.h SPI chip select pin definitions
  */
 
-#ifndef HARDWARE_SPI_H
-#define HARDWARE_SPI_H
+#ifndef AVR_SPI_H
+#define AVR_SPI_H
 
 #include <avr/io.h>
 #include <stdint.h>

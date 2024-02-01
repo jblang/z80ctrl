@@ -29,15 +29,17 @@
 
 #include <avr/io.h>
 
+#include "avr_gpio.h"
 #include "mcp23s17.h"
 
 /**
  * Address Bus
  */
 
-#define ADDRLO_DDR DDRA
-#define ADDRLO_PORT PORTA
-#define ADDRLO_PIN PINA
+#define ADDRLO_INPUT GPIO_INPUT(A, GPIO_ALL)
+#define ADDRLO_OUTPUT GPIO_OUTPUT(A, GPIO_ALL)
+#define ADDRLO_READ GPIO_READ(A)
+#define ADDRLO_WRITE(V) GPIO_WRITE(A, (V))
 
 #if (BOARD_REV == 3 || BOARD_REV == 4)
 #define ADDRHI_IODIR IODIRA
@@ -51,15 +53,16 @@
 #error "Unsupported board revision. Set BOARD_REV in your Makefile to match your board revision."
 #endif
 
-#define ADDR_INPUT (ADDRLO_DDR = 0x00, iox0_write(ADDRHI_IODIR, 0xFF))
-#define ADDR_OUTPUT (ADDRLO_DDR = 0xFF, iox0_write(ADDRHI_IODIR, 0x00))
+#define GET_ADDRLO ADDRLO_READ
+#define SET_ADDRLO ADDRLO_WRITE
 
-#define GET_ADDRLO ADDRLO_PIN
-#define SET_ADDRLO(addr) ADDRLO_PORT = (addr)
-
+#define ADDRHI_INPUT iox0_write(ADDRHI_IODIR, 0xFF)
+#define ADDRHI_OUTPUT iox0_write(ADDRHI_IODIR, 0x00)
 #define GET_ADDRHI iox0_read(ADDRHI_GPIO)
 #define SET_ADDRHI(addr) iox0_write(ADDRHI_GPIO, (addr))
 
+#define ADDR_INPUT ADDRLO_INPUT; ADDRHI_INPUT
+#define ADDR_OUTPUT ADDRLO_OUTPUT; ADDRHI_OUTPUT
 #define GET_ADDR (GET_ADDRLO | (GET_ADDRHI << 8))
 #define SET_ADDR(addr) (SET_ADDRLO((addr) & 0xFF), SET_ADDRHI((addr) >> 8))
 
@@ -67,44 +70,49 @@
  * Data Bus
  */
 
-#define DATA_DDR DDRC
-#define DATA_PORT PORTC
-#define DATA_PIN PINC
+#define DATA_INPUT GPIO_INPUT(C, GPIO_ALL)
+#define DATA_OUTPUT GPIO_OUTPUT(C, GPIO_ALL)
+#define DATA_READ GPIO_READ(C)
+#define DATA_WRITE(V) GPIO_WRITE(C, (V))
 
-#define DATA_INPUT DATA_DDR = 0x00
-#define DATA_OUTPUT DATA_DDR = 0xFF
-#define GET_DATA DATA_PIN
-#define SET_DATA(data) DATA_PORT = (data)
+#define GET_DATA DATA_READ
+#define SET_DATA DATA_WRITE
 
 /**
- * PORTB flags
+ * First group of control signals
  */
+
+#define CTRL1_INPUT(V) GPIO_INPUT(B, (V))
+#define CTRL1_OUTPUT(V) GPIO_OUTPUT(B, (V))
+#define CTRL1_READ GPIO_READ(B)
+#define CTRL1_SET(V) GPIO_SET(B, (V))
+#define CTRL1_CLEAR(V) GPIO_CLEAR(B, (V))
 
 #define BUSRQ (1 << 0)
 
-#define GET_BUSRQ (PINB & BUSRQ)
+#define GET_BUSRQ (CTRL1_READ & BUSRQ)
 #define BUSRQ_STATUS (status.flags & BUSRQ)
-#define BUSRQ_HI PORTB |= BUSRQ
-#define BUSRQ_LO PORTB &= ~BUSRQ
+#define BUSRQ_HI CTRL1_SET(BUSRQ)
+#define BUSRQ_LO CTRL1_CLEAR(BUSRQ)
 
-#define CTRLB_MASK 0x0F
-#define CTRLB_OUTPUT_INIT DDRB |= BUSRQ
+#define CTRL1_MASK 0x0F
+#define CTRL1_OUTPUT_INIT DDRB |= BUSRQ
 
 #if (BOARD_REV == 3 || BOARD_REV == 4)
 #define IORQ (1 << 1)
 #define MREQ (1 << 2)
 
-#define GET_MREQ (PINB & MREQ)
+#define GET_MREQ (CTRL1_READ & MREQ)
 #define MREQ_STATUS (status.flags & MREQ)
-#define MREQ_HI PORTB |= MREQ
-#define MREQ_LO PORTB &= ~MREQ
+#define MREQ_HI CTRL1_SET(MREQ)
+#define MREQ_LO CTRL1_CLEAR(MREQ)
 
-#define GET_IORQ (PINB & IORQ)
+#define GET_IORQ (CTRL1_READ & IORQ)
 #define IORQ_STATUS (status.flags & IORQ)
-#define IORQ_HI PORTB |= IORQ
-#define IORQ_LO PORTB &= ~IORQ
+#define IORQ_HI CTRL1_SET(IORQ)
+#define IORQ_LO CTRL1_CLEAR(IORQ)
 
-#define IOMR_HI PORTB |= (IORQ | MREQ)
+#define IOMR_HI CTRL1_SET((IORQ | MREQ))
 #define IOMR_OUTPUT DDRB |= (IORQ | MREQ)
 #define IOMR_INPUT DDRB &= ~(IORQ | MREQ)
 
@@ -117,50 +125,57 @@
 #define WAIT (1 << 1)
 #define IOXINT (1 << 2)
 
-#define GET_WAIT (PINB & WAIT)
+#define GET_WAIT (CTRL1_READ & WAIT)
 #define WAIT_STATUS (status.flags & WAIT)
 
-#define GET_IOXINT (PINB & IOXINT)
+#define GET_IOXINT (CTRL1_READ & IOXINT)
 #define IOXINT_STATUS (status.flags & IOXINT)
 #endif
 
 /**
- * PORTD Flags
+ * Second group of control signals
  */
+
+#define CTRL2_INPUT(V) GPIO_INPUT(D, (V))
+#define CTRL2_OUTPUT(V) GPIO_OUTPUT(D, (V))
+#define CTRL2_READ GPIO_READ(D)
+#define CTRL2_SET(V) GPIO_SET(D, (V))
+#define CTRL2_CLEAR(V) GPIO_CLEAR(D, (V))
+#define CTRL2_TOGGLE(V) GPIO_TOGGLE(D, (V))
 
 #define RD (1 << 4)
 #define WR (1 << 5)
 #define CLK (1 << 6)
 #define BUSACK (1 << 7)
 
-#define GET_RD (PIND & RD)
+#define GET_RD (CTRL2_READ & RD)
 #define RD_STATUS (status.flags & RD)
-#define RD_HI PORTD |= RD
-#define RD_LO PORTD &= ~RD
+#define RD_HI CTRL2_SET(RD)
+#define RD_LO CTRL2_CLEAR(RD)
 
-#define GET_WR (PIND & WR)
+#define GET_WR (CTRL2_READ & WR)
 #define WR_STATUS (status.flags & WR)
-#define WR_HI PORTD |= WR
-#define WR_LO PORTD &= ~WR
+#define WR_HI CTRL2_SET(WR)
+#define WR_LO CTRL2_CLEAR(WR)
 
 #define RDWR_INPUT DDRD &= ~(RD | WR)
 #define RDWR_OUTPUT DDRD |= (RD | WR)
-#define RDWR_HI PORTD |= (RD | WR)
+#define RDWR_HI CTRL2_SET((RD | WR))
 
-#define GET_CLK (PIND & CLK)
+#define GET_CLK (CTRL2_READ & CLK)
 #define CLK_STATUS (status.flags & CLK)
-#define CLK_HI PORTD |= CLK
-#define CLK_LO PORTD &= ~CLK
-#define CLK_TOGGLE PIND |= CLK
+#define CLK_HI CTRL2_SET(CLK)
+#define CLK_LO CTRL2_CLEAR(CLK)
+#define CLK_TOGGLE CTRL2_TOGGLE(CLK)
 
-#define GET_BUSACK (PIND & BUSACK)
+#define GET_BUSACK (CTRL2_READ & BUSACK)
 #define BUSACK_STATUS (status.flags & BUSACK)
 
-#define CTRLD_MASK 0xF0
-#define CTRLD_OUTPUT_INIT DDRD |= CLK
+#define CTRL2_MASK 0xF0
+#define CTRL2_OUTPUT_INIT DDRD |= CLK
 
 /**
- * IOX flags
+ * Third group of control signals
  */
 
 #if (BOARD_REV == 3 || BOARD_REV == 4)
