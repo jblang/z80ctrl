@@ -20,14 +20,15 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "util/pgmspace.h"
+#include "harvard.h"
 
-#include "cli.h"
+#include "z80ctrl.h"
 
-#include "hardware/hardware.h"
-#include "hardware/term.h"
+#include "io.h"
+#include "ffwrap.h"
+#include "term.h"
 
-#include "util/ffwrap.h"
+#include "ffwrap.h"
 
 const char z80ctrl_banner[] PROGMEM =
     "\n     ___   ___       _        _ "
@@ -70,7 +71,14 @@ int main(void)
 {
     term_init();
     printf_P(z80ctrl_banner);
-    hardware_init();
+    bus_init();
+    iorq_init();
+#ifdef TMS_BASE
+    tms_init(TMS_TEXT);
+#endif
+#ifdef SN76489_PORT
+    sn76489_mute();
+#endif
     ffw_init();
     cli_start();
 }

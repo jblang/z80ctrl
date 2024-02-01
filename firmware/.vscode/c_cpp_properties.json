@@ -8,15 +8,29 @@
         {
             "name": "PlatformIO",
             "includePath": [
-                "d:/RC2014/z80ctrl/firmware/include",
-                "d:/RC2014/z80ctrl/firmware/src",
+                "/home/jblang/repos/z80ctrl/firmware/include",
+                "/home/jblang/repos/z80ctrl/firmware/src",
+                "/home/jblang/repos/z80ctrl/firmware/lib/emulation",
+                "/home/jblang/repos/z80ctrl/firmware/lib/peripherals",
+                "/home/jblang/repos/z80ctrl/firmware/lib/bus",
+                "/home/jblang/repos/z80ctrl/firmware/lib/util",
+                "/home/jblang/repos/z80ctrl/firmware/lib/iox",
+                "/home/jblang/repos/z80ctrl/firmware/lib/fatfs",
+                "/home/jblang/repos/z80ctrl/firmware/lib/avr",
                 ""
             ],
             "browse": {
                 "limitSymbolsToIncludedHeaders": true,
                 "path": [
-                    "d:/RC2014/z80ctrl/firmware/include",
-                    "d:/RC2014/z80ctrl/firmware/src",
+                    "/home/jblang/repos/z80ctrl/firmware/include",
+                    "/home/jblang/repos/z80ctrl/firmware/src",
+                    "/home/jblang/repos/z80ctrl/firmware/lib/emulation",
+                    "/home/jblang/repos/z80ctrl/firmware/lib/peripherals",
+                    "/home/jblang/repos/z80ctrl/firmware/lib/bus",
+                    "/home/jblang/repos/z80ctrl/firmware/lib/util",
+                    "/home/jblang/repos/z80ctrl/firmware/lib/iox",
+                    "/home/jblang/repos/z80ctrl/firmware/lib/fatfs",
+                    "/home/jblang/repos/z80ctrl/firmware/lib/avr",
                     ""
                 ]
             },
@@ -25,17 +39,12 @@
                 "PLATFORMIO=60113",
                 "ARDUINO_AVR_ATmega1284",
                 "BOARD_REV=6",
-                "BANK_PORT=0X78",
-                "TMS_BASE=0xBE",
-                "SN76489_PORT=0xFF",
-                "DS1302_RTC=1",
-                "MSX_KEY_BASE=0xA9",
                 "__AVR_ATmega1284P__",
                 ""
             ],
             "cStandard": "gnu11",
             "cppStandard": "gnu++11",
-            "compilerPath": "C:/Users/jblan/.platformio/packages/toolchain-atmelavr/bin/avr-gcc.exe",
+            "compilerPath": "/home/jblang/.platformio/packages/toolchain-atmelavr/bin/avr-gcc",
             "compilerArgs": [
                 "-mmcu=atmega1284p",
                 ""
