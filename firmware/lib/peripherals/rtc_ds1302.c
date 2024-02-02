@@ -33,53 +33,82 @@
 #include "rtc.h"
 #include "rtc_ds1302.h"
 #include "avr_spi.h"
+#include "avr_gpio.h"
+
+/* z80ctrl (https://github.com/jblang/z80ctrl)
+ * Copyright 2018-2023 J.B. Langston
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
+ */
+
+/**
+ * @file avr_spi.h SPI chip select pin definitions
+ */
+
+#include <avr/io.h>
+#include <stdint.h>
+
+/*
+// SPI pins
+#define SPI_DDR DDRB
+#define SPI_PORT PORTB
+#define SPI_PIN PINB
+
+#define SCK DDB7
+#define MISO DDB6
+#define MOSI DDB5
+
+#define SPI_ENABLE SPCR |= (1 << SPE)
+#define SPI_DISABLE SPCR &= ~(1 << SPE)
+
+#define MISO_LO SPI_PORT &= ~(1 << MISO)
+#define MISO_HI SPI_PORT |= (1 << MISO)
+#define GET_MISO (SPI_PIN & (1 << MISO))
+#define MISO_INPUT SPI_DDR &= ~(1 << MISO)
+#define MISO_OUTPUT SPI_DDR |= (1 << MISO)
+
+#define SCK_LO SPI_PORT &= ~(1 << SCK)
+#define SCK_HI SPI_PORT |= (1 << SCK)
+*/
+
 
 void rtc_begin()
 {
-    SPI_DISABLE;
-    SCK_LO;
-    _delay_us(4);
-    RTC_SEL;
+    miso_multiplex_begin();
+    spi_cs(CS_RTC);
     _delay_us(4);
 }
 
 void rtc_end()
 {
-    RTC_DESEL;
-    SPI_ENABLE;
+    spi_cs(CS_IDLE);
+    miso_multiplex_end();
 }
 
 void rtc_byte_out(uint8_t value)
 {
-    MISO_OUTPUT;
-    for (uint8_t i = 0; i < 8; i++) {
-        if (value & 1)
-            MISO_HI;
-        else
-            MISO_LO;
-        SCK_LO;
-        _delay_us(2);
-        SCK_HI;
-        _delay_us(2);
-        value >>= 1;
-    }
-    MISO_INPUT;
+    miso_multiplex_out(value);
 }
 
 uint8_t rtc_byte_in()
 {
-    uint8_t value = 0;
-    MISO_INPUT;
-    for (uint8_t i = 0; i < 8; i++) {
-        value >>= 1;
-        SCK_HI;
-        _delay_us(2);
-        SCK_LO;
-        _delay_us(2);
-        if (GET_MISO)
-            value |= 0x80;
-    }
-    return value;
+    return miso_multiplex_in();
 }
 
 void rtc_read_burst(uint8_t addr, uint8_t len, uint8_t* values)

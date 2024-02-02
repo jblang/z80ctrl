@@ -50,7 +50,6 @@ const uint8_t iox_bank1[] PROGMEM = {
 #define IOX_SIGNATURE 0x40
 #define IOX_WRITE 0
 #define IOX_READ 1
-#define IOX_END AUX2_SEL
 
 // local copy of register values
 uint8_t iox0_registers[] = {
@@ -82,7 +81,7 @@ void iox_init(void)
 
 void iox_begin(uint8_t chip, uint8_t mode, uint8_t reg)
 {
-    IOX_SEL;
+    spi_cs(CS_IOX);
     if (iox_banks & (1 << chip))
         reg = pgm_read_byte(&iox_bank1[reg]);
     spi_exchange(IOX_SIGNATURE | (chip << 1) | mode);
@@ -95,7 +94,7 @@ uint8_t iox_read(uint8_t chip, uint8_t reg)
     uint8_t data;
     iox_begin(chip, IOX_READ, reg);
     data = spi_exchange(0);
-    IOX_END;
+    spi_cs(CS_IDLE);
     return data;
 }
 
@@ -105,7 +104,7 @@ void iox_write(uint8_t chip, uint8_t reg, uint8_t data)
     if (chip != 0) {
         iox_begin(chip, IOX_WRITE, reg);
         spi_exchange(data);
-        IOX_END;
+        spi_cs(CS_IDLE);
         if (reg == IOCON || reg == IOCONB) {
             if (data & BANK)
                 iox_banks |= (1 << chip);
@@ -121,7 +120,7 @@ void iox0_begin(uint8_t mode, uint8_t reg)
         reg = IOCON;
     if (iox0_registers[IOCON] & BANK)
         reg = pgm_read_byte(&iox_bank1[reg]);
-    IOX_SEL;
+    spi_cs(CS_IOX);
     spi_exchange(IOX_SIGNATURE | mode);
     spi_exchange(reg);
 }
@@ -130,7 +129,7 @@ uint8_t iox0_read(uint8_t reg)
 {
     iox0_begin(IOX_READ, reg);
     uint8_t data = spi_exchange(0);
-    IOX_END;
+    spi_cs(CS_IDLE);
     return data;
 }
 
@@ -139,7 +138,7 @@ uint16_t iox0_read16(uint8_t reg)
     iox0_begin(IOX_READ, reg);
     uint16_t data = spi_exchange(0);
     data |= spi_exchange(0) << 8;
-    IOX_END;
+    spi_cs(CS_IDLE);
     return data;
 }
 
@@ -148,7 +147,7 @@ void iox0_write(uint8_t reg, uint8_t data)
     iox0_registers[reg] = data;
     iox0_begin(IOX_WRITE, reg);
     spi_exchange(data);
-    IOX_END;
+    spi_cs(CS_IDLE);
 }
 
 void iox0_set(uint8_t reg, uint8_t mask)

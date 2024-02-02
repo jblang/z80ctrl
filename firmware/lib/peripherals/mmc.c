@@ -34,12 +34,12 @@
 #endif
 
 /* Peripheral controls (Platform dependent) */
-#define CS_LOW() SD_SEL /* Set MMC_CS = low */
-#define CS_HIGH() AUX2_SEL /* Set MMC_CS = high */
+#define CS_LOW() spi_cs(CS_MMC) /* Set MMC_CS = low */
+#define CS_HIGH() spi_cs(CS_IDLE) /* Set MMC_CS = high */
 #define MMC_CD 1 /* Test if card detected.   yes:true, no:false, default:true */
 #define MMC_WP 0 /* Test if write protected. yes:true, no:false, default:false */
-#define FCLK_SLOW() SPI_SLOW /* Set SPI clock for initialization (100-400kHz) */
-#define FCLK_FAST() SPI_FAST /* Set SPI clock for read/write (20MHz max) */
+#define FCLK_SLOW() spi_speed(SPI_SLOW) /* Set SPI clock for initialization (100-400kHz) */
+#define FCLK_FAST() spi_speed(SPI_FAST) /* Set SPI clock for read/write (20MHz max) */
 
 /*--------------------------------------------------------------------------
 
@@ -154,50 +154,6 @@ static void power_off(void)
 }
 
 /*-----------------------------------------------------------------------*/
-/* Transmit/Receive data from/to MMC via SPI  (Platform dependent)       */
-/*-----------------------------------------------------------------------*/
-
-/* Exchange a byte */
-static BYTE xchg_spi(/* Returns received data */
-    BYTE dat /* Data to be sent */
-)
-{
-    SPDR = dat;
-    loop_until_bit_is_set(SPSR, SPIF);
-    return SPDR;
-}
-
-/* Receive a data block fast */
-static void rcvr_spi_multi(
-    BYTE* p, /* Data read buffer */
-    UINT cnt /* Size of data block */
-)
-{
-    do {
-        SPDR = 0xFF;
-        loop_until_bit_is_set(SPSR, SPIF);
-        *p++ = SPDR;
-        SPDR = 0xFF;
-        loop_until_bit_is_set(SPSR, SPIF);
-        *p++ = SPDR;
-    } while (cnt -= 2);
-}
-
-/* Send a data block fast */
-static void xmit_spi_multi(
-    const BYTE* p, /* Data block to be sent */
-    UINT cnt /* Size of data block */
-)
-{
-    do {
-        SPDR = *p++;
-        loop_until_bit_is_set(SPSR, SPIF);
-        SPDR = *p++;
-        loop_until_bit_is_set(SPSR, SPIF);
-    } while (cnt -= 2);
-}
-
-/*-----------------------------------------------------------------------*/
 /* Wait for card ready                                                   */
 /*-----------------------------------------------------------------------*/
 
@@ -209,7 +165,7 @@ static int wait_ready(/* 1:Ready, 0:Timeout */
 
     Timer2 = wt / 10;
     do
-        d = xchg_spi(0xFF);
+        d = spi_exchange(0xFF);
 
     /* This loop takes a time. Insert rot_rdq() here for multitask envilonment. */
 
@@ -225,7 +181,7 @@ static int wait_ready(/* 1:Ready, 0:Timeout */
 static void deselect(void)
 {
     CS_HIGH(); /* Set CS# high */
-    xchg_spi(0xFF); /* Dummy clock (force DO hi-z for multiple slave SPI) */
+    spi_exchange(0xFF); /* Dummy clock (force DO hi-z for multiple slave SPI) */
 }
 
 /*-----------------------------------------------------------------------*/
@@ -235,7 +191,7 @@ static void deselect(void)
 static int select(void) /* 1:Successful, 0:Timeout */
 {
     CS_LOW(); /* Set CS# low */
-    xchg_spi(0xFF); /* Dummy clock (force DO enabled) */
+    spi_exchange(0xFF); /* Dummy clock (force DO enabled) */
 
     if (wait_ready(500))
         return 1; /* Leading busy check: Wait for card ready */
@@ -257,14 +213,14 @@ static int rcvr_datablock(
 
     Timer1 = 20;
     do { /* Wait for data packet in timeout of 200ms */
-        token = xchg_spi(0xFF);
+        token = spi_exchange(0xFF);
     } while ((token == 0xFF) && Timer1);
     if (token != 0xFE)
         return 0; /* If not valid data token, retutn with error */
 
-    rcvr_spi_multi(buff, btr); /* Receive the data block into buffer */
-    xchg_spi(0xFF); /* Discard CRC */
-    xchg_spi(0xFF);
+    spi_receive_buf(buff, btr); /* Receive the data block into buffer */
+    spi_exchange(0xFF); /* Discard CRC */
+    spi_exchange(0xFF);
 
     return 1; /* Return with success */
 }
@@ -284,15 +240,15 @@ static int xmit_datablock(
     if (!wait_ready(500))
         return 0; /* Leading busy check: Wait for card ready to accept data block */
 
-    xchg_spi(token); /* Xmit data token */
+    spi_exchange(token); /* Xmit data token */
     if (token == 0xFD)
         return 1; /* Do not send data if token is StopTran */
 
-    xmit_spi_multi(buff, 512); /* Data */
-    xchg_spi(0xFF);
-    xchg_spi(0xFF); /* Dummy CRC */
+    spi_send_buf(buff, 512); /* Data */
+    spi_exchange(0xFF);
+    spi_exchange(0xFF); /* Dummy CRC */
 
-    resp = xchg_spi(0xFF); /* Receive data resp */
+    resp = spi_exchange(0xFF); /* Receive data resp */
 
     return (resp & 0x1F) == 0x05 ? 1 : 0; /* Data was accepted or not */
 
@@ -326,24 +282,24 @@ static BYTE send_cmd(/* Returns R1 resp (bit7==1:Send failed) */
     }
 
     /* Send command packet */
-    xchg_spi(0x40 | cmd); /* Start + Command index */
-    xchg_spi((BYTE)(arg >> 24)); /* Argument[31..24] */
-    xchg_spi((BYTE)(arg >> 16)); /* Argument[23..16] */
-    xchg_spi((BYTE)(arg >> 8)); /* Argument[15..8] */
-    xchg_spi((BYTE)arg); /* Argument[7..0] */
+    spi_exchange(0x40 | cmd); /* Start + Command index */
+    spi_exchange((BYTE)(arg >> 24)); /* Argument[31..24] */
+    spi_exchange((BYTE)(arg >> 16)); /* Argument[23..16] */
+    spi_exchange((BYTE)(arg >> 8)); /* Argument[15..8] */
+    spi_exchange((BYTE)arg); /* Argument[7..0] */
     n = 0x01; /* Dummy CRC + Stop */
     if (cmd == CMD0)
         n = 0x95; /* Valid CRC for CMD0(0) + Stop */
     if (cmd == CMD8)
         n = 0x87; /* Valid CRC for CMD8(0x1AA) Stop */
-    xchg_spi(n);
+    spi_exchange(n);
 
     /* Receive command response */
     if (cmd == CMD12)
-        xchg_spi(0xFF); /* Skip a stuff byte when stop reading */
+        spi_exchange(0xFF); /* Skip a stuff byte when stop reading */
     n = 10; /* Wait for a valid response in timeout of 10 attempts */
     do
-        res = xchg_spi(0xFF);
+        res = spi_exchange(0xFF);
     while ((res & 0x80) && --n);
 
     return res; /* Return with the response value */
@@ -375,20 +331,20 @@ DSTATUS mmc_disk_initialize(void)
     power_on(); /* Turn on the socket power */
     FCLK_SLOW();
     for (n = 10; n; n--)
-        xchg_spi(0xFF); /* 80 dummy clocks */
+        spi_exchange(0xFF); /* 80 dummy clocks */
 
     ty = 0;
     if (send_cmd(CMD0, 0) == 1) { /* Put the card SPI mode */
         Timer1 = 100; /* Initialization timeout of 1000 msec */
         if (send_cmd(CMD8, 0x1AA) == 1) { /* Is the card SDv2? */
             for (n = 0; n < 4; n++)
-                ocr[n] = xchg_spi(0xFF); /* Get trailing return value of R7 resp */
+                ocr[n] = spi_exchange(0xFF); /* Get trailing return value of R7 resp */
             if (ocr[2] == 0x01 && ocr[3] == 0xAA) { /* The card can work at vdd range of 2.7-3.6V */
                 while (Timer1 && send_cmd(ACMD41, 1UL << 30))
                     ; /* Wait for leaving idle state (ACMD41 with HCS bit) */
                 if (Timer1 && send_cmd(CMD58, 0) == 0) { /* Check CCS bit in the OCR */
                     for (n = 0; n < 4; n++)
-                        ocr[n] = xchg_spi(0xFF);
+                        ocr[n] = spi_exchange(0xFF);
                     ty = (ocr[0] & 0x40) ? CT_SD2 | CT_BLOCK : CT_SD2; /* Check if the card is SDv2 */
                 }
             }
@@ -556,10 +512,10 @@ DRESULT mmc_disk_ioctl(
     case GET_BLOCK_SIZE: /* Get erase block size in unit of sector (DWORD) */
         if (CardType & CT_SD2) { /* SDv2? */
             if (send_cmd(ACMD13, 0) == 0) { /* Read SD status */
-                xchg_spi(0xFF);
+                spi_exchange(0xFF);
                 if (rcvr_datablock(csd, 16)) { /* Read partial block */
                     for (n = 64 - 16; n; n--)
-                        xchg_spi(0xFF); /* Purge trailing data */
+                        spi_exchange(0xFF); /* Purge trailing data */
                     *(DWORD*)buff = 16UL << (csd[10] >> 4);
                     res = RES_OK;
                 }
@@ -620,7 +576,7 @@ DRESULT mmc_disk_ioctl(
     case MMC_GET_OCR: /* Receive OCR as an R3 resp (4 bytes) */
         if (send_cmd(CMD58, 0) == 0) { /* READ_OCR */
             for (n = 4; n; n--)
-                *ptr++ = xchg_spi(0xFF);
+                *ptr++ = spi_exchange(0xFF);
             res = RES_OK;
         }
         deselect();
@@ -628,7 +584,7 @@ DRESULT mmc_disk_ioctl(
 
     case MMC_GET_SDSTAT: /* Receive SD statsu as a data block (64 bytes) */
         if (send_cmd(ACMD13, 0) == 0) { /* SD_STATUS */
-            xchg_spi(0xFF);
+            spi_exchange(0xFF);
             if (rcvr_datablock(ptr, 64))
                 res = RES_OK;
         }
@@ -644,13 +600,13 @@ DRESULT mmc_disk_ioctl(
     case ISDIO_READ:
         sdi = buff;
         if (send_cmd(CMD48, 0x80000000 | (DWORD)sdi->func << 28 | (DWORD)sdi->addr << 9 | ((sdi->ndata - 1) & 0x1FF)) == 0) {
-            for (Timer1 = 100; (rc = xchg_spi(0xFF)) == 0xFF && Timer1;)
+            for (Timer1 = 100; (rc = spi_exchange(0xFF)) == 0xFF && Timer1;)
                 ;
             if (rc == 0xFE) {
                 for (bp = sdi->data, dc = sdi->ndata; dc; dc--)
-                    *bp++ = xchg_spi(0xFF);
+                    *bp++ = spi_exchange(0xFF);
                 for (dc = 514 - sdi->ndata; dc; dc--)
-                    xchg_spi(0xFF);
+                    spi_exchange(0xFF);
                 res = RES_OK;
             }
         }
@@ -660,13 +616,13 @@ DRESULT mmc_disk_ioctl(
     case ISDIO_WRITE:
         sdi = buff;
         if (send_cmd(CMD49, 0x80000000 | (DWORD)sdi->func << 28 | (DWORD)sdi->addr << 9 | ((sdi->ndata - 1) & 0x1FF)) == 0) {
-            xchg_spi(0xFF);
-            xchg_spi(0xFE);
+            spi_exchange(0xFF);
+            spi_exchange(0xFE);
             for (bp = sdi->data, dc = sdi->ndata; dc; dc--)
-                xchg_spi(*bp++);
+                spi_exchange(*bp++);
             for (dc = 514 - sdi->ndata; dc; dc--)
-                xchg_spi(0xFF);
-            if ((xchg_spi(0xFF) & 0x1F) == 0x05)
+                spi_exchange(0xFF);
+            if ((spi_exchange(0xFF) & 0x1F) == 0x05)
                 res = RES_OK;
         }
         deselect();
@@ -675,12 +631,12 @@ DRESULT mmc_disk_ioctl(
     case ISDIO_MRITE:
         sdi = buff;
         if (send_cmd(CMD49, 0x84000000 | (DWORD)sdi->func << 28 | (DWORD)sdi->addr << 9 | sdi->ndata >> 8) == 0) {
-            xchg_spi(0xFF);
-            xchg_spi(0xFE);
-            xchg_spi(sdi->ndata);
+            spi_exchange(0xFF);
+            spi_exchange(0xFE);
+            spi_exchange(sdi->ndata);
             for (dc = 513; dc; dc--)
-                xchg_spi(0xFF);
-            if ((xchg_spi(0xFF) & 0x1F) == 0x05)
+                spi_exchange(0xFF);
+            if ((spi_exchange(0xFF) & 0x1F) == 0x05)
                 res = RES_OK;
         }
         deselect();

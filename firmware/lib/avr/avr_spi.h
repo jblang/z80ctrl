@@ -21,65 +21,44 @@
  */
 
 /**
- * @file avr_spi.h SPI chip select pin definitions
+ * @file spi.h SPI chip select pin definitions
  */
 
 #ifndef AVR_SPI_H
 #define AVR_SPI_H
 
-#include <avr/io.h>
 #include <stdint.h>
 
-// SPI pins
-#define SPI_DDR DDRB
-#define SPI_PORT PORTB
-#define SPI_PIN PINB
+// Chip select addresses
+typedef enum {
+    CS_IOX = 0,
+    CS_MMC = 1,
+    CS_RTC = 2,
+    CS_IDLE = 3
+} spi_cs_t;
 
-#define SCK DDB7
-#define MISO DDB6
-#define MOSI DDB5
+typedef enum {
+    SPI_SLOW,
+    SPI_FAST
+} spi_speed_t;
 
-#define IOX_ADDR 0
-#define SD_ADDR 1
-#define AUX1_ADDR 2
-#define AUX2_ADDR 3
-
-#define CSADDR 3
-#define CSADDRMASK ((1 << CSADDR) | (1 << CSADDR + 1))
-
-#define IOX_SEL SPI_PORT = SPI_PORT & ~CSADDRMASK | (IOX_ADDR << CSADDR)
-#define SD_SEL SPI_PORT = SPI_PORT & ~CSADDRMASK | (SD_ADDR << CSADDR)
-#define AUX1_SEL SPI_PORT = SPI_PORT & ~CSADDRMASK | (AUX1_ADDR << CSADDR)
-#define AUX2_SEL SPI_PORT = SPI_PORT & ~CSADDRMASK | (AUX2_ADDR << CSADDR)
-
-#define SPI_SLOW SPCR |= ((1 << SPR1) | (1 << SPR0));
-#define SPI_FAST SPCR &= ~((1 << SPR1) | (1 << SPR0))
-
-#define SPI_PHASE0 SPCR &= ~(1 << CPHA)
-#define SPI_PHASE1 SPCR |= (1 << CPHA)
-
-#define SPI_ENABLE SPCR |= (1 << SPE)
-#define SPI_DISABLE SPCR &= ~(1 << SPE)
-
-#define MISO_LO SPI_PORT &= ~(1 << MISO)
-#define MISO_HI SPI_PORT |= (1 << MISO)
-#define GET_MISO (SPI_PIN & (1 << MISO))
-#ifdef MISO_INPUT_PULLUP
-#define MISO_INPUT           \
-    SPI_DDR &= ~(1 << MISO); \
-    MISO_HI;
-#define MISO_OUTPUT         \
-    SPI_DDR |= (1 << MISO); \
-    MISO_LO;
-#else
-#define MISO_INPUT SPI_DDR &= ~(1 << MISO)
-#define MISO_OUTPUT SPI_DDR |= (1 << MISO)
-#endif
-
-#define SCK_LO SPI_PORT &= ~(1 << SCK)
-#define SCK_HI SPI_PORT |= (1 << SCK)
+typedef enum {
+    SPI_PHASE0,
+    SPI_PHASE1
+} spi_phase_t;
 
 void spi_init();
-uint8_t spi_exchange(uint8_t val);
+void spi_cs(spi_cs_t chip);
+void spi_speed(spi_speed_t speed);
+void spi_phase(spi_phase_t phase);
+
+uint8_t spi_exchange(uint8_t value);
+void spi_send_buf(const uint8_t *buf, uint16_t len);
+void spi_receive_buf(uint8_t *buf, uint16_t len);
+
+void miso_multiplex_begin();
+void miso_multiplex_end();
+uint8_t miso_multiplex_in();
+void miso_multiplex_out(uint8_t value);
 
 #endif

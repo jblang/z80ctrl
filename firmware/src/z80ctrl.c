@@ -20,15 +20,17 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "harvard.h"
-
 #include "z80ctrl.h"
-
 #include "io.h"
-#include "ffwrap.h"
 #include "term.h"
-
 #include "ffwrap.h"
+#include "harvard.h"
+#ifdef TMS_BASE
+#include "tms9918.h"
+#endif
+#ifdef SN76489_PORT
+#include "sn76489.h"
+#endif
 
 const char z80ctrl_banner[] PROGMEM =
     "\n     ___   ___       _        _ "
