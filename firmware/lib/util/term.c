@@ -150,7 +150,7 @@ FILE term_stream = FDEV_SETUP_STREAM(term_putchar, term_getchar, _FDEV_SETUP_RW)
 
 void term_init()
 {
-    uart_init(0, UBRR115200);
-    uart_init(1, UBRR115200);
+    uart_init(0, DEFAULT_BAUD);
+    uart_init(1, DEFAULT_BAUD);
     stderr = stdout = stdin = &term_stream;
 }

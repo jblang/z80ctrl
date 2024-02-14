@@ -45,22 +45,9 @@ void cli_baud(int argc, char* argv[])
         return;
     }
     uint8_t uart = strtoul(argv[1], NULL, 10) & 1;
-    uint32_t requested = strtoul(argv[2], NULL, 10);
-    uint16_t ubrr = 0;
-    uint32_t actual = 0;
-    // Find closest possible actual baud rate
-    for (;;) {
-        actual = (uint32_t)F_CPU / ((uint32_t)16 * ((uint32_t)ubrr + (uint32_t)1));
-        if (actual <= requested)
-            break;
-        ubrr++;
-        // stop if we have maxed out UBRR
-        if (ubrr == 0)
-            break;
-    }
-    printf_P(PSTR("UART %u: requested: %lu, actual: %lu\n"), uart, requested, actual);
+    uint32_t baud = strtoul(argv[2], NULL, 10);
     uart_flush();
-    uart_init(uart, ubrr);
+    uart_init(uart, baud);
 }
 
 #ifdef USE_RTC
