@@ -24,6 +24,10 @@
  * @file benchmark.c bench command
  */
 
+#ifdef BENCHMARK
+
+// TODO: fix this to work with timer abstractions
+
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -43,7 +47,6 @@
 /**
  * Run a benchmark
  */
-// #ifdef BENCHMARK
 void cli_bench(int argc, char* argv[])
 {
     uint32_t count = 1;
@@ -151,4 +154,4 @@ void cli_bench(int argc, char* argv[])
         uart_flush();
     }
 }
-// #endif
+#endif

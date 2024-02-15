@@ -22,6 +22,7 @@
 #ifdef USE_RTC
 #include "rtc.h"
 #endif
+#include "avr_timer.h"
 #include "avr_spi.h"
 
 #if (BOARD_REV == 3 || BOARD_REV == 4)
@@ -79,20 +80,12 @@ static BYTE CardType; /* Card type flags (b0:MMC, b1:SDv1, b2:SDv2, b3:Block add
 
 volatile UINT Timer; /* Performance timer (100Hz increment) */
 
-ISR(TIMER0_COMPA_vect)
-{
-    Timer++; /* Performance counter for this module */
-    disk_timerproc(); /* Drive timer procedure of low level disk I/O module */
-}
+void mmc_disk_timerproc(void);
 
 void start_timer(void)
 {
     /* Start 100Hz system timer with TC0 */
-    OCR0A = F_CPU / 1024 / 100 - 1;
-    TCCR0A = _BV(WGM01);
-    TCCR0B = 0b101;
-    TIMSK0 = _BV(OCIE0A);
-    sei();
+    timer_callback_start(100, mmc_disk_timerproc);
 }
 
 DWORD get_fattime(void)
@@ -657,16 +650,16 @@ DRESULT mmc_disk_ioctl(
 
 void mmc_disk_timerproc(void)
 {
-    BYTE n, s;
+    Timer++; /* Performance counter for this module */
 
-    n = Timer1; /* 100Hz decrement timer */
+    BYTE n = Timer1; /* 100Hz decrement timer */
     if (n)
         Timer1 = --n;
     n = Timer2;
     if (n)
         Timer2 = --n;
 
-    s = Stat;
+    BYTE s = Stat;
 
     if (MMC_WP) { /* Write protected */
         s |= STA_PROTECT;

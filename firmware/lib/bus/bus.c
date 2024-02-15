@@ -29,6 +29,7 @@
 #include <stdio.h>
 #include <util/delay.h>
 
+#include "avr_timer.h"
 #include "harvard.h"
 #include "strutil.h"
 
@@ -70,11 +71,7 @@ uint8_t get_clkdiv(void)
  */
 void clk_run(void)
 {
-    // Fast PWM mode with adjustable top and no prescaler
-    TCCR2A |= (1 << COM2B1) | (1 << WGM21) | (1 << WGM20);
-    TCCR2B |= (1 << WGM22) | (1 << CS20);
-    OCR2A = (clkdiv - 1);
-    OCR2B = (clkdiv - 1) >> 1;
+    timer_pwm_start((clkdiv - 1), (clkdiv - 1) >> 1);
 }
 
 /**
@@ -82,10 +79,7 @@ void clk_run(void)
  */
 void clk_stop()
 {
-    TCCR2A = 0;
-    TCCR2B = 0;
-    OCR2A = 0;
-    OCR2B = 0;
+    timer_pwm_stop();
 }
 
 /**

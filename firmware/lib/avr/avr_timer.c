@@ -32,66 +32,54 @@
 
 #include "avr_timer.h"
 
-void config_timer(uint8_t timer, uint8_t prescaler)
+#if __AVR_ARCH__ < 100 // Classic AVRs
+
+timer_callback_t timer_callback;
+
+void timer_callback_start(uint32_t hz, timer_callback_t callback)
 {
-    switch (timer) {
-    case 0:
-        TIMSK0 = 0;
-        TCCR0A = 0;
-        TCCR0B = prescaler & 7;
-        break;
-    case 1:
-        TIMSK1 = 0;
-        TCCR1A = 0;
-        TCCR1B = prescaler & 7;
-        break;
-    case 2:
-        TIMSK2 = 0;
-        TCCR2A = 0;
-        TCCR2B = prescaler & 7;
-        break;
-    case 3:
-        TIMSK3 = 0;
-        TCCR3A = 0;
-        TCCR3B = prescaler & 7;
-        break;
-    }
+    OCR0A = F_CPU / 1024 / hz - 1;
+    TCCR0A = (1 << WGM01);
+    TCCR0B = 0b101;
+    TIMSK0 = (1 << OCIE0A);
+    timer_callback = callback;
+    sei();
 }
 
-uint16_t get_tcnt(uint8_t timer)
+ISR(TIMER0_COMPA_vect)
 {
-    if (timer == 0) {
-        return TCNT0;
-    } else if (timer == 2) {
-        return TCNT2;
-    }
-
-    uint8_t sreg = SREG;
-    uint16_t value = 0;
-    cli();
-    if (timer == 1)
-        value = TCNT1;
-    else if (timer == 3)
-        value = TCNT3;
-    SREG = sreg;
-    return value;
+    timer_callback();
 }
 
-void set_tcnt(uint8_t timer, uint16_t value)
+void timer_pwm_start(uint8_t oca, uint8_t ocb)
 {
-    if (timer == 0) {
-        TCNT0 = value;
-        return;
-    } else if (timer == 2) {
-        TCNT2 = value;
-        return;
-    }
-
-    uint8_t sreg = SREG;
-    cli();
-    if (timer == 1)
-        TCNT1 = value;
-    else if (timer == 3)
-        TCNT3 = value;
-    SREG = sreg;
+    // Fast PWM mode with adjustable top and no prescaler
+    TCCR2A |= (1 << COM2B1) | (1 << WGM21) | (1 << WGM20);
+    TCCR2B |= (1 << WGM22) | (1 << CS20);
+    OCR2A = oca;
+    OCR2B = ocb;
 }
+
+void timer_pwm_stop(void)
+{
+    TCCR2A = 0;
+    TCCR2B = 0;
+    OCR2A = 0;
+    OCR2B = 0;
+}
+
+#else // Modern AVRs (xmega register architecture)
+
+void timer_callback_init(uint32_t hz, timer_callback_t callback)
+{
+}
+
+void timer_pwm_start(uint8_t oca, uint8_t ocb)
+{
+}
+
+void timer_pwm_stop()
+{
+}
+
+#endif

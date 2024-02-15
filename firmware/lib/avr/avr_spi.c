@@ -126,16 +126,16 @@ void spi_cs(spi_cs_t chip)
 #else
     switch (chip)
     {
-    case IOX_ADDR:
+    case CS_IOX:
         IOX_CS_LO;
         break;
-    case MMC_ADDR:
+    case CS_MMC:
         MMC_CS_LO;
         break;
-    case RTC_ADDR:
+    case CS_RTC:
         RTC_CS_LO;
         break;
-    case IDLE_ADDR:
+    case CS_IDLE:
     default:
         IOX_CS_HI;
         MMC_CS_HI;

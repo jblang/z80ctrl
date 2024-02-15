@@ -33,20 +33,9 @@
 
 #include <stdint.h>
 
-#define CLKOFF 0
-#define CLKDIV1 1
-#define CLKDIV8 2
-#define CLKDIV64 3
-#define CLKDIV256 4
-#define CLKDIV1024 5
-#define CLKEXTFALL 6
-#define CLKEXTRISE 7
+typedef void(*timer_callback_t)(void);
 
-#define TCNT_TO_US(tcnt, freq) (tcnt / (freq / 1000000UL))
-#define TCNT_TO_MS(tcnt, freq) (tcnt / (freq / 1000UL))
-
-void config_timer(uint8_t timer, uint8_t prescaler);
-uint16_t get_tcnt(uint8_t timer);
-void set_tcnt(uint8_t timer, uint16_t value);
-
+void timer_callback_start(uint32_t hz, timer_callback_t callback);
+void timer_pwm_start(uint8_t oca, uint8_t ocb);
+void timer_pwm_stop();
 #endif
