@@ -53,18 +53,15 @@
 #error "Unsupported board revision. Set BOARD_REV in your Makefile to match your board revision."
 #endif
 
-#define GET_ADDRLO ADDRLO_READ
-#define SET_ADDRLO ADDRLO_WRITE
-
 #define ADDRHI_INPUT iox0_write(ADDRHI_IODIR, 0xFF)
 #define ADDRHI_OUTPUT iox0_write(ADDRHI_IODIR, 0x00)
-#define GET_ADDRHI iox0_read(ADDRHI_GPIO)
-#define SET_ADDRHI(addr) iox0_write(ADDRHI_GPIO, (addr))
+#define ADDRHI_READ iox0_read(ADDRHI_GPIO)
+#define ADDRHI_WRITE(addr) iox0_write(ADDRHI_GPIO, (addr))
 
 #define ADDR_INPUT ADDRLO_INPUT; ADDRHI_INPUT
 #define ADDR_OUTPUT ADDRLO_OUTPUT; ADDRHI_OUTPUT
-#define GET_ADDR (GET_ADDRLO | (GET_ADDRHI << 8))
-#define SET_ADDR(addr) (SET_ADDRLO((addr) & 0xFF), SET_ADDRHI((addr) >> 8))
+#define ADDR_READ (ADDRLO_READ | (ADDRHI_READ << 8))
+#define ADDR_WRITE(addr) (ADDRLO_WRITE((addr) & 0xFF), ADDRHI_WRITE((addr) >> 8))
 
 /**
  * Data Bus
@@ -74,9 +71,6 @@
 #define DATA_OUTPUT GPIO_OUTPUT(C, GPIO_ALL)
 #define DATA_READ GPIO_READ(C)
 #define DATA_WRITE(V) GPIO_WRITE(C, (V))
-
-#define GET_DATA DATA_READ
-#define SET_DATA DATA_WRITE
 
 /**
  * First group of control signals

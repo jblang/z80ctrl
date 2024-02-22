@@ -35,12 +35,12 @@
 
 static void sst_cmd_prefix(void)
 {
-    SET_ADDR(0x5555);
-    SET_DATA(0xAA);
+    ADDR_WRITE(0x5555);
+    DATA_WRITE(0xAA);
     WR_LO;
     WR_HI;
-    SET_ADDR(0x2AAA);
-    SET_DATA(0x55);
+    ADDR_WRITE(0x2AAA);
+    DATA_WRITE(0x55);
     WR_LO;
     WR_HI;
 }
@@ -59,8 +59,8 @@ void sst_write(uint32_t addr, const void* buf, uint32_t len)
     for (uint32_t i = 0; i < len; i++) {
         // Send byte program command sequence
         sst_cmd_prefix();
-        SET_ADDR(0x5555);
-        SET_DATA(0xA0);
+        ADDR_WRITE(0x5555);
+        DATA_WRITE(0xA0);
         WR_LO;
         WR_HI;
 
@@ -72,8 +72,8 @@ void sst_write(uint32_t addr, const void* buf, uint32_t len)
             DATA_OUTPUT;
             MREQ_LO;
         }
-        SET_ADDR((addr & 0x3fff) + 0x8000);
-        SET_DATA(bytebuf[i]);
+        ADDR_WRITE((addr & 0x3fff) + 0x8000);
+        DATA_WRITE(bytebuf[i]);
         DATA_OUTPUT;
         WR_LO;
         WR_HI;
@@ -100,15 +100,15 @@ void sst_erase(uint32_t addr)
     MREQ_LO;
     // Send erase command sequence
     sst_cmd_prefix();
-    SET_ADDR(0x5555);
-    SET_DATA(0x80);
+    ADDR_WRITE(0x5555);
+    DATA_WRITE(0x80);
     WR_LO;
     WR_HI;
     sst_cmd_prefix();
     if (addr > 0x7FFFF) {
         // Erase entire chip
-        SET_ADDR(0x5555);
-        SET_DATA(0x10);
+        ADDR_WRITE(0x5555);
+        DATA_WRITE(0x10);
         WR_LO;
         WR_HI;
         _delay_ms(100);
@@ -118,8 +118,8 @@ void sst_erase(uint32_t addr)
         mem_bank(0, addr >> 14);
         DATA_OUTPUT;
         MREQ_LO;
-        SET_ADDR(addr & 0x3000);
-        SET_DATA(0x30);
+        ADDR_WRITE(addr & 0x3000);
+        DATA_WRITE(0x30);
         DATA_OUTPUT;
         WR_LO;
         WR_HI;

@@ -118,8 +118,8 @@ uint8_t bus_release(void)
     RDWR_INPUT;
     ADDR_INPUT;
     DATA_INPUT;
-    SET_DATA(0); // Disable pullups on data and address lines
-    SET_ADDRLO(0);
+    DATA_WRITE(0); // Disable pullups on data and address lines
+    ADDRLO_WRITE(0);
     BUSRQ_HI;
 
     // Clock the Z80 until it takes back control of the bus
@@ -154,8 +154,8 @@ bus_stat bus_status_fast(void)
     bus_stat status;
     status.flags = (CTRL1_READ & CTRL1_MASK) | (CTRL2_READ & CTRL2_MASK);
     status.xflags = 0xFF;
-    status.data = GET_DATA;
-    status.addr = GET_ADDRLO;
+    status.data = DATA_READ;
+    status.addr = ADDRLO_READ;
     return status;
 }
 

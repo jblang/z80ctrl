@@ -74,10 +74,10 @@ void mem_read_page(uint8_t start, uint8_t end, void* buf)
     DATA_INPUT;
     RD_LO;
     do {
-        SET_ADDRLO(start++);
+        ADDRLO_WRITE(start++);
         _NOP();
         _NOP();
-        *bytebuf++ = GET_DATA;
+        *bytebuf++ = DATA_READ;
     } while (start <= end && start != 0);
     RD_HI;
 }
@@ -89,8 +89,8 @@ void mem_write_page(uint8_t start, uint8_t end, void* buf)
     uint8_t* bytebuf = buf;
     DATA_OUTPUT;
     do {
-        SET_ADDRLO(start++);
-        SET_DATA(*bytebuf++);
+        ADDRLO_WRITE(start++);
+        DATA_WRITE(*bytebuf++);
         WR_LO;
         WR_HI;
     } while (start <= end && start != 0);
@@ -104,8 +104,8 @@ void mem_write_page_P(uint8_t start, uint8_t end, void* buf)
     uint8_t* bytebuf = buf;
     DATA_OUTPUT;
     do {
-        SET_ADDRLO(start++);
-        SET_DATA(pgm_read_byte(bytebuf++));
+        ADDRLO_WRITE(start++);
+        DATA_WRITE(pgm_read_byte(bytebuf++));
         WR_LO;
         WR_HI;
     } while (start <= end && start != 0);
@@ -123,7 +123,7 @@ void mem_iterate(uint16_t start, uint16_t end, pagefunc_t pagefunc, void* buf)
     uint8_t endhi = end >> 8;
     uint8_t endlo = end & 0xff;
     MREQ_LO;
-    SET_ADDRHI(starthi);
+    ADDRHI_WRITE(starthi);
     if (starthi == endhi) {
         pagefunc(startlo, endlo, buf);
     } else {
@@ -131,11 +131,11 @@ void mem_iterate(uint16_t start, uint16_t end, pagefunc_t pagefunc, void* buf)
         buf += 0x100 - startlo;
         starthi++;
         while (starthi < endhi) {
-            SET_ADDRHI(starthi++);
+            ADDRHI_WRITE(starthi++);
             pagefunc(0, 0xff, buf);
             buf += 0x100;
         }
-        SET_ADDRHI(starthi);
+        ADDRHI_WRITE(starthi);
         pagefunc(0, endlo, buf);
     }
     MREQ_HI;

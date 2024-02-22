@@ -8,29 +8,29 @@
         {
             "name": "PlatformIO",
             "includePath": [
-                "/home/jblang/repos/z80ctrl/firmware/include",
-                "/home/jblang/repos/z80ctrl/firmware/src",
-                "/home/jblang/repos/z80ctrl/firmware/lib/emulation",
-                "/home/jblang/repos/z80ctrl/firmware/lib/peripherals",
-                "/home/jblang/repos/z80ctrl/firmware/lib/bus",
-                "/home/jblang/repos/z80ctrl/firmware/lib/util",
-                "/home/jblang/repos/z80ctrl/firmware/lib/iox",
-                "/home/jblang/repos/z80ctrl/firmware/lib/fatfs",
-                "/home/jblang/repos/z80ctrl/firmware/lib/avr",
+                "C:/Users/jblan/repos/z80ctrl/firmware/include",
+                "C:/Users/jblan/repos/z80ctrl/firmware/src",
+                "C:/Users/jblan/repos/z80ctrl/firmware/lib/emulation",
+                "C:/Users/jblan/repos/z80ctrl/firmware/lib/peripherals",
+                "C:/Users/jblan/repos/z80ctrl/firmware/lib/bus",
+                "C:/Users/jblan/repos/z80ctrl/firmware/lib/util",
+                "C:/Users/jblan/repos/z80ctrl/firmware/lib/iox",
+                "C:/Users/jblan/repos/z80ctrl/firmware/lib/fatfs",
+                "C:/Users/jblan/repos/z80ctrl/firmware/lib/avr",
                 ""
             ],
             "browse": {
                 "limitSymbolsToIncludedHeaders": true,
                 "path": [
-                    "/home/jblang/repos/z80ctrl/firmware/include",
-                    "/home/jblang/repos/z80ctrl/firmware/src",
-                    "/home/jblang/repos/z80ctrl/firmware/lib/emulation",
-                    "/home/jblang/repos/z80ctrl/firmware/lib/peripherals",
-                    "/home/jblang/repos/z80ctrl/firmware/lib/bus",
-                    "/home/jblang/repos/z80ctrl/firmware/lib/util",
-                    "/home/jblang/repos/z80ctrl/firmware/lib/iox",
-                    "/home/jblang/repos/z80ctrl/firmware/lib/fatfs",
-                    "/home/jblang/repos/z80ctrl/firmware/lib/avr",
+                    "C:/Users/jblan/repos/z80ctrl/firmware/include",
+                    "C:/Users/jblan/repos/z80ctrl/firmware/src",
+                    "C:/Users/jblan/repos/z80ctrl/firmware/lib/emulation",
+                    "C:/Users/jblan/repos/z80ctrl/firmware/lib/peripherals",
+                    "C:/Users/jblan/repos/z80ctrl/firmware/lib/bus",
+                    "C:/Users/jblan/repos/z80ctrl/firmware/lib/util",
+                    "C:/Users/jblan/repos/z80ctrl/firmware/lib/iox",
+                    "C:/Users/jblan/repos/z80ctrl/firmware/lib/fatfs",
+                    "C:/Users/jblan/repos/z80ctrl/firmware/lib/avr",
                     ""
                 ]
             },
@@ -50,7 +50,7 @@
             ],
             "cStandard": "gnu11",
             "cppStandard": "gnu++11",
-            "compilerPath": "/home/jblang/.platformio/packages/toolchain-atmelavr/bin/avr-gcc",
+            "compilerPath": "C:/Users/jblan/.platformio/packages/toolchain-atmelavr/bin/avr-gcc.exe",
             "compilerArgs": [
                 "-mmcu=atmega1284p",
                 ""

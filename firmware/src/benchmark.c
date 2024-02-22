@@ -66,11 +66,11 @@ void cli_bench(int argc, char* argv[])
         uint16_t m1t = TCNT1;
 
         TCNT1 = 0;
-        uint8_t addrlo = GET_ADDRLO;
+        uint8_t addrlo = ADDRLO_READ;
         uint16_t addrlot = TCNT1;
 
         TCNT1 = 0;
-        uint8_t addrhi = GET_ADDRHI;
+        uint8_t addrhi = ADDRHI_READ;
         uint16_t addrhit = TCNT1;
 
         TCNT1 = 0;

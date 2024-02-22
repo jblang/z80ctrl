@@ -356,15 +356,15 @@ void iorq_init()
     // Search for external devices
     clk_run();
     DATA_INPUT;
-    SET_DATA(0xFF); // set pullups
+    DATA_WRITE(0xFF); // set pullups
     IORQ_LO;
     for (uint16_t i = 0; i <= 0xff; i++) {
-        SET_ADDRLO(i);
+        ADDRLO_WRITE(i);
         RD_LO;
         _delay_us(10);
         // if no device responds, pullups will force data bus to 0xff
         // so if the data bus is not 0xff, we know a device is there
-        if (GET_DATA != 0xFF) {
+        if (DATA_READ != 0xFF) {
             read_port[i] = EXT_UNKNOWN;
             write_port[i] = EXT_UNKNOWN;
         } else {
@@ -405,29 +405,29 @@ uint8_t iorq_dispatch()
 {
     if (!GET_RD) {
         // set pullups in case no device is present
-        SET_DATA(0xFF);
-        uint8_t devid = read_port[GET_ADDRLO];
+        DATA_WRITE(0xFF);
+        uint8_t devid = read_port[ADDRLO_READ];
         if (devid < EXT_UNKNOWN) {
             // output data from internal device
             uint8_t (*read_func)() = pgm_read_ptr(&device_read[devid]);
             if (read_func != NULL) {
-                SET_DATA(read_func());
+                DATA_WRITE(read_func());
                 DATA_OUTPUT;
             }
         } else {
             // capture data from external device
             void (*save_func)(uint8_t data) = pgm_read_ptr(&device_read[devid]);
             if (save_func != NULL)
-                save_func(GET_DATA);
+                save_func(DATA_READ);
         }
     } else if (!GET_WR) {
-        uint8_t devid = write_port[GET_ADDRLO];
+        uint8_t devid = write_port[ADDRLO_READ];
         void (*write_func)(uint8_t data) = pgm_read_ptr(&device_write[devid]);
         if (write_func != NULL) {
-            write_func(GET_DATA);
+            write_func(DATA_READ);
         }
     }
-    uint8_t data = GET_DATA;
+    uint8_t data = DATA_READ;
     if (dma_function) {
         if (bus_request())
             dma_function();
@@ -455,8 +455,8 @@ uint8_t io_out(uint8_t addr, uint8_t value)
     MREQ_HI;
     RD_HI;
     _delay_us(1);
-    SET_ADDRLO(addr);
-    SET_DATA(value);
+    ADDRLO_WRITE(addr);
+    DATA_WRITE(value);
     DATA_OUTPUT;
     IORQ_LO;
     WR_LO;
@@ -480,12 +480,12 @@ uint8_t io_in(uint8_t addr)
     MREQ_HI;
     WR_HI;
     _delay_us(1);
-    SET_ADDRLO(addr);
+    ADDRLO_WRITE(addr);
     DATA_INPUT;
     IORQ_LO;
     RD_LO;
     _delay_us(1);
-    uint8_t value = GET_DATA;
+    uint8_t value = DATA_READ;
     RD_HI;
     IORQ_HI;
     return value;
