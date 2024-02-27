@@ -40,31 +40,46 @@
 #define GPIO_ALL 0xFF
 #define GPIO_NONE 0x00
 
-#if __AVR_ARCH__ < 100
+/*
+Register concatenation macros with workaround for lack of argument prescan:
+https://gcc.gnu.org/onlinedocs/gcc-13.2.0/cpp/Concatenation.html
+https://gcc.gnu.org/onlinedocs/gcc-13.2.0/cpp/Argument-Prescan.html#Argument-Prescan
+*/
+#define GPIO_DDR_P(P) DDR##P
+#define GPIO_PIN_P(P) PIN##P
+#define GPIO_PORT_P(P) PORT##P
 
-/* Classic AVR */
-#define GPIO_OUTPUT(P, V) (DDR ## P) |= (V)
-#define GPIO_INPUT(P, V) (DDR ## P) &= ~(V)
-#define GPIO_WRITE(P, V) (PORT ## P) = (V)
-#define GPIO_SET(P, V) (PORT ## P) |= (V)
-#define GPIO_CLEAR(P, V) (PORT ## P) &= ~(V)
-#define GPIO_TOGGLE(P, V) (PIN ## P) = (V)
-#define GPIO_READ(P) (PIN ## P)
-#define GPIO_PULLUP_ON(P, V) (PORT ## P) |= (V)
-#define GPIO_PULLUP_OFF(P, V) (PORT ## P) &= ~(V)
+#if __AVR_ARCH__ < 100 /* Classic AVR */
 
-#else
+#define GPIO_OUTPUT(P, V) GPIO_DDR_P(P) |= (V)
+#define GPIO_INPUT(P, V) GPIO_DDR_P(P) &= ~(V)
+#define GPIO_WRITE(P, V) GPIO_PORT_P(P) = (V)
+#define GPIO_SET(P, V) GPIO_PORT_P(P) |= (V)
+#define GPIO_CLEAR(P, V) GPIO_PORT_P(P) &= ~(V)
+#define GPIO_TOGGLE(P, V) GPIO_PIN_P(P) = (V)
+#define GPIO_READ(P) GPIO_PIN_P(P)
+#define GPIO_PULLUP_ON(P, V) GPIO_PORT_P(P) |= (V)
+#define GPIO_PULLUP_OFF(P, V) GPIO_PORT_P(P) &= ~(V)
 
-/* Modern AVR (xmega registers) */
-#define GPIO_OUTPUT(P, V) (PORT ## P).DIRSET = (V)
-#define GPIO_INPUT(P, V) (PORT ## P).DIRCLR = (V)
-#define GPIO_WRITE(P, V) (PORT ## P).OUT = (V)
-#define GPIO_SET(P, V) (PORT ## P).OUTSET = (V)
-#define GPIO_CLEAR(P, V) (PORT ## P).OUTCLR = (V)
-#define GPIO_TOGGLE(P, V) (PORT ## P).OUTTGL = (V)
-#define GPIO_READ(P) ((PORT ## P).IN)
-#define GPIO_PULLUP_ON(P, V) (PORT ## P).PINCONFIG = PORT_PULLUPEN_bm; (PORT ## P).PINCTRLSET = (V);
-#define GPIO_PULLUP_OFF(P, V) (PORT ## P).PINCONFIG = PORT_PULLUPEN_bm; (PORT ## P).PINCTRLCLR = (V);
+#else /* Modern AVR (xmega registers) */
+
+#define GPIO_OUTPUT(P, V) GPIO_PORT_P(P).DIRSET = (V)
+#define GPIO_INPUT(P, V) GPIO_PORT_P(P).DIRCLR = (V)
+#define GPIO_WRITE(P, V) GPIO_PORT_P(P).OUT = (V)
+#define GPIO_SET(P, V) GPIO_PORT_P(P).OUTSET = (V)
+#define GPIO_CLEAR(P, V) GPIO_PORT_P(P).OUTCLR = (V)
+#define GPIO_TOGGLE(P, V) GPIO_PORT_P(P).OUTTGL = (V)
+#define GPIO_READ(P) (GPIO_PORT_P(P).IN)
+#define GPIO_PULLUP_ON(P, V)                              \
+    do {                                                  \
+        GPIO_PORT_P(P).PINCONFIG = GPIO_PORT_PULLUPEN_bm; \
+        GPIO_PORT_P(P).PINCTRLSET = (V);                  \
+    } while (0);
+#define GPIO_PULLUP_OFF(P, V)                             \
+    do {                                                  \
+        GPIO_PORT_P(P).PINCONFIG = GPIO_PORT_PULLUPEN_bm; \
+        GPIO_PORT_P(P).PINCTRLCLR = (V);                  \
+    } while (0);
 
 #endif
 
