@@ -138,7 +138,7 @@ uint8_t bus_release(void)
 bus_stat bus_status(void)
 {
     bus_stat status;
-    uint16_t iox = iox0_read16(ADDRHI_GPIO);
+    uint16_t iox = iox0_read16(IOX_GPIO(CTRLX_PORT));
     status.flags = (CTRL1_READ & CTRL1_MASK) | (CTRL2_READ & CTRL2_MASK);
     status.xflags = iox >> 8;
     status.data = DATA_READ;

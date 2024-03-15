@@ -73,10 +73,10 @@ void iox_init(void)
 {
     spi_init();
     // Enable individually addressable chips
-    iox0_set(IOCON, HAEN);
+    iox0_set(IOCONA, HAEN);
 
     // Disable sequential operation
-    iox0_set(IOCON, SEQOP);
+    iox0_set(IOCONA, SEQOP);
 }
 
 void iox_begin(uint8_t chip, uint8_t mode, uint8_t reg)
@@ -105,7 +105,7 @@ void iox_write(uint8_t chip, uint8_t reg, uint8_t data)
         iox_begin(chip, IOX_WRITE, reg);
         spi_exchange(data);
         spi_cs(CS_IDLE);
-        if (reg == IOCON || reg == IOCONB) {
+        if (reg == IOCONA || reg == IOCONB) {
             if (data & BANK)
                 iox_banks |= (1 << chip);
             else
@@ -117,8 +117,8 @@ void iox_write(uint8_t chip, uint8_t reg, uint8_t data)
 void iox0_begin(uint8_t mode, uint8_t reg)
 {
     if (reg == IOCONB)
-        reg = IOCON;
-    if (iox0_registers[IOCON] & BANK)
+        reg = IOCONA;
+    if (iox0_registers[IOCONA] & BANK)
         reg = pgm_read_byte(&iox_bank1[reg]);
     spi_cs(CS_IOX);
     spi_exchange(IOX_SIGNATURE | mode);

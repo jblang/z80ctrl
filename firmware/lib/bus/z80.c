@@ -103,10 +103,10 @@ void z80_reset(uint32_t addr)
 void z80_run(void)
 {
     // configure IO extender to interrupt on halt condition
-    iox0_write(CTRLX_INTCON, 0xff);
-    iox0_write(CTRLX_DEFVAL, 0xff);
-    iox0_write(CTRLX_GPINTEN, halt_mask);
-    iox0_read(CTRLX_INTCAP); // clear interrupts
+    iox0_write(IOX_INTCON(CTRLX_PORT), 0xff);
+    iox0_write(IOX_DEFVAL(CTRLX_PORT), 0xff);
+    iox0_write(IOX_GPINTEN(CTRLX_PORT), halt_mask);
+    iox0_read(IOX_INTCAP(CTRLX_PORT)); // clear interrupts
     watch_flag = 0;
     bus_release();
     clk_run();
@@ -124,7 +124,7 @@ void z80_run(void)
         if (GET_IOXINT)
             continue;
 #endif
-        uint8_t xflags = iox0_read(CTRLX_INTCAP);
+        uint8_t xflags = iox0_read(IOX_INTCAP(CTRLX_PORT));
         if ((xflags & halt_mask) != halt_mask) {
             printf_P(
                 PSTR("breaking due to %S signal\n"),

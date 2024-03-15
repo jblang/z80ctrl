@@ -41,7 +41,7 @@ enum {
     DEFVALB = 0x07,
     INTCONA = 0x08,
     INTCONB = 0x09,
-    IOCON = 0x0a,
+    IOCONA = 0x0a,
     IOCONB = 0x0b,
     GPPUA = 0x0c,
     GPPUB = 0x0d,
@@ -54,6 +54,32 @@ enum {
     OLATA = 0x14,
     OLATB = 0x15
 };
+
+#define IOX_IODIR_P(P) IODIR##P
+#define IOX_IPOL_P(P) IPOL##P
+#define IOX_GPINTEN_P(P) GPINTEN##P
+#define IOX_DEFVAL_P(P) DEFVAL##P
+#define IOX_INTCON_P(P) INTCON##P
+#define IOX_IOCON_P(P) IOCON##P
+#define IOX_GPPU_P(P) GPPU##P
+#define IOX_INTF_P(P) INTF##P
+#define IOX_INTCAP_P(P) INTCAP##P
+#define IOX_GPIO_P(P) GPIO##P
+#define IOX_OLAT_P(P) OLAT##P
+
+#define IOX_IODIR(P) IOX_IODIR_P(P)
+#define IOX_IPOL(P) IOX_IPOL_P(P)
+#define IOX_GPINTEN(P) IOX_GPINTEN_P(P)
+#define IOX_DEFVAL(P) IOX_DEFVAL_P(P)
+#define IOX_INTCON(P) IOX_INTCON_P(P)
+#define IOX_IOCON(P) IOX_IOCON_P(P)
+#define IOX_GPPU(P) IOX_GPPU_P(P)
+#define IOX_INTF(P) IOX_INTF_P(P)
+#define IOX_INTCAP(P) IOX_INTCAP_P(P)
+#define IOX_GPIO(P) IOX_GPIO_P(P)
+#define IOX_OLAT(P) IOX_OLAT_P(P)
+
+
 
 // Bits in IOCON register
 enum {
