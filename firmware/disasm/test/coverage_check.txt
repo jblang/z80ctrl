@@ -1,0 +1,35 @@
+Z80 Instruction Coverage Analysis:
+
+TESTED (31 instructions):
+- NOP (0x00)
+- LD A, n / LD B, n (immediate)
+- LD B, C / LD A, A / LD H, L (register-to-register)
+- LD BC, nn / LD HL, nn (16-bit immediate)
+- ADD A, B / SUB C / AND n / CP n (ALU ops)
+- JP nn / CALL cc, nn / RET
+- JR n / JR cc, n
+- RLC B / RR A / SLA H (CB rotates)
+- BIT n, r / RES n, r / SET n, r (CB bit ops)
+- HALT
+- PUSH BC / POP HL
+- INC B / DEC C / INC BC / DEC HL
+
+NOT TESTED:
+- ED-prefixed instructions (block ops, extended ops)
+- IX/IY indexed instructions (DD/FD prefixed)
+- DDCB/FDCB undocumented instructions
+- Many base instructions:
+  - EX, EXX
+  - CPL, CCF, SCF, DAA
+  - DJNZ
+  - RST
+  - IN, OUT
+  - Most LD variants
+  - Most jump/call/ret variants
+  - RLA, RRA, RLCA, RRCA
+  - DI, EI
+  - IM 0/1/2
+  - And many more...
+
+Total Z80 opcodes: ~1000+ (including all prefixes)
+Currently tested: ~31 (~3% coverage)
