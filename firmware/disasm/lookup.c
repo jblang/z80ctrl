@@ -32,28 +32,6 @@
 
 // Reference: http://www.z80.info/decoding.htm
 
-//////////////// general functions ////////////////
-
-// instruction constructor
-instr_t instr(uint8_t op, uint8_t p1, uint8_t p2)
-{
-    instr_t i;
-    i.op = op;
-    i.p1 = p1;
-    i.p2 = p2;
-    return i;
-}
-
-// instructor lookup from specified table and index
-instr_t i_lookup(const instr_t* tab, uint8_t n)
-{
-    instr_t i;
-    i.op = pgm_read_byte(&tab[n].op);
-    i.p1 = pgm_read_byte(&tab[n].p1);
-    i.p2 = pgm_read_byte(&tab[n].p2);
-    return i;
-}
-
 //////////////// token lookups ////////////////
 
 // clang-format off
@@ -95,172 +73,40 @@ uint8_t t_lookup(uint8_t tok, uint8_t y, uint8_t z)
 {
     uint8_t p = y >> 1;
     uint8_t q = y & 1; // q is bit 0 of y
-    uint8_t index;
     uint8_t offset = tok;
+    uint8_t index = y;
 
-    if (tok == P_REG16) {
-        // P_REG16 is now in Y_TOKEN enum at position 7
+    switch (tok) {
+    case Y_DIGIT:
+        return y;
+    case Q_INC_DEC:
+        return q ? DEC : INC;
+    case Q_SBC_ADC:
+        return q ? ADC_ : SBC;
+    case Y_RETI_RETN:
+        return y == 1 ? RETI : RETN;
+    case YZ_BLOCK:
+        return (y > 3 && z < 4) ? LOOKUP(blockops, z + (y - 4) * 4) : NONI;
+    case P_REG16:
         index = p;
-    } else if (tok == Z_REG8) {
-        // Z_REG8 uses same table as Y_REG8 (both are 8-bit regs)
+        break;
+    case Z_REG8:
         offset = Y_REG8;
         index = z;
-    } else if (TOKTYPE(tok) == Y_TOKEN) {
-        index = y;
-    } else {
-        switch (tok) {
-        case Y_DIGIT:
-            return y;
-        case Q_INC_DEC:
-            return q ? DEC : INC;
-        case Q_SBC_ADC:
-            return q ? ADC_ : SBC;
-        case Y_RETI_RETN:
-            return y == 1 ? RETI : RETN;
-        case YZ_BLOCK:
-            return (y > 3 && z < 4) ? LOOKUP(blockops, z + (y - 4) * 4) : NONI;
-        default:
-            // Literal tokens pass through
-            return tok;
-        }
+        break;
+    default:
+        if (TOKTYPE(tok) != Y_TOKEN)
+            return tok; // Literal tokens pass through
     }
     return LOOKUP(tokens, offset * 8 + index);
 }
 
-//////////////// Y-based LUTs ////////////////
+//////////////// Instruction LUTs ////////////////
 
-// 0y0: relative jumps and miscellaneous
-const instr_t instr_jr_misc[] PROGMEM = {
-    { NOP, _, _ },
-    { EX, AF, AFP },
-    { DJNZ, DISP, _ },
-    { JR, DISP, _ },
-    { JR, NZ, DISP },
-    { JR, Z, DISP },
-    { JR, NC, DISP },
-    { JR, C, DISP }
-};
-
-// 0y1: 16-bit immediate load / ADD HL operations
-const instr_t instr_ld_add_16_imm[] PROGMEM = {
-    { LD, BC, WORD },
-    { ADD, HL, BC },
-    { LD, DE, WORD },
-    { ADD, HL, DE },
-    { LD, HL, WORD },
-    { ADD, HL, HL },
-    { LD, SP_, WORD },
-    { ADD, HL, SP_ }
-};
-
-const instr_t instr_ld16_ind[] PROGMEM = {
-    { LD, BCI, A },
-    { LD, A, BCI },
-    { LD, DEI, A },
-    { LD, A, DEI },
-    { LD, ADDR, HL },
-    { LD, HL, ADDR },
-    { LD, ADDR, A },
-    { LD, A, ADDR }
-};
-
-// 3y2: pops and miscellaneous instructions
-const instr_t instr_pop_misc[] PROGMEM = {
-    { POP, BC, _ },
-    { RET, _, _ },
-    { POP, DE, _ },
-    { EXX, _, _ },
-    { POP, HL, _ },
-    { JP, HLI, _ },
-    { POP, AF, _ },
-    { LD, SP_, HL }
-};
-
-// 3y3: miscellaneous instructions
-const instr_t instr_misc[] PROGMEM = {
-    { JP, WORD, _ },
-    { _, _, _ }, // CB prefix
-    { OUT, PORT, A },
-    { IN, A, PORT },
-    { EX, SPI, HL },
-    { EX, DE, NSHL },
-    { DI, _, _ },
-    { EI, _, _ }
-};
-
-// 3y5: push and call instructions
-const instr_t instr_push_call[] PROGMEM = {
-    { PUSH, BC, _ },
-    { CALL, WORD, _ },
-    { PUSH, DE, _ },
-    { _, _, _ }, // DD prefix
-    { PUSH, HL, _ },
-    { _, _, _ }, // ED prefix
-    { PUSH, AF, _ },
-    { _, _, _ } // FD prefix
-};
-
-// 1y7: ld, i/r, a and rrd/rld instructions
-const instr_t instr_ld_ir_rot[] PROGMEM = {
-    { LD, I, A },
-    { LD, R, A },
-    { LD, A, I },
-    { LD, A, R },
-    { RRD, _, _ },
-    { RLD, _, _ },
-    { NOP, _, _ },
-    { NOP, _, _ }
-};
-
-// y-based lookup for specified token and y-value
-instr_t y_lookup(uint8_t tok, uint8_t y)
-{
-    const instr_t* tab;
-    switch (tok) {
-    case Y_JR_MISC:
-        tab = instr_jr_misc;
-        break;
-    case Y_LD_ADD_16:
-        tab = instr_ld_add_16_imm;
-        break;
-    case Y_LD_IND:
-        tab = instr_ld16_ind;
-        break;
-    case Y_POP_MISC:
-        tab = instr_pop_misc;
-        break;
-    case Y_MISC:
-        tab = instr_misc;
-        break;
-    case Y_PUSH_CALL:
-        tab = instr_push_call;
-        break;
-    case Y_LD_IR_ROT:
-        tab = instr_ld_ir_rot;
-        break;
-    case Y_LD16_IMM: {
-        // ED-prefixed extended 16-bit LD: LD (nn), rr or LD rr, (nn)
-        // q=0: LD (nn), rr; q=1: LD rr, (nn)
-        // ADDR < PAREN, so it will automatically get parentheses
-        instr_t i;
-        if (y & 1) {
-            i = instr(LD, P_REG16, ADDR); // LD rr, (nn)
-        } else {
-            i = instr(LD, ADDR, P_REG16); // LD (nn), rr
-        }
-        // Resolve P_REG16 token using y value
-        i.p1 = t_lookup(i.p1, y, 0);
-        i.p2 = t_lookup(i.p2, y, 0);
-        return i;
-    }
-    }
-    return i_lookup(tab, y);
-}
-
-//////////////// Z-based LUTs ////////////////
-
-// 0yz: unprefixed instructions from 000-077
-const instr_t instr_0yz[] PROGMEM = {
+// Z-based 8-instruction lookup tables (indexed by z field)
+// Order MUST match Z_INSTR enum order: Z_0YZ, Z_3YZ, Z_ED_1YZ
+const instr_t z_instrs[] PROGMEM = {
+    // Z_0YZ (offset 0): unprefixed instructions from 000-077
     { Y_JR_MISC, _, _ },
     { Y_LD_ADD_16, _, _ },
     { Y_LD_IND, _, _ },
@@ -268,11 +114,9 @@ const instr_t instr_0yz[] PROGMEM = {
     { INC, Y_REG8, _ },
     { DEC, Y_REG8, _ },
     { LD, Y_REG8, BYTE },
-    { Y_FLAG, _, _ }
-};
+    { Y_FLAG, _, _ },
 
-// 3yz: unprefixed instructions from 300-377
-const instr_t instr_3yz[] PROGMEM = {
+    // Z_3YZ (offset 8): unprefixed instructions from 300-377
     { RET, Y_CC, _ },
     { Y_POP_MISC, _, _ },
     { JP, Y_CC, WORD },
@@ -280,11 +124,9 @@ const instr_t instr_3yz[] PROGMEM = {
     { CALL, Y_CC, WORD },
     { Y_PUSH_CALL, _, _ },
     { Y_ALU, A, BYTE },
-    { RST, Y_RST, _ }
-};
+    { RST, Y_RST, _ },
 
-// ed-1yz: ED-prefixed instructions from 100-177
-const instr_t instr_ed_1yz[] PROGMEM = {
+    // Z_ED_1YZ (offset 16): ED-prefixed instructions from 100-177
     { IN, Y_REG8, CI },
     { OUT, CI, Y_REG8 },
     { Q_SBC_ADC, HL, P_REG16 },
@@ -295,31 +137,89 @@ const instr_t instr_ed_1yz[] PROGMEM = {
     { Y_LD_IR_ROT, _, _ }
 };
 
-// z-based lookup for specified token and z-value
-instr_t z_lookup(uint8_t tok, uint8_t y, uint8_t z)
-{
-    const instr_t* tab;
-    switch (tok) {
-    case Z_0YZ:
-        tab = instr_0yz;
-        break;
-    case Z_3YZ:
-        tab = instr_3yz;
-        break;
-    case Z_ED_1YZ:
-        tab = instr_ed_1yz;
-        break;
-    }
-    instr_t i = i_lookup(tab, z);
-    if (TOKTYPE(i.op) == Y_INSTR) {
-        return y_lookup(i.op, y);
-    } else {
-        i.op = t_lookup(i.op, y, z);
-        i.p1 = t_lookup(i.p1, y, z);
-        i.p2 = t_lookup(i.p2, y, z);
-        return i;
-    }
-}
+// Y-based 8-instruction lookup tables (indexed by y field)
+// Order MUST match Y_INSTR enum order: Y_JR_MISC through Y_LD_IR_ROT
+const instr_t y_instrs[] PROGMEM = {
+    // 0y0: Y_JR_MISC (offset 0): relative jumps and miscellaneous
+    { NOP, _, _ },
+    { EX, AF, AFP },
+    { DJNZ, DISP, _ },
+    { JR, DISP, _ },
+    { JR, NZ, DISP },
+    { JR, Z, DISP },
+    { JR, NC, DISP },
+    { JR, C, DISP },
+
+    // 0y1: Y_LD_ADD_16 (offset 8): 16-bit immediate load / ADD HL operations
+    { LD, BC, WORD },
+    { ADD, HL, BC },
+    { LD, DE, WORD },
+    { ADD, HL, DE },
+    { LD, HL, WORD },
+    { ADD, HL, HL },
+    { LD, SP_, WORD },
+    { ADD, HL, SP_ },
+
+    // 0y2: Y_LD_IND (offset 16): indirect load operations
+    { LD, BCI, A },
+    { LD, A, BCI },
+    { LD, DEI, A },
+    { LD, A, DEI },
+    { LD, ADDR, HL },
+    { LD, HL, ADDR },
+    { LD, ADDR, A },
+    { LD, A, ADDR },
+
+    // 3y1: Y_POP_MISC (offset 24): pops and miscellaneous instructions
+    { POP, BC, _ },
+    { RET, _, _ },
+    { POP, DE, _ },
+    { EXX, _, _ },
+    { POP, HL, _ },
+    { JP, HLI, _ },
+    { POP, AF, _ },
+    { LD, SP_, HL },
+
+    // 3y3: Y_MISC (offset 32): miscellaneous instructions
+    { JP, WORD, _ },
+    { _, _, _ }, // CB prefix
+    { OUT, PORT, A },
+    { IN, A, PORT },
+    { EX, SPI, HL },
+    { EX, DE, NSHL },
+    { DI, _, _ },
+    { EI, _, _ },
+
+    // 3y5: Y_PUSH_CALL (offset 40): push and call instructions
+    { PUSH, BC, _ },
+    { CALL, WORD, _ },
+    { PUSH, DE, _ },
+    { _, _, _ }, // DD prefix
+    { PUSH, HL, _ },
+    { _, _, _ }, // ED prefix
+    { PUSH, AF, _ },
+    { _, _, _ }, // FD prefix
+
+    // ED-1y3: Y_LD16_IMM (offset 48): ED-prefixed extended 16-bit LD
+    { LD, ADDR, BC },
+    { LD, BC, ADDR },
+    { LD, ADDR, DE },
+    { LD, DE, ADDR },
+    { LD, ADDR, HL },
+    { LD, HL, ADDR },
+    { LD, ADDR, SP_ },
+    { LD, SP_, ADDR },
+
+    // ED-1y7: Y_LD_IR_ROT (offset 56): ld, i/r, a and rrd/rld instructions
+    { LD, I, A },
+    { LD, R, A },
+    { LD, A, I },
+    { LD, A, R },
+    { RRD, _, _ },
+    { RLD, _, _ },
+    { NOP, _, _ },
+    { NOP, _, _ }
+};
 
 //////////////// X-based LUTs ////////////////
 
@@ -345,14 +245,23 @@ const instr_t instr_cb_prefixed[] PROGMEM = {
     { SET, Y_DIGIT, Z_REG8 }
 };
 
+//////////////// general functions ////////////////
+
+// instructor lookup from specified table and index
+instr_t i_lookup(const instr_t* tab, uint8_t n)
+{
+    instr_t i;
+    i.op = pgm_read_byte(&tab[n].op);
+    i.p1 = pgm_read_byte(&tab[n].p1);
+    i.p2 = pgm_read_byte(&tab[n].p2);
+    return i;
+}
+
 // x-based lookup for specified prefix and opcode
 instr_t decode(uint8_t prefix, uint8_t opcode)
 {
-    uint8_t x = opcode >> 6;
-    uint8_t y = (opcode >> 3) & 7;
-    uint8_t z = opcode & 7;
     const instr_t* tab;
-
+    instr_t i = { HALT_, _, _ };
     switch (prefix) {
     case 0xCB:
         tab = instr_cb_prefixed;
@@ -362,20 +271,34 @@ instr_t decode(uint8_t prefix, uint8_t opcode)
         break;
     default:
         if (opcode == 0x76)
-            return instr(HALT_, _, _);
+            return i;
         tab = instr_unprefixed;
     }
 
-    instr_t i = i_lookup(tab, x);
-    switch (TOKTYPE(i.op)) {
-    case Z_INSTR:
-        return z_lookup(i.op, y, z);
-    case Y_INSTR:
-        return y_lookup(i.op, y);
-    default:
-        i.op = t_lookup(i.op, y, z);
-        i.p1 = t_lookup(i.p1, y, z);
-        i.p2 = t_lookup(i.p2, y, z);
-        return i;
+    uint8_t x = opcode >> 6;
+    uint8_t y = (opcode >> 3) & 7;
+    uint8_t z = opcode & 7;
+
+    uint8_t offset;
+
+    // x-based lookup
+    i = i_lookup(tab, x);
+
+    // z-based lookup
+    if (TOKTYPE(i.op) == Z_INSTR) {
+        offset = (i.op - Z_INSTR) * 8 + z;
+        i = i_lookup(z_instrs, offset);
     }
+
+    // y-based lookup
+    if (TOKTYPE(i.op) == Y_INSTR) {
+        offset = (i.op - Y_INSTR) * 8 + y;
+        return i_lookup(y_instrs, offset);
+    }
+
+    // Common path for all non-Y_INSTR results: resolve tokens using t_lookup
+    i.op = t_lookup(i.op, y, z);
+    i.p1 = t_lookup(i.p1, y, z);
+    i.p2 = t_lookup(i.p2, y, z);
+    return i;
 }

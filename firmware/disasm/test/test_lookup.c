@@ -6,26 +6,8 @@
 #include <string.h>
 
 // Forward declarations from lookup.c
-extern instr_t instr(uint8_t op, uint8_t p1, uint8_t p2);
 extern uint8_t t_lookup(uint8_t tok, uint8_t y, uint8_t z);
-extern instr_t y_lookup(uint8_t tok, uint8_t y);
-extern instr_t z_lookup(uint8_t tok, uint8_t y, uint8_t z);
 extern instr_t decode(uint8_t prefix, uint8_t opcode);
-
-void test_instr_constructor(void)
-{
-    TEST_CASE("test_instr_constructor");
-
-    instr_t i = instr(LD, A, B);
-    ASSERT_EQ(LD, i.op, "instr() should set op field");
-    ASSERT_EQ(A, i.p1, "instr() should set p1 field");
-    ASSERT_EQ(B, i.p2, "instr() should set p2 field");
-
-    instr_t i2 = instr(NOP, _, _);
-    ASSERT_EQ(NOP, i2.op, "instr() should handle NOP");
-    ASSERT_EQ(_, i2.p1, "instr() should handle blank p1");
-    ASSERT_EQ(_, i2.p2, "instr() should handle blank p2");
-}
 
 void test_t_lookup_y_reg8(void)
 {
@@ -206,7 +188,6 @@ int main(void)
 
     TEST_SUITE("Lookup Function Tests");
 
-    test_instr_constructor();
     test_t_lookup_y_reg8();
     test_t_lookup_z_reg8();
     test_t_lookup_y_cc();

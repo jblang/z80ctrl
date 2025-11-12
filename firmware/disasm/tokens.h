@@ -71,8 +71,8 @@ enum {
     Y_POP_MISC,          // pop and miscellaneous
     Y_MISC,              // miscellaneous
     Y_PUSH_CALL,         // push and call
-    Y_LD_IR_ROT,         // ld a, i/r and rld/rrd
-    Y_LD16_IMM           // 16-bit ld rp16,imm / ld imm,rp16
+    Y_LD16_IMM,          // 16-bit ld rp16,imm / ld imm,rp16
+    Y_LD_IR_ROT          // ld a, i/r and rld/rrd
 };
 
 // instruction lookups selcted by z
